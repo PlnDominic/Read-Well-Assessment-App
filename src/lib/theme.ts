@@ -7,7 +7,11 @@ export const colors = {
   sageTintBorder: "#B9CDBB",
 
   terracotta: "#C97B5F",
-  terracottaDark: "#A85C3F",
+  // Originally #A85C3F — see globals.css for the contrast numbers behind
+  // this and the other darkened tokens below; keep these two files in
+  // sync since this one feeds PDF/inline-SVG rendering, which can't read
+  // CSS custom properties.
+  terracottaDark: "#9C5238",
   terracottaTint: "#FBF3EE",
 
   cream: "#F6F1E4",
@@ -18,11 +22,11 @@ export const colors = {
   ink: "#2E3B2F",
   inkSoft: "#3A463B",
   body: "#5C6B5D",
-  muted: "#7A8A7C",
-  mutedLight: "#8A9A8B",
+  muted: "#5A6B5C",
+  mutedLight: "#5A6B5C",
 
   goldBg: "#FBF0DE",
-  goldText: "#8A6A32",
+  goldText: "#7D5E28",
   goldBorder: "#E3D3A8",
 
   taupe: "#8B8365",

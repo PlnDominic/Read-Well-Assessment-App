@@ -53,6 +53,7 @@ export function StaffRow({
               <input type="hidden" name="id" value={staffMember.id} />
               <select
                 name="role"
+                aria-label={`Role for ${staffMember.name}`}
                 defaultValue={staffMember.role}
                 className="border-2 border-[var(--color-cream-border)] rounded-full px-3 py-1.5 text-xs"
               >

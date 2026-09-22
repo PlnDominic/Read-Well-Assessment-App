@@ -107,6 +107,7 @@ export function AssessmentItemsEditor({
           <div key={item.id} className="border-2 border-[var(--color-cream-border)] rounded-2xl p-5">
             <div className="flex flex-wrap items-center gap-3 mb-3.5">
               <select
+                aria-label="Skill area"
                 value={item.skillAreaKey}
                 onChange={(e) => updateItem(i, { skillAreaKey: e.target.value })}
                 className="border-2 border-[var(--color-cream-border)] rounded-xl px-3 py-2 text-sm"
@@ -118,6 +119,7 @@ export function AssessmentItemsEditor({
                 ))}
               </select>
               <select
+                aria-label="Item type"
                 value={item.type}
                 onChange={(e) => {
                   const type = e.target.value as AssessmentItem["type"];

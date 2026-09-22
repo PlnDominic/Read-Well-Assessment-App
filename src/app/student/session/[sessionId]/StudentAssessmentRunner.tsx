@@ -262,6 +262,9 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
           <>
             <button
               onClick={() => toggleMic(micDone)}
+              aria-label={
+                micStatus === "done" ? "Reading recorded" : micStatus === "recording" ? "Listening" : "Tap to read aloud"
+              }
               className="w-[120px] h-[120px] rounded-full border-none flex items-center justify-center mx-auto mb-3 cursor-pointer transition-transform"
               style={{
                 background: micStatus === "done" ? "var(--color-sage)" : micStatus === "recording" ? "var(--color-terracotta-dark)" : "var(--color-terracotta)",

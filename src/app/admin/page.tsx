@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { retrySchoolReport } from "./actions";
 
 type ResultRow = {
   session_id: string;
@@ -117,9 +118,19 @@ export default async function AdminDashboardPage() {
             >
               Export PDF
             </a>
+          ) : reportStatus === "failed" && cycle ? (
+            <form action={retrySchoolReport}>
+              <input type="hidden" name="cycleId" value={cycle.id} />
+              <button
+                type="submit"
+                className="bg-[var(--color-terracotta-tint)] border-[1.5px] border-[var(--color-terracotta)] text-[var(--color-terracotta-dark)] font-bold text-sm px-4.5 py-2.5 rounded-full cursor-pointer"
+              >
+                PDF failed — Retry
+              </button>
+            </form>
           ) : (
             <span className="bg-[var(--color-cream)] border-[1.5px] border-[var(--color-cream-border)] text-[var(--color-muted)] font-bold text-sm px-4.5 py-2.5 rounded-full">
-              {reportStatus === "failed" ? "PDF failed" : "PDF pending"}
+              PDF pending
             </span>
           )}
         </div>

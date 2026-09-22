@@ -5,6 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { computeOverallLabel } from "@/lib/scoring";
+import { retryStudentReport } from "./actions";
 
 type ResultRow = { score: number; flagged_as_difficulty: boolean; skill_areas: { id: string; name: string } };
 
@@ -123,9 +124,19 @@ export default async function StudentReportPage({
                 >
                   Export PDF
                 </a>
+              ) : report?.status === "failed" ? (
+                <form action={retryStudentReport}>
+                  <input type="hidden" name="sessionId" value={sessionId} />
+                  <button
+                    type="submit"
+                    className="bg-[var(--color-terracotta-tint)] border-[1.5px] border-[var(--color-terracotta)] text-[var(--color-terracotta-dark)] font-bold text-sm px-4 py-2.25 rounded-full cursor-pointer"
+                  >
+                    PDF failed — Retry
+                  </button>
+                </form>
               ) : (
                 <span className="bg-[var(--color-cream)] border-[1.5px] border-[var(--color-cream-border)] text-[var(--color-muted)] font-bold text-sm px-4 py-2.25 rounded-full">
-                  {report?.status === "failed" ? "PDF failed — retry soon" : "PDF generating…"}
+                  PDF generating…
                 </span>
               )}
             </div>

@@ -113,12 +113,14 @@ export default async function AdminStudentsPage() {
                 <input type="hidden" name="id" value={s.id} />
                 <input
                   name="name"
+                  aria-label="Student name"
                   defaultValue={s.name}
                   required
                   className="font-extrabold text-[var(--color-sage-deep)] text-base border-2 border-transparent hover:border-[var(--color-cream-border)] focus:border-[var(--color-sage)] rounded-lg px-2 py-1 flex-1 min-w-[140px]"
                 />
                 <select
                   name="grade"
+                  aria-label="Grade"
                   defaultValue={s.grade}
                   className="border-2 border-[var(--color-cream-border)] rounded-lg px-2 py-1 text-sm w-20"
                 >
@@ -130,6 +132,7 @@ export default async function AdminStudentsPage() {
                 </select>
                 <select
                   name="teacherId"
+                  aria-label="Teacher"
                   defaultValue={s.teacher_id}
                   className="border-2 border-[var(--color-cream-border)] rounded-lg px-2 py-1 text-sm"
                 >
@@ -177,6 +180,7 @@ export default async function AdminStudentsPage() {
                     <input type="hidden" name="studentId" value={s.id} />
                     <select
                       name="specialistId"
+                      aria-label="Assign specialist"
                       className="border-2 border-[var(--color-cream-border)] rounded-full px-3 py-1.5 text-xs"
                       defaultValue=""
                     >

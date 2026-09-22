@@ -151,13 +151,63 @@ local dev. This also requires the project's email sending to be working
 SMTP for real usage). An administrator can also force a reset for any staff
 member from `/admin/staff` without relying on email at all.
 
-### 4. Type-check / lint / build
+### 4. Type-check / lint / test / build
 
 ```bash
 npx tsc --noEmit
 npx eslint .
+npm test
 npm run build
 ```
+
+### Report generation retry
+
+If a student or school report's PDF generation fails (`student_reports`/
+`school_reports.status = 'failed'`), a **Retry** button appears right where
+the "Export PDF" button would be — on the student report page and the admin
+dashboard, respectively. It re-runs `generateStudentReport`/
+`generateSchoolReport` synchronously so the page shows the outcome
+immediately.
+
+### Testing & CI
+
+Unit tests (Vitest) cover the pure logic: response scoring
+(`evaluateResponse`), skill-area aggregation (`aggregateSkillScores`), the
+overall-label rule (`computeOverallLabel`), and session-code
+generation/normalization. They don't touch a database — RLS policies and
+the full assessment→scoring→report pipeline are still only verified by
+hand (see "Try the student flow" above); a real end-to-end test would need
+a seeded Supabase instance in CI, which isn't set up yet.
+
+`.github/workflows/ci.yml` runs type-check, lint, tests, and a build (with
+placeholder Supabase env vars — no real project is touched) on every push
+and PR to `main`. It doesn't include a staging deploy gate as a separate
+step because Vercel's own GitHub integration already provides one: every
+PR gets its own preview deployment distinct from production, *as long as
+changes go through a PR rather than a direct push to `main`*.
+
+### Accessibility
+
+A manual pass (not a full automated audit — no axe-core/Lighthouse run,
+since there's no browser available to drive one in this environment) found
+and fixed concrete WCAG AA contrast failures: `--color-muted` (~3.2:1),
+`--color-muted-light` (~2.6:1), and `--color-gold-text` (~4.44:1) all fell
+short of the 4.5:1 required for normal text against the backgrounds they're
+used on; see the comments in `src/app/globals.css` and `src/lib/theme.ts`
+for the before/after values (both files are updated together since PDF/SVG
+rendering reads `theme.ts`'s JS constants, not CSS custom properties).
+Also added `aria-label`s to a few controls that had no accessible name
+(the mic recording button, several bare `<select>`s in the admin screens).
+
+**Known, deliberately unfixed**: white text on the primary sage-green
+button background (`--color-sage`) measures ~3.6:1 — enough for large/bold
+text but short of 4.5:1 for the smaller buttons. Fixing it means either
+darkening the brand's primary color or resizing button text, both of which
+change the approved visual design rather than just correcting an
+oversight, so it's left as a flagged decision rather than something I
+changed unilaterally. A full audit (every color pairing, keyboard
+navigation order, screen-reader testing) is still open — see the CI note
+above about no browser/AT tooling being available here.
 
 ## Deploying
 

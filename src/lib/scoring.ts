@@ -53,21 +53,7 @@ export async function scoreSession(admin: AdminClient, sessionId: string): Promi
   const items = assessment.items as AssessmentItem[];
   const correctByItemId = new Map(responses.map((r) => [r.item_id, r.is_correct === true]));
 
-  const totalsBySkill = new Map<string, { correct: number; total: number }>();
-  for (const item of items) {
-    const bucket = totalsBySkill.get(item.skillAreaKey) ?? { correct: 0, total: 0 };
-    bucket.total += 1;
-    if (correctByItemId.get(item.id)) bucket.correct += 1;
-    totalsBySkill.set(item.skillAreaKey, bucket);
-  }
-
-  const results: SkillScore[] = [];
-  for (const [skillAreaKey, { correct, total }] of totalsBySkill) {
-    const skillAreaId = skillAreaIdByKey.get(skillAreaKey);
-    if (!skillAreaId) continue; // reference data missing; skip rather than fail the whole session
-    const score = total > 0 ? Math.round((correct / total) * 100) : 0;
-    results.push({ skillAreaId, skillAreaKey, score, flagged: score < FLAGGED_SCORE_THRESHOLD });
-  }
+  const results = aggregateSkillScores(items, correctByItemId, skillAreaIdByKey);
 
   const { error: upsertError } = await admin.from("results").upsert(
     results.map((r) => ({
@@ -80,6 +66,37 @@ export async function scoreSession(admin: AdminClient, sessionId: string): Promi
   );
   if (upsertError) throw upsertError;
 
+  return results;
+}
+
+/**
+ * Pure aggregation step of the Scoring Service, pulled out of scoreSession
+ * so it's testable without a Supabase client: percent-correct per skill
+ * area, flagged when below FLAGGED_SCORE_THRESHOLD. Items whose
+ * skillAreaKey has no matching row in skillAreaIdByKey are skipped rather
+ * than failing the whole session (reference data drift shouldn't block
+ * scoring the items that do resolve).
+ */
+export function aggregateSkillScores(
+  items: AssessmentItem[],
+  correctByItemId: Map<string, boolean>,
+  skillAreaIdByKey: Map<string, string>
+): SkillScore[] {
+  const totalsBySkill = new Map<string, { correct: number; total: number }>();
+  for (const item of items) {
+    const bucket = totalsBySkill.get(item.skillAreaKey) ?? { correct: 0, total: 0 };
+    bucket.total += 1;
+    if (correctByItemId.get(item.id)) bucket.correct += 1;
+    totalsBySkill.set(item.skillAreaKey, bucket);
+  }
+
+  const results: SkillScore[] = [];
+  for (const [skillAreaKey, { correct, total }] of totalsBySkill) {
+    const skillAreaId = skillAreaIdByKey.get(skillAreaKey);
+    if (!skillAreaId) continue;
+    const score = total > 0 ? Math.round((correct / total) * 100) : 0;
+    results.push({ skillAreaId, skillAreaKey, score, flagged: score < FLAGGED_SCORE_THRESHOLD });
+  }
   return results;
 }
 

@@ -9,7 +9,7 @@
   --color-sage-tint-border: #b9cdbb;
 
   --color-terracotta: #c97b5f;
-  --color-terracotta-dark: #a85c3f;
+  --color-terracotta-dark: #9c5238;
   --color-terracotta-tint: #fbf3ee;
 
   --color-cream: #f6f1e4;
@@ -21,11 +21,17 @@
   --color-ink: #2e3b2f;
   --color-ink-soft: #3a463b;
   --color-body: #5c6b5d;
-  --color-muted: #7a8a7c;
-  --color-muted-light: #8a9a8b;
+  /* Originally #7a8a7c / #8a9a8b — both failed WCAG AA contrast (~3.2:1 and
+     ~2.6:1) against the cream/white backgrounds they're used on for normal
+     (non-large) text. Darkened to a verified ~4.8-5:1; there isn't much
+     room to keep them visually distinct from each other while both passing
+     on a light background, so they're intentionally close in value now. */
+  --color-muted: #5a6b5c;
+  --color-muted-light: #5a6b5c;
 
   --color-gold-bg: #fbf0de;
-  --color-gold-text: #8a6a32;
+  /* Originally #8a6a32 (~4.44:1 against --color-gold-bg, just under AA). */
+  --color-gold-text: #7d5e28;
   --color-gold-border: #e3d3a8;
 
   --color-taupe: #8b8365;

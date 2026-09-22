@@ -15,13 +15,10 @@ export function ImportCsvForm() {
         Header row <code>name,grade,teacher_email</code> — one student per line, teacher matched by email.
       </p>
       <form action={formAction} className="flex flex-wrap items-center gap-3">
-        <input
-          type="file"
-          name="file"
-          accept=".csv,text/csv"
-          required
-          className="text-sm"
-        />
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="sr-only">CSV file</span>
+          <input type="file" name="file" accept=".csv,text/csv" required className="text-sm" />
+        </label>
         <button
           type="submit"
           disabled={isPending}
