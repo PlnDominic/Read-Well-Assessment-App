@@ -22,10 +22,17 @@ interface KioskState {
   answersByItemId: Record<string, unknown>;
 }
 
+// --- localStorage helpers -----------------------------------------------
+// TRD §7 "Offline Handling": tolerate brief connectivity drops without
+// losing in-progress answers. Three things are cached per session so a
+// reload or a dead network mid-assessment doesn't strand the student:
+// unsent answers, the last-known server state (so the quiz can still
+// render if the very first load happens while offline), and whether a
+// "finish" attempt is still waiting to reach the server.
+
 function pendingKey(sessionId: string) {
   return `rw:pending:${sessionId}`;
 }
-
 function readPending(sessionId: string): Record<string, unknown> {
   try {
     return JSON.parse(localStorage.getItem(pendingKey(sessionId)) ?? "{}");
@@ -33,7 +40,6 @@ function readPending(sessionId: string): Record<string, unknown> {
     return {};
   }
 }
-
 function writePending(sessionId: string, pending: Record<string, unknown>) {
   try {
     localStorage.setItem(pendingKey(sessionId), JSON.stringify(pending));
@@ -42,37 +48,98 @@ function writePending(sessionId: string, pending: Record<string, unknown>) {
   }
 }
 
+function stateCacheKey(sessionId: string) {
+  return `rw:state:${sessionId}`;
+}
+function readCachedState(sessionId: string): KioskState | null {
+  try {
+    const raw = localStorage.getItem(stateCacheKey(sessionId));
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+function writeCachedState(sessionId: string, data: KioskState) {
+  try {
+    localStorage.setItem(stateCacheKey(sessionId), JSON.stringify(data));
+  } catch {
+    // best-effort
+  }
+}
+
+function pendingCompleteKey(sessionId: string) {
+  return `rw:pendingComplete:${sessionId}`;
+}
+function readPendingComplete(sessionId: string): boolean {
+  try {
+    return localStorage.getItem(pendingCompleteKey(sessionId)) === "1";
+  } catch {
+    return false;
+  }
+}
+function writePendingComplete(sessionId: string, value: boolean) {
+  try {
+    if (value) localStorage.setItem(pendingCompleteKey(sessionId), "1");
+    else localStorage.removeItem(pendingCompleteKey(sessionId));
+  } catch {
+    // best-effort
+  }
+}
+
 export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
   const router = useRouter();
   const [state, setState] = useState<KioskState | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [usingCachedState, setUsingCachedState] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
   const [started, setStarted] = useState(false);
   const [qIndex, setQIndex] = useState(0);
   const [recording, setRecording] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [completing, setCompleting] = useState(false);
+  const [pendingComplete, setPendingComplete] = useState(false);
   const pendingRef = useRef<Record<string, unknown>>({});
 
-  const load = useCallback(async () => {
-    const res = await fetch(`/api/kiosk/sessions/${sessionId}`, { cache: "no-store" });
-    if (!res.ok) {
-      setError("We couldn't find that assessment. Ask your teacher for a new code.");
-      return;
-    }
-    const data: KioskState = await res.json();
+  const applyState = useCallback((data: KioskState) => {
     setState(data);
     const hasAnyAnswer = Object.keys(data.answersByItemId).length > 0;
     setStarted(data.status !== "not_started" || hasAnyAnswer);
     setQIndex(Math.min(data.currentItemIndex, Math.max(data.items.length - 1, 0)));
-  }, [sessionId]);
+  }, []);
+
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/kiosk/sessions/${sessionId}`, { cache: "no-store" });
+      if (!res.ok) {
+        setError("We couldn't find that assessment. Ask your teacher for a new code.");
+        return;
+      }
+      const data: KioskState = await res.json();
+      writeCachedState(sessionId, data);
+      setUsingCachedState(false);
+      applyState(data);
+    } catch {
+      // A thrown fetch (as opposed to a resolved !res.ok) means we're
+      // offline, not that the session doesn't exist — fall back to
+      // whatever was last cached so the student isn't stuck on a spinner,
+      // and let the online-retry effect below keep trying quietly.
+      const cached = readCachedState(sessionId);
+      if (cached) {
+        setUsingCachedState(true);
+        applyState(cached);
+      }
+    }
+  }, [sessionId, applyState]);
 
   useEffect(() => {
-    // Fetch-on-mount: `load` sets state only after its internal `await`s
-    // resolve, so this isn't a synchronous setState-in-effect despite the
-    // lint rule's static check flagging the call itself.
+    // Reading browser-only state (navigator.onLine, localStorage) on mount
+    // — not derivable during render/SSR — and kicking off the initial
+    // fetch (load() only sets state after its internal awaits resolve).
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    load();
+    setIsOnline(navigator.onLine);
+    setPendingComplete(readPendingComplete(sessionId));
     pendingRef.current = readPending(sessionId);
+    load();
   }, [load, sessionId]);
 
   const flushPending = useCallback(async (): Promise<boolean> => {
@@ -102,17 +169,40 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
     return allOk;
   }, [sessionId]);
 
+  const attemptComplete = useCallback(async (): Promise<boolean> => {
+    const flushed = await flushPending();
+    if (!flushed) return false;
+    try {
+      const res = await fetch(`/api/kiosk/sessions/${sessionId}/complete`, { method: "POST" });
+      if (!res.ok) return false;
+    } catch {
+      return false;
+    }
+    writePendingComplete(sessionId, false);
+    setPendingComplete(false);
+    setState((prev) => (prev ? { ...prev, status: "completed" } : prev));
+    return true;
+  }, [sessionId, flushPending]);
+
   useEffect(() => {
-    const onOnline = () => flushPending();
+    const onOnline = () => {
+      setIsOnline(true);
+      if (usingCachedState) load();
+      flushPending();
+      if (readPendingComplete(sessionId)) attemptComplete();
+    };
+    const onOffline = () => setIsOnline(false);
     window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
     const interval = setInterval(() => {
       if (Object.keys(pendingRef.current).length > 0) flushPending();
     }, 6000);
     return () => {
       window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
       clearInterval(interval);
     };
-  }, [flushPending]);
+  }, [flushPending, attemptComplete, load, usingCachedState, sessionId]);
 
   function saveAnswer(itemId: string, answer: unknown) {
     pendingRef.current[itemId] = answer;
@@ -143,19 +233,15 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
       return;
     }
     setCompleting(true);
-    const flushed = await flushPending();
-    if (!flushed) {
-      setCompleting(false);
-      setError("Still saving your answers — check your connection and try again in a moment.");
-      return;
-    }
-    const res = await fetch(`/api/kiosk/sessions/${sessionId}/complete`, { method: "POST" });
+    const ok = await attemptComplete();
     setCompleting(false);
-    if (!res.ok) {
-      setError("Something went wrong finishing up. Try tapping the button again.");
-      return;
+    if (!ok) {
+      // Could be offline, or a one-off server hiccup — either way, don't
+      // dead-end. Remember the intent so a reload still shows the "almost
+      // done" screen, and the online-retry effect will keep trying.
+      writePendingComplete(sessionId, true);
+      setPendingComplete(true);
     }
-    setState((prev) => (prev ? { ...prev, status: "completed" } : prev));
   }
 
   if (error) {
@@ -166,8 +252,38 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
     );
   }
 
+  if (pendingComplete) {
+    return (
+      <div className="w-full max-w-[480px] mt-[10vh] text-center">
+        <div className="w-[140px] h-[140px] rounded-full bg-[var(--color-terracotta)] mx-auto mb-6.5 flex items-center justify-center shadow-[0_14px_30px_rgba(201,123,95,0.3)]">
+          <SunnyMascot size={86} mood="big-smile" />
+        </div>
+        <h1 className="font-heading font-bold text-[28px] text-[var(--color-sage-deep)] m-0 mb-2.5">
+          Almost done!
+        </h1>
+        <p className="text-[var(--color-body)] text-lg leading-relaxed m-0 mb-6">
+          {isOnline
+            ? "Finishing up…"
+            : "You're offline. Your answers are saved on this device — we'll finish up as soon as you're back online."}
+        </p>
+        <button
+          onClick={async () => {
+            setCompleting(true);
+            const ok = await attemptComplete();
+            setCompleting(false);
+            if (!ok) writePendingComplete(sessionId, true);
+          }}
+          disabled={completing}
+          className="bg-[var(--color-sage)] text-white border-none rounded-full font-heading font-bold text-lg px-10 py-4 cursor-pointer disabled:opacity-60"
+        >
+          {completing ? "Trying…" : "Try again"}
+        </button>
+      </div>
+    );
+  }
+
   if (!state) {
-    return <div className="mt-[20vh] text-[var(--color-body)]">Loading…</div>;
+    return <div className="mt-[20vh] text-[var(--color-body)] text-center">Loading…</div>;
   }
 
   if (state.status === "completed") {
@@ -192,9 +308,16 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
     );
   }
 
+  const offlineBanner = !isOnline && (
+    <div className="w-full max-w-[640px] mb-4 bg-[var(--color-gold-bg)] border border-[var(--color-gold-border)] text-[var(--color-gold-text)] text-sm font-bold rounded-xl px-4 py-2.5 text-center">
+      You&apos;re offline — answers are saved on this device and will sync automatically when you&apos;re back online.
+    </div>
+  );
+
   if (!started) {
     return (
       <div className="w-full max-w-[480px] mt-[8vh] text-center">
+        {offlineBanner}
         <div className="w-[140px] h-[140px] rounded-full bg-[var(--color-sage)] mx-auto mb-6.5 flex items-center justify-center shadow-[0_14px_30px_rgba(74,107,82,0.28)]">
           <SunnyMascot size={86} mood="big-smile" />
         </div>
@@ -227,6 +350,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
 
   return (
     <div className="w-full max-w-[640px] mt-[2vh]">
+      {offlineBanner}
       <div className="flex items-center gap-3.5 mb-7">
         <div className="flex-1 h-3.5 bg-[var(--color-cream-border)] rounded-full overflow-hidden">
           <div

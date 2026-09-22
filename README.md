@@ -103,6 +103,36 @@ student's assessment (simulating handing the device to them). To test the
 separate-device kiosk path instead, note the `session_code` on that
 `assessment_sessions` row and enter it at `/student/join`.
 
+### Offline handling
+
+TRD §7 asks the assessment client to "tolerate brief connectivity drops
+without losing in-progress answers." `StudentAssessmentRunner` caches three
+things in `localStorage`, keyed by session id, to make that concrete:
+
+- **Unsent answers** — every response is queued locally the instant it's
+  picked, then flushed to the server in the background (on selection, every
+  6s while anything's queued, and immediately on the browser's `online`
+  event). A student can keep answering questions while offline; nothing is
+  lost, it just syncs late.
+- **Last-known server state** — if the *very first* load of the assessment
+  happens while offline (`fetch` throws rather than resolving), the runner
+  falls back to whatever was cached from the last successful load instead
+  of showing a dead-end error, and shows a persistent "You're offline"
+  banner. It retries the real fetch automatically once the `online` event
+  fires.
+- **A pending-finish flag** — if the final "I'm Done!" tap can't reach the
+  server (offline, or a one-off failure), the student sees an "Almost
+  done!" screen instead of a false "You're all done," and completion is
+  retried automatically on reconnect (or manually via a "Try again"
+  button). The flag survives a page reload, so closing and reopening the
+  kiosk tab doesn't lose the fact that the student already tried to finish.
+
+This covers brief drops on a single device, not full offline-first
+operation — the initial page load and sign-in still need a network
+connection; there's no service worker/app-shell caching. That's
+intentional scope: PRD/TRD only ask for tolerance of brief drops during an
+in-progress assessment, not a fully installable offline app.
+
 ### Admin tooling
 
 Signed in as an administrator, the top nav under `/admin` has:
