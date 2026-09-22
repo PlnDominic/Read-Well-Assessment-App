@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { after } from "next/server";
-import { AppShell } from "@/components/AppShell";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -101,9 +100,8 @@ export default async function AdminDashboardPage() {
       : "No skill areas are broadly flagged this cycle.";
 
   return (
-    <AppShell>
-      <div className="w-full max-w-[920px]">
-        <div className="flex justify-between items-start flex-wrap gap-3.5 mb-6">
+    <div className="w-full max-w-[920px]">
+      <div className="flex justify-between items-start flex-wrap gap-3.5 mb-6">
           <div>
             <h1 className="font-heading font-bold text-[26px] text-[var(--color-sage-deep)] m-0 mb-1">
               {school?.name ?? "Your School"}
@@ -157,11 +155,10 @@ export default async function AdminDashboardPage() {
           </div>
         </div>
 
-        <div className="bg-[var(--color-sage-tint)] rounded-2xl px-6.5 py-5.5 text-[var(--color-ink-soft)] text-sm leading-relaxed">
-          <strong className="text-[var(--color-sage-deep)]">Planning note:</strong> {planningNote}
-        </div>
+      <div className="bg-[var(--color-sage-tint)] rounded-2xl px-6.5 py-5.5 text-[var(--color-ink-soft)] text-sm leading-relaxed">
+        <strong className="text-[var(--color-sage-deep)]">Planning note:</strong> {planningNote}
       </div>
-    </AppShell>
+    </div>
   );
 }
 

@@ -69,7 +69,8 @@ You need a Supabase project (local via the CLI, or hosted at supabase.com).
 **Option A — hosted:**
 1. Create a project at [supabase.com](https://supabase.com).
 2. In the SQL editor, run the migrations in `supabase/migrations/` **in
-   order** (`0001_init.sql`, `0002_rls.sql`, `0003_storage.sql`).
+   order** (`0001_init.sql`, `0002_rls.sql`, `0003_storage.sql`,
+   `0004_specialist_readonly.sql`).
 3. Run `supabase/seed.sql` for demo data (Ms. Rivera's Grade 1 class at
    Lincoln Elementary — see below for login credentials). If seeding the two
    `auth.users` rows fails (GoTrue schema differences across versions),
@@ -103,6 +104,26 @@ student's assessment (simulating handing the device to them). To test the
 separate-device kiosk path instead, note the `session_code` on that
 `assessment_sessions` row and enter it at `/student/join`.
 
+### Admin tooling
+
+Signed in as an administrator, the top nav under `/admin` has:
+- **Students** — add a student (assigned to a teacher), assign/unassign a
+  reading specialist to a student
+- **Staff** — invite a teacher/reading-specialist/administrator; this
+  creates the Supabase Auth user (service role) and shows a one-time
+  generated temporary password to relay to them
+- **Content** — edit the Grade 1 assessment's items (choice/mic, options,
+  correct answers) and the skill-area → recommendation mapping, without a
+  code deploy. Saving the assessment creates a new version rather than
+  mutating in place, so already-completed sessions keep pointing at the
+  exact content they were scored against
+- **Cycles** — close the current assessment cycle and start a new one
+
+A reading specialist signs in the same way (via the "I'm a Teacher" tile —
+the login form is really just "staff sign-in"; which dashboard they land on
+is driven by their actual `profiles.role`) and lands on `/specialist`, a
+read-only roster of the students an administrator has assigned to them.
+
 ### 4. Type-check / lint / build
 
 ```bash
@@ -129,7 +150,8 @@ src/app/                 Routes (App Router)
   student/join/          Kiosk session-code entry (unauthenticated)
   student/session/[id]/  The assessment itself (unauthenticated, service-role backed)
   teacher/                Roster + per-student report (RLS-scoped to the signed-in teacher/specialist)
-  admin/                  School-wide dashboard (administrator only)
+  specialist/             Read-only roster of a specialist's assigned students
+  admin/                  Dashboard, students, staff, content, cycles (administrator only)
   api/kiosk/              Session start/autosave/complete (service-role)
   api/reports/            Signed PDF download + audit log
 src/lib/

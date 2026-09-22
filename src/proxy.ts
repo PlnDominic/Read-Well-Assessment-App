@@ -44,13 +44,15 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (pathname.startsWith("/admin") && user) {
+  if (user && (pathname.startsWith("/admin") || pathname.startsWith("/specialist"))) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
       .eq("id", user.id)
       .single();
-    if (profile?.role !== "administrator") {
+
+    const requiredRole = pathname.startsWith("/admin") ? "administrator" : "reading_specialist";
+    if (profile?.role !== requiredRole) {
       const url = request.nextUrl.clone();
       url.pathname = "/";
       return NextResponse.redirect(url);

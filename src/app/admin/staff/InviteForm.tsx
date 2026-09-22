@@ -1,0 +1,55 @@
+"use client";
+
+import { useActionState } from "react";
+import { inviteStaff, type InviteStaffState } from "./actions";
+
+const initialState: InviteStaffState = { error: null, result: null };
+
+export function InviteForm() {
+  const [state, formAction, isPending] = useActionState(inviteStaff, initialState);
+
+  return (
+    <div>
+      <form action={formAction} className="flex flex-wrap items-end gap-3.5">
+        <label className="flex flex-col gap-1.5 text-sm flex-1 min-w-[160px]">
+          <span className="font-bold text-[var(--color-muted)] text-xs uppercase">Name</span>
+          <input name="name" required className="border-2 border-[var(--color-cream-border)] rounded-xl px-3.5 py-2.5" />
+        </label>
+        <label className="flex flex-col gap-1.5 text-sm flex-1 min-w-[200px]">
+          <span className="font-bold text-[var(--color-muted)] text-xs uppercase">Email</span>
+          <input
+            name="email"
+            type="email"
+            required
+            className="border-2 border-[var(--color-cream-border)] rounded-xl px-3.5 py-2.5"
+          />
+        </label>
+        <label className="flex flex-col gap-1.5 text-sm min-w-[170px]">
+          <span className="font-bold text-[var(--color-muted)] text-xs uppercase">Role</span>
+          <select name="role" required defaultValue="teacher" className="border-2 border-[var(--color-cream-border)] rounded-xl px-3.5 py-2.5">
+            <option value="teacher">Teacher</option>
+            <option value="reading_specialist">Reading Specialist</option>
+            <option value="administrator">Administrator</option>
+          </select>
+        </label>
+        <button
+          type="submit"
+          disabled={isPending}
+          className="bg-[var(--color-sage)] text-white border-none rounded-full font-bold text-sm px-5 py-2.75 cursor-pointer disabled:opacity-60"
+        >
+          {isPending ? "Creating…" : "Invite staff member"}
+        </button>
+      </form>
+
+      {state.error && <p className="text-[var(--color-terracotta-dark)] text-sm mt-3 mb-0">{state.error}</p>}
+
+      {state.result && (
+        <div className="mt-4 bg-[var(--color-sage-tint)] rounded-xl px-4.5 py-3.5 text-sm text-[var(--color-ink-soft)]">
+          Account created for <strong>{state.result.email}</strong>. Temporary password (shown once — share it
+          securely with them):{" "}
+          <code className="bg-white px-2 py-1 rounded font-bold">{state.result.tempPassword}</code>
+        </div>
+      )}
+    </div>
+  );
+}
