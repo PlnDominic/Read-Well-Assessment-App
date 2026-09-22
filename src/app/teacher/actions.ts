@@ -1,8 +1,40 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { generateSessionCode } from "@/lib/kiosk";
+
+/**
+ * Lets a teacher add a student to their own roster. RLS
+ * (students_insert_teacher_or_admin) independently enforces role='teacher'
+ * and teacher_id=auth.uid(), so this can't be used to add a student under
+ * anyone else even if called directly.
+ */
+export async function addStudentToOwnRoster(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: profile } = await supabase.from("profiles").select("role, school_id").eq("id", user.id).single();
+  if (!profile || profile.role !== "teacher") throw new Error("Only teachers can add students here");
+
+  const name = String(formData.get("name") ?? "").trim();
+  const grade = Number(formData.get("grade") ?? 1);
+  if (!name) throw new Error("Name is required");
+
+  const { error } = await supabase.from("students").insert({
+    school_id: profile.school_id,
+    teacher_id: user.id,
+    name,
+    grade,
+  });
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/teacher");
+}
 
 /**
  * Teacher-initiated session start/resume (Assessment Service, TRD §4.1).

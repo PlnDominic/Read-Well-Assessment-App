@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { SunnyMascot, StudentRoleIcon, TeacherRoleIcon, AdminRoleIcon } from "@/components/icons";
 import { signInWithPassword } from "./actions";
 
@@ -136,6 +137,12 @@ function StaffLoginForm({ mode, onBack }: { mode: Exclude<Mode, "select">; onBac
             {isPending ? "Signing in…" : "Sign In"}
           </button>
         </form>
+        <Link
+          href="/login/forgot"
+          className="block text-center mt-4 text-[var(--color-sage)] font-bold text-sm no-underline hover:underline"
+        >
+          Forgot your password?
+        </Link>
       </div>
     </div>
   );

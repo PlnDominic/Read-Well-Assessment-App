@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { addStudent, assignSpecialist, unassignSpecialist } from "./actions";
+import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
+import { addStudent, assignSpecialist, deleteStudent, unassignSpecialist, updateStudent } from "./actions";
+import { ImportCsvForm } from "./ImportCsvForm";
 
 export default async function AdminStudentsPage() {
   const supabase = await createClient();
@@ -29,7 +31,6 @@ export default async function AdminStudentsPage() {
     .from("specialist_assignments")
     .select("student_id, specialist_id");
 
-  const teacherById = new Map((teachers ?? []).map((t) => [t.id, t.name]));
   const specialistById = new Map((specialists ?? []).map((s) => [s.id, s.name]));
   const specialistIdsByStudent = new Map<string, string[]>();
   for (const a of assignments ?? []) {
@@ -93,6 +94,7 @@ export default async function AdminStudentsPage() {
             Add a teacher on the Staff tab first — students need one assigned.
           </p>
         )}
+        <ImportCsvForm />
       </div>
 
       <div className="bg-white rounded-[20px] shadow-[0_6px_20px_rgba(0,0,0,0.06)] overflow-hidden">
@@ -105,16 +107,56 @@ export default async function AdminStudentsPage() {
           return (
             <div
               key={s.id}
-              className="px-6 py-4.5 border-b border-[var(--color-cream-divider)] last:border-b-0 flex flex-wrap items-center justify-between gap-3"
+              className="px-6 py-4.5 border-b border-[var(--color-cream-divider)] last:border-b-0 flex flex-col gap-3"
             >
-              <div>
-                <div className="font-extrabold text-[var(--color-sage-deep)] text-base">{s.name}</div>
-                <div className="text-[13px] text-[var(--color-muted-light)]">
-                  Grade {s.grade} · Teacher: {teacherById.get(s.teacher_id) ?? "—"}
-                </div>
-              </div>
+              <form action={updateStudent} className="flex flex-wrap items-end gap-2.5">
+                <input type="hidden" name="id" value={s.id} />
+                <input
+                  name="name"
+                  defaultValue={s.name}
+                  required
+                  className="font-extrabold text-[var(--color-sage-deep)] text-base border-2 border-transparent hover:border-[var(--color-cream-border)] focus:border-[var(--color-sage)] rounded-lg px-2 py-1 flex-1 min-w-[140px]"
+                />
+                <select
+                  name="grade"
+                  defaultValue={s.grade}
+                  className="border-2 border-[var(--color-cream-border)] rounded-lg px-2 py-1 text-sm w-20"
+                >
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((g) => (
+                    <option key={g} value={g}>
+                      Grade {g}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  name="teacherId"
+                  defaultValue={s.teacher_id}
+                  className="border-2 border-[var(--color-cream-border)] rounded-lg px-2 py-1 text-sm"
+                >
+                  {teachers.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="submit"
+                  className="bg-white border-[1.5px] border-[var(--color-cream-border-strong)] text-[var(--color-sage-dark)] font-bold text-xs px-3 py-1.5 rounded-full cursor-pointer"
+                >
+                  Save
+                </button>
+              </form>
 
               <div className="flex flex-wrap items-center gap-2">
+                <form action={deleteStudent}>
+                  <input type="hidden" name="id" value={s.id} />
+                  <ConfirmSubmitButton
+                    confirmMessage={`Delete ${s.name}? This also deletes their assessment sessions and reports.`}
+                    className="text-[var(--color-terracotta-dark)] text-xs font-bold bg-none border-none cursor-pointer"
+                  >
+                    Delete student
+                  </ConfirmSubmitButton>
+                </form>
                 {assignedIds.map((specId) => (
                   <form action={unassignSpecialist} key={specId} className="flex items-center gap-1.5">
                     <input type="hidden" name="studentId" value={s.id} />

@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { createClient } from "@/lib/supabase/server";
-import { startOrResumeAssessment } from "./actions";
+import { addStudentToOwnRoster, startOrResumeAssessment } from "./actions";
 
 const STATUS_STYLE: Record<
   string,
@@ -85,6 +85,39 @@ export default async function TeacherRosterPage() {
         <p className="text-[var(--color-muted)] text-[15px] m-0 mb-6">
           Grade 1 · {cycle?.name ?? "No active assessment cycle"}
         </p>
+
+        {profile.role === "teacher" && (
+          <div className="bg-white rounded-[20px] shadow-[0_6px_20px_rgba(0,0,0,0.06)] px-6 py-5 mb-5">
+            <form action={addStudentToOwnRoster} className="flex flex-wrap items-end gap-3">
+              <label className="flex flex-col gap-1.5 text-sm flex-1 min-w-[160px]">
+                <span className="font-bold text-[var(--color-muted)] text-xs uppercase">Add a student</span>
+                <input
+                  name="name"
+                  placeholder="Student name"
+                  required
+                  className="border-2 border-[var(--color-cream-border)] rounded-xl px-3.5 py-2.5"
+                />
+              </label>
+              <select
+                name="grade"
+                defaultValue={1}
+                className="border-2 border-[var(--color-cream-border)] rounded-xl px-3.5 py-2.5 text-sm"
+              >
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((g) => (
+                  <option key={g} value={g}>
+                    Grade {g}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="submit"
+                className="bg-[var(--color-sage)] text-white border-none rounded-full font-bold text-sm px-4.5 py-2.5 cursor-pointer"
+              >
+                Add
+              </button>
+            </form>
+          </div>
+        )}
 
         <div className="bg-white rounded-[20px] shadow-[0_6px_20px_rgba(0,0,0,0.06)] overflow-hidden">
           {(students ?? []).length === 0 && (

@@ -69,8 +69,7 @@ You need a Supabase project (local via the CLI, or hosted at supabase.com).
 **Option A — hosted:**
 1. Create a project at [supabase.com](https://supabase.com).
 2. In the SQL editor, run the migrations in `supabase/migrations/` **in
-   order** (`0001_init.sql`, `0002_rls.sql`, `0003_storage.sql`,
-   `0004_specialist_readonly.sql`).
+   order** (`0001_init.sql` through `0005_profiles_is_active.sql`).
 3. Run `supabase/seed.sql` for demo data (Ms. Rivera's Grade 1 class at
    Lincoln Elementary — see below for login credentials). If seeding the two
    `auth.users` rows fails (GoTrue schema differences across versions),
@@ -107,11 +106,13 @@ separate-device kiosk path instead, note the `session_code` on that
 ### Admin tooling
 
 Signed in as an administrator, the top nav under `/admin` has:
-- **Students** — add a student (assigned to a teacher), assign/unassign a
-  reading specialist to a student
-- **Staff** — invite a teacher/reading-specialist/administrator; this
-  creates the Supabase Auth user (service role) and shows a one-time
-  generated temporary password to relay to them
+- **Students** — add, edit, or delete a student; assign/unassign a reading
+  specialist; bulk-import a roster from a CSV (`name,grade,teacher_email`)
+- **Staff** — invite a teacher/reading-specialist/administrator (creates the
+  Supabase Auth user via service role and shows a one-time temp password);
+  change a staff member's role, deactivate/reactivate their account, or
+  force a password reset (also shown once). An admin can't deactivate or
+  demote themselves from this screen.
 - **Content** — edit the Grade 1 assessment's items (choice/mic, options,
   correct answers) and the skill-area → recommendation mapping, without a
   code deploy. Saving the assessment creates a new version rather than
@@ -123,6 +124,22 @@ A reading specialist signs in the same way (via the "I'm a Teacher" tile —
 the login form is really just "staff sign-in"; which dashboard they land on
 is driven by their actual `profiles.role`) and lands on `/specialist`, a
 read-only roster of the students an administrator has assigned to them.
+
+A teacher can also add students to their own roster directly from `/teacher`
+(no admin needed) — RLS restricts this to students where `teacher_id` is
+themselves.
+
+### Password reset
+
+"Forgot your password?" on the sign-in form leads to `/login/forgot`, which
+calls `supabase.auth.resetPasswordForEmail`. **For the emailed link to
+redirect back correctly, set the Supabase project's Authentication → URL
+Configuration → Site URL (and add a Redirect URL) to your actual deployed
+origin** — by default it's `http://localhost:3000`, which only works for
+local dev. This also requires the project's email sending to be working
+(Supabase's built-in email service has low rate limits; configure custom
+SMTP for real usage). An administrator can also force a reset for any staff
+member from `/admin/staff` without relying on email at all.
 
 ### 4. Type-check / lint / build
 

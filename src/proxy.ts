@@ -44,18 +44,28 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && (pathname.startsWith("/admin") || pathname.startsWith("/specialist"))) {
+  if (user && !isPublic) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, is_active")
       .eq("id", user.id)
       .single();
 
-    const requiredRole = pathname.startsWith("/admin") ? "administrator" : "reading_specialist";
-    if (profile?.role !== requiredRole) {
+    if (profile && !profile.is_active) {
+      await supabase.auth.signOut();
       const url = request.nextUrl.clone();
-      url.pathname = "/";
+      url.pathname = "/login";
+      url.searchParams.set("deactivated", "1");
       return NextResponse.redirect(url);
+    }
+
+    if (pathname.startsWith("/admin") || pathname.startsWith("/specialist")) {
+      const requiredRole = pathname.startsWith("/admin") ? "administrator" : "reading_specialist";
+      if (profile?.role !== requiredRole) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/";
+        return NextResponse.redirect(url);
+      }
     }
   }
 

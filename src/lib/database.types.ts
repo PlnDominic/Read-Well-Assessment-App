@@ -45,9 +45,10 @@ export interface Database {
           name: string;
           email: string;
           role: UserRole;
+          is_active: boolean;
           created_at: string;
         },
-        { id: string; school_id: string; name: string; email: string; role: UserRole }
+        { id: string; school_id: string; name: string; email: string; role: UserRole; is_active?: boolean }
       >;
       students: Table<
         {
