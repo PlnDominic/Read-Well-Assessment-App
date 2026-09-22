@@ -1,1 +1,153 @@
-# Read-Well-Assessment-App
+# Read Well Assessment App
+
+A Grade 1 reading assessment app: students take a grade-matched assessment on
+a shared/kiosk device, and the app auto-generates a per-student report
+(skill-area breakdown + program-aligned recommendations) and a school-wide
+report for administrators, both exportable as PDF.
+
+This implements the design handed off from Claude Design (see
+[`design-handoff/`](./design-handoff)) as a full application, per the
+[PRD](./design-handoff/project/uploads/Read_Well_Assessment_App_PRD.pdf) and
+[TRD](./design-handoff/project/uploads/Read_Well_Assessment_App_TRD.pdf) in
+that bundle: Next.js (App Router, TypeScript) + Supabase (Postgres, Auth,
+Storage), matching the TRD's recommended stack.
+
+## Stack
+
+- **Frontend**: Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4
+- **Backend**: Supabase — Postgres, Auth, Storage; Next.js Route Handlers for
+  the assessment/scoring/report APIs
+- **PDF generation**: `@react-pdf/renderer`, run via Next's `after()` so it
+  never blocks the assessment-completion response
+- **Hosting**: Vercel (frontend + API routes) + Supabase (db/auth/storage),
+  as recommended in the TRD
+
+## Architecture notes / assumptions
+
+A few things the PRD/TRD left open that needed a concrete decision to ship:
+
+- **Students never authenticate.** Per TRD §6 ("kiosk-style, teacher-initiated"),
+  a teacher starts or resumes a student's session from the roster
+  (`startOrResumeAssessment` in `src/app/teacher/actions.ts`), which creates
+  an `assessment_sessions` row with a random 6-character `session_code` and
+  redirects straight into `/student/session/[id]`. If the student is on a
+  *different* device, the teacher can instead read them that code to enter
+  at `/student/join` — this is what the design's "I'm a Student" login tile
+  leads to. All student-facing reads/writes go through Route Handlers using
+  the Supabase **service-role** client (`src/lib/supabase/admin.ts`), since
+  there's no `auth.uid()` for RLS to key off of; authorization is instead
+  enforced in application code against the session id / code. See the header
+  comment in `supabase/migrations/0002_rls.sql` for the full rationale.
+- **Fluency scoring is simulated.** The PRD/TRD don't specify a
+  speech-recognition/oral-reading-fluency grading integration, and building
+  one is well beyond this scope. The mic item just records that the student
+  attempted it (matching the original prototype's simulated mic flow) and
+  scores it correct — see `evaluateResponse` in `src/lib/kiosk.ts`. Swapping
+  in real fluency scoring later only touches that one function.
+- **Overall report label.** "On Track" vs. "Needs Support" wasn't specified
+  as a formula anywhere. `computeOverallLabel` in `src/lib/scoring.ts` uses
+  "2+ flagged skill areas → Needs Support", chosen because it reproduces the
+  original prototype's mock reports exactly (Amara: 1 flag → On Track;
+  Diego: 4 flags → Needs Support; Layla: 0 flags → On Track).
+- **Report generation** runs synchronously-but-non-blocking via `after()`
+  (Next.js 15+) rather than a separate queue/worker, which is the pragmatic
+  reading of the TRD's "must not block the assessment-completion response"
+  requirement without standing up separate infrastructure for an MVP.
+
+## Getting started
+
+### 1. Install dependencies
+
+```bash
+npm install
+```
+
+### 2. Set up Supabase
+
+You need a Supabase project (local via the CLI, or hosted at supabase.com).
+
+**Option A — hosted:**
+1. Create a project at [supabase.com](https://supabase.com).
+2. In the SQL editor, run the migrations in `supabase/migrations/` **in
+   order** (`0001_init.sql`, `0002_rls.sql`, `0003_storage.sql`).
+3. Run `supabase/seed.sql` for demo data (Ms. Rivera's Grade 1 class at
+   Lincoln Elementary — see below for login credentials). If seeding the two
+   `auth.users` rows fails (GoTrue schema differences across versions),
+   create those two accounts instead via **Authentication → Add user** in
+   the dashboard, then re-run just the "Domain data" section of the seed
+   file with their real user ids substituted in.
+4. Copy `.env.example` to `.env.local` and fill in your project's URL, anon
+   key, and service role key (Project Settings → API).
+
+**Option B — local (Supabase CLI):**
+```bash
+supabase start
+supabase db reset   # applies migrations + seed.sql
+```
+Then copy the local URL/keys `supabase start` prints into `.env.local`.
+
+### 3. Run the app
+
+```bash
+npm run dev
+```
+
+Visit `http://localhost:3000`. Demo staff logins (password `readwell-demo`
+for both):
+- Teacher: `rivera@lincoln-elementary.edu`
+- Administrator: `chen@lincoln-elementary.edu`
+
+To try the student flow: sign in as the teacher, click **Start Assessment**
+next to a student on the roster — this redirects straight into that
+student's assessment (simulating handing the device to them). To test the
+separate-device kiosk path instead, note the `session_code` on that
+`assessment_sessions` row and enter it at `/student/join`.
+
+### 4. Type-check / lint / build
+
+```bash
+npx tsc --noEmit
+npx eslint .
+npm run build
+```
+
+## Deploying
+
+1. Push this repo to GitHub.
+2. Import it into Vercel; set the three env vars from `.env.example` as
+   Vercel project environment variables (development/preview/production, per
+   the TRD's isolated-environments requirement — use separate Supabase
+   projects per environment).
+3. Run the migrations against your production Supabase project before the
+   first deploy that needs them.
+
+## Project layout
+
+```
+src/app/                 Routes (App Router)
+  login/                 Staff sign-in + role tiles
+  student/join/          Kiosk session-code entry (unauthenticated)
+  student/session/[id]/  The assessment itself (unauthenticated, service-role backed)
+  teacher/                Roster + per-student report (RLS-scoped to the signed-in teacher/specialist)
+  admin/                  School-wide dashboard (administrator only)
+  api/kiosk/              Session start/autosave/complete (service-role)
+  api/reports/            Signed PDF download + audit log
+src/lib/
+  supabase/               Browser / server (RLS) / admin (service-role) clients
+  scoring.ts              Scoring Service (TRD §4.2)
+  recommendations.ts      Recommendation Engine (TRD §4.3)
+  reports.ts + pdf/       Report Generation Service (TRD §4.4)
+  kiosk.ts                Student-session helpers (response evaluation, codes)
+supabase/
+  migrations/             Schema + RLS + storage bucket
+  seed.sql                Demo data
+design-handoff/           Original Claude Design bundle (BRD/PRD/TRD, chat transcript, prototype)
+```
+
+## What's out of scope (matches the PRD)
+
+Grades other than 1, parent/guardian access, SIS integration, district-level
+rollup reporting, and native mobile apps are explicitly out of scope for this
+release per the PRD — the data model (e.g. `students.grade`,
+`assessments.grade_level`) is shaped to extend to more grades later without a
+redesign.

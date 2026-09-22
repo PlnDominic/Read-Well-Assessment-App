@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<![CDATA[
+<helmet>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Nunito+Sans:wght@400;600;700;800&display=swap');
+  body { margin: 0; background: #F6F1E4; }
+  * { box-sizing: border-box; font-family: 'Nunito Sans', sans-serif; }
+  ::-webkit-scrollbar { width: 10px; } ::-webkit-scrollbar-thumb { background: #C9BFA0; border-radius: 8px; }
+  a { color: #6B8F71; text-decoration: none; } a:hover { color: #4A6B52; text-decoration: underline; }
+</style>
+</helmet>
+
+<div style="min-height:100vh; background:#F6F1E4; display:flex; flex-direction:column; align-items:center; padding:24px 16px 60px;">
+
+  <!-- top switcher bar (hidden on quiz screens for low-distraction) -->
+  <sc-if value="{{ showTopBar }}">
+    <div style="width:100%; max-width:1100px; display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div style="width:36px;height:36px;border-radius:50%;background:#6B8F71;display:flex;align-items:center;justify-content:center;">
+          <svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" fill="#F6F1E4"/><circle cx="7" cy="9" r="1.6" fill="#4A6B52"/><circle cx="13" cy="9" r="1.6" fill="#4A6B52"/><path d="M6 13 Q10 16 14 13" stroke="#4A6B52" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg>
+        </div>
+        <span style="font-family:'Quicksand',sans-serif; font-weight:700; font-size:20px; color:#2E3B2F;">Read Well</span>
+      </div>
+      <button onClick="{{ backToLogin }}" style="background:#FFFFFF; border:1.5px solid #D9CFAF; color:#4A6B52; font-weight:700; font-size:14px; padding:9px 16px; border-radius:999px; cursor:pointer;">Switch Role</button>
+    </div>
+  </sc-if>
+
+  <!-- ===================== LOGIN / ROLE SELECT ===================== -->
+  <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ true }}">
+    <div data-screen-label="Login" style="width:100%; max-width:460px; margin-top:6vh; text-align:center;">
+      <div style="width:96px;height:96px;border-radius:50%;background:#6B8F71; margin:0 auto 18px; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 24px rgba(74,107,82,0.25);">
+        <svg width="56" height="56" viewBox="0 0 56 56">
+          <ellipse cx="18" cy="30" rx="7" ry="10" fill="#5C7F62"/>
+          <ellipse cx="38" cy="30" rx="7" ry="10" fill="#5C7F62"/>
+          <circle cx="28" cy="26" r="17" fill="#F6F1E4"/>
+          <circle cx="21" cy="24" r="4.2" fill="#2E3B2F"/>
+          <circle cx="35" cy="24" r="4.2" fill="#2E3B2F"/>
+          <circle cx="22" cy="23" r="1.3" fill="#F6F1E4"/>
+          <circle cx="36" cy="23" r="1.3" fill="#F6F1E4"/>
+          <path d="M25 33 Q28 37 31 33" stroke="#2E3B2F" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <polygon points="25,29 31,29 28,33" fill="#C97B5F"/>
+        </svg>
+      </div>
+      <h1 style="font-family:'Quicksand',sans-serif; font-weight:700; font-size:32px; color:#2E3B2F; margin:0 0 6px;">Read Well</h1>
+      <p style="color:#5C6B5D; font-size:16px; margin:0 0 36px;">Grade 1 Reading Assessment</p>
+
+      <div style="display:flex; flex-direction:column; gap:14px;">
+        <button onClick="{{ selectRoleStudent }}" style="display:flex; align-items:center; gap:14px; background:#FFFFFF; border:2px solid #E3DAC0; border-radius:18px; padding:18px 22px; cursor:pointer; text-align:left;">
+          <div style="width:44px;height:44px;border-radius:12px; background:#EAF1E8; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <svg width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" fill="#6B8F71"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" fill="#6B8F71"/></svg>
+          </div>
+          <div>
+            <div style="font-weight:800; color:#2E3B2F; font-size:17px;">I'm a Student</div>
+            <div style="color:#7A8A7C; font-size:13px;">Take my reading assessment</div>
+          </div>
+        </button>
+        <button onClick="{{ selectRoleTeacher }}" style="display:flex; align-items:center; gap:14px; background:#FFFFFF; border:2px solid #E3DAC0; border-radius:18px; padding:18px 22px; cursor:pointer; text-align:left;">
+          <div style="width:44px;height:44px;border-radius:12px; background:#F5E8DE; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <svg width="24" height="24" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="12" rx="2" fill="#C97B5F"/><rect x="8" y="19" width="8" height="2" rx="1" fill="#C97B5F"/></svg>
+          </div>
+          <div>
+            <div style="font-weight:800; color:#2E3B2F; font-size:17px;">I'm a Teacher</div>
+            <div style="color:#7A8A7C; font-size:13px;">Start assessments &amp; view reports</div>
+          </div>
+        </button>
+        <button onClick="{{ selectRoleAdmin }}" style="display:flex; align-items:center; gap:14px; background:#FFFFFF; border:2px solid #E3DAC0; border-radius:18px; padding:18px 22px; cursor:pointer; text-align:left;">
+          <div style="width:44px;height:44px;border-radius:12px; background:#EDEAE0; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <svg width="24" height="24" viewBox="0 0 24 24"><rect x="3" y="12" width="4" height="9" fill="#8B8365"/><rect x="10" y="7" width="4" height="14" fill="#8B8365"/><rect x="17" y="3" width="4" height="18" fill="#8B8365"/></svg>
+          </div>
+          <div>
+            <div style="font-weight:800; color:#2E3B2F; font-size:17px;">I'm an Administrator</div>
+            <div style="color:#7A8A7C; font-size:13px;">View the school-wide report</div>
+          </div>
+        </button>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ===================== STUDENT: INTRO ===================== -->
+  <sc-if value="{{ isStudentIntro }}">
+    <div data-screen-label="Student Intro" style="width:100%; max-width:480px; margin-top:8vh; text-align:center;">
+      <div style="width:140px;height:140px;border-radius:50%;background:#6B8F71; margin:0 auto 26px; display:flex; align-items:center; justify-content:center; box-shadow:0 14px 30px rgba(74,107,82,0.28);">
+        <svg width="86" height="86" viewBox="0 0 56 56">
+          <ellipse cx="18" cy="30" rx="7" ry="10" fill="#5C7F62"/>
+          <ellipse cx="38" cy="30" rx="7" ry="10" fill="#5C7F62"/>
+          <circle cx="28" cy="26" r="17" fill="#F6F1E4"/>
+          <circle cx="21" cy="24" r="4.2" fill="#2E3B2F"/>
+          <circle cx="35" cy="24" r="4.2" fill="#2E3B2F"/>
+          <circle cx="22" cy="23" r="1.3" fill="#F6F1E4"/>
+          <circle cx="36" cy="23" r="1.3" fill="#F6F1E4"/>
+          <path d="M23 32 Q28 39 33 32" stroke="#2E3B2F" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <polygon points="25,29 31,29 28,33" fill="#C97B5F"/>
+        </svg>
+      </div>
+      <h1 style="font-family:'Quicksand',sans-serif; font-weight:700; font-size:30px; color:#2E3B2F; margin:0 0 10px;">Hi! I'm Sunny.</h1>
+      <p style="color:#5C6B5D; font-size:19px; line-height:1.5; margin:0 0 40px;">Let's read some words together. There's no wrong answers &mdash; just try your best!</p>
+      <button onClick="{{ startQuiz }}" style="background:#C97B5F; color:#FFFFFF; border:none; border-radius:999px; font-family:'Quicksand',sans-serif; font-weight:700; font-size:22px; padding:20px 56px; cursor:pointer; box-shadow:0 10px 20px rgba(201,123,95,0.35);">Let's Start!</button>
+    </div>
+  </sc-if>
+
+  <!-- ===================== STUDENT: QUIZ ===================== -->
+  <sc-if value="{{ isStudentQuiz }}">
+    <div data-screen-label="Student Quiz" style="width:100%; max-width:640px; margin-top:2vh;">
+      <div style="display:flex; align-items:center; gap:14px; margin-bottom:28px;">
+        <div style="flex:1; height:14px; background:#E3DAC0; border-radius:999px; overflow:hidden;">
+          <div style="height:100%; background:#6B8F71; border-radius:999px; width:{{ progressPercent }}%; transition:width 0.3s;"></div>
+        </div>
+        <span style="font-weight:800; color:#5C6B5D; font-size:15px; white-space:nowrap;">{{ progressLabel }}</span>
+      </div>
+
+      <div style="background:#FFFFFF; border-radius:24px; padding:36px 30px; box-shadow:0 6px 20px rgba(0,0,0,0.06); text-align:center;">
+        <div style="display:inline-block; background:{{ currentQuestion.tileColor }}; color:#FFFFFF; font-weight:800; font-size:12px; letter-spacing:0.04em; padding:6px 14px; border-radius:999px; margin-bottom:18px;">{{ currentQuestion.skillLabel }}</div>
+
+        <sc-if value="{{ currentQuestion.passage }}">
+          <div style="background:#F6F1E4; border-radius:14px; padding:16px 20px; margin-bottom:18px; font-size:19px; color:#3A463B; line-height:1.6;">{{ currentQuestion.passage }}</div>
+        </sc-if>
+
+        <p style="font-family:'Quicksand',sans-serif; font-weight:700; font-size:24px; color:#2E3B2F; margin:0 0 28px; line-height:1.4;">{{ currentQuestion.prompt }}</p>
+
+        <sc-if value="{{ currentQuestion.isMic }}">
+          <button onClick="{{ toggleMic }}" style="width:120px; height:120px; border-radius:50%; background:{{ micButtonColor }}; border:none; display:flex; align-items:center; justify-content:center; margin:0 auto 12px; cursor:pointer; transition:transform 0.15s;">
+            <svg width="46" height="46" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3" fill="#FFFFFF"/><path d="M5 11a7 7 0 0 0 14 0" stroke="#FFFFFF" stroke-width="2" fill="none" stroke-linecap="round"/><line x1="12" y1="18" x2="12" y2="22" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+          <div style="color:#5C6B5D; font-weight:700; font-size:15px;">{{ micStatusLabel }}</div>
+        </sc-if>
+
+        <sc-if value="{{ currentQuestion.isChoice }}" hint-placeholder-count="3">
+          <div style="display:grid; gap:14px;">
+            <sc-for list="{{ currentQuestion.options }}" as="opt" hint-placeholder-count="3">
+              <button onClick="{{ opt.onSelect }}" style="{{ opt.buttonStyle }}">{{ opt.text }}</button>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; margin-top:22px;">
+        <sc-if value="{{ canProceed }}">
+          <button onClick="{{ nextQuestion }}" style="background:#6B8F71; color:#FFFFFF; border:none; border-radius:999px; font-family:'Quicksand',sans-serif; font-weight:700; font-size:18px; padding:14px 38px; cursor:pointer;">{{ nextButtonLabel }}</button>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ===================== STUDENT: DONE ===================== -->
+  <sc-if value="{{ isStudentDone }}">
+    <div data-screen-label="Student Done" style="width:100%; max-width:480px; margin-top:10vh; text-align:center;">
+      <div style="width:150px;height:150px;border-radius:50%;background:#C97B5F; margin:0 auto 28px; display:flex; align-items:center; justify-content:center; box-shadow:0 14px 30px rgba(201,123,95,0.3);">
+        <svg width="90" height="90" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke="#FFFFFF" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <h1 style="font-family:'Quicksand',sans-serif; font-weight:700; font-size:32px; color:#2E3B2F; margin:0 0 12px;">You're all done!</h1>
+      <p style="color:#5C6B5D; font-size:19px; line-height:1.5; margin:0 0 40px;">Great job today. Go tell your teacher you finished!</p>
+      <button onClick="{{ backToLogin }}" style="background:#6B8F71; color:#FFFFFF; border:none; border-radius:999px; font-family:'Quicksand',sans-serif; font-weight:700; font-size:20px; padding:18px 48px; cursor:pointer;">Finish</button>
+    </div>
+  </sc-if>
+
+  <!-- ===================== TEACHER: ROSTER ===================== -->
+  <sc-if value="{{ isTeacherRoster }}">
+    <div data-screen-label="Teacher Roster" style="width:100%; max-width:840px;">
+      <h1 style="font-family:'Quicksand',sans-serif; font-weight:700; font-size:26px; color:#2E3B2F; margin:0 0 4px;">Ms. Rivera's Class</h1>
+      <p style="color:#7A8A7C; font-size:15px; margin:0 0 24px;">Grade 1 &middot; Fall Reading Assessment Cycle</p>
+
+      <div style="background:#FFFFFF; border-radius:20px; box-shadow:0 6px 20px rgba(0,0,0,0.06); overflow:hidden;">
+        <sc-for list="{{ roster }}" as="s" hint-placeholder-count="5">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; padding:18px 24px; border-bottom:1px solid #EFEAD9; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:14px;">
+              <div style="width:42px;height:42px;border-radius:50%; background:#EAF1E8; display:flex; align-items:center; justify-content:center; font-family:'Quicksand',sans-serif; font-weight:700; color:#4A6B52;">{{ s.initials }}</div>
+              <div>
+                <div style="font-weight:800; color:#2E3B2F; font-size:16px;">{{ s.name }}</div>
+                <div style="font-size:13px; color:#8A9A8B;">Grade 1</div>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+              <span style="background:{{ s.statusBg }}; color:{{ s.statusColor }}; font-weight:700; font-size:13px; padding:6px 14px; border-radius:999px;">{{ s.statusLabel }}</span>
+              <button onClick="{{ s.action }}" style="background:{{ s.actionBg }}; color:{{ s.actionColor }}; border:1.5px solid {{ s.actionBorder }}; font-weight:700; font-size:14px; padding:9px 18px; border-radius:999px; cursor:pointer;">{{ s.actionLabel }}</button>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ===================== TEACHER: STUDENT REPORT ===================== -->
+  <sc-if value="{{ isTeacherReport }}">
+    <div data-screen-label="Student Report" style="width:100%; max-width:760px;">
+      <button onClick="{{ backToRoster }}" style="background:none; border:none; color:#6B8F71; font-weight:700; font-size:14px; cursor:pointer; padding:0; margin-bottom:16px;">&larr; Back to class</button>
+
+      <div style="background:#FFFFFF; border-radius:20px; box-shadow:0 6px 20px rgba(0,0,0,0.06); padding:30px 32px; margin-bottom:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; margin-bottom:22px;">
+          <div>
+            <h1 style="font-family:'Quicksand',sans-serif; font-weight:700; font-size:26px; color:#2E3B2F; margin:0 0 4px;">{{ report.name }}</h1>
+            <p style="color:#7A8A7C; font-size:14px; margin:0;">Grade 1 &middot; Assessed {{ report.date }}</p>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="background:{{ report.overallBg }}; color:{{ report.overallColor }}; font-weight:800; font-size:14px; padding:8px 16px; border-radius:999px;">{{ report.overallLabel }}</span>
+            <button style="background:#F6F1E4; border:1.5px solid #E3DAC0; color:#4A6B52; font-weight:700; font-size:14px; padding:9px 16px; border-radius:999px; cursor:pointer;">Export PDF</button>
+          </div>
+        </div>
+
+        <div style="font-family:'Quicksand',sans-serif; font-weight:700; font-size:15px; color:#2E3B2F; margin-bottom:14px;">Skill Area Breakdown</div>
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <sc-for list="{{ report.skills }}" as="sk" hint-placeholder-count="5">
+            <div>
+              <div style="display:flex; justify-content:space-between; font-size:14px; margin-bottom:6px;">
+                <span style="font-weight:700; color:#3A463B;">{{ sk.name }}</span>
+                <span style="font-weight:700; color:{{ sk.textColor }};">{{ sk.scoreLabel }}</span>
+              </div>
+              <div style="height:12px; background:#EFEAD9; border-radius:999px; overflow:hidden;">
+                <div style="height:100%; background:{{ sk.barColor }}; width:{{ sk.score }}%; border-radius:999px;"></div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="background:#FFFFFF; border-radius:20px; box-shadow:0 6px 20px rgba(0,0,0,0.06); padding:30px 32px;">
+        <div style="font-family:'Quicksand',sans-serif; font-weight:700; font-size:15px; color:#2E3B2F; margin-bottom:16px;">Program-Aligned Recommendations</div>
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <sc-for list="{{ report.recommendations }}" as="rec" hint-placeholder-count="2">
+            <div style="display:flex; gap:14px; background:#FBF3EE; border-left:4px solid #C97B5F; border-radius:10px; padding:14px 18px;">
+              <div style="flex:1;">
+                <div style="font-weight:800; color:#2E3B2F; font-size:14px; margin-bottom:4px;">{{ rec.skill }}</div>
+                <div style="color:#5C6B5D; font-size:14px; line-height:1.5;">{{ rec.text }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ===================== ADMIN: SCHOOL DASHBOARD ===================== -->
+  <sc-if value="{{ isAdminDashboard }}">
+    <div data-screen-label="Admin Dashboard" style="width:100%; max-width:920px;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:14px; margin-bottom:24px;">
+        <div>
+          <h1 style="font-family:'Quicksand',sans-serif; font-weight:700; font-size:26px; color:#2E3B2F; margin:0 0 4px;">Lincoln Elementary</h1>
+          <p style="color:#7A8A7C; font-size:15px; margin:0;">School-Wide Report &middot; Fall Assessment Cycle</p>
+        </div>
+        <button style="background:#F6F1E4; border:1.5px solid #E3DAC0; color:#4A6B52; font-weight:700; font-size:14px; padding:10px 18px; border-radius:999px; cursor:pointer;">Export PDF</button>
+      </div>
+
+      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin-bottom:24px;">
+        <div style="background:#FFFFFF; border-radius:16px; padding:22px; box-shadow:0 6px 20px rgba(0,0,0,0.06);">
+          <div style="color:#8A9A8B; font-size:13px; font-weight:700; margin-bottom:8px;">Students Assessed</div>
+          <div style="font-family:'Quicksand',sans-serif; font-weight:700; font-size:30px; color:#2E3B2F;">128 / 132</div>
+        </div>
+        <div style="background:#FFFFFF; border-radius:16px; padding:22px; box-shadow:0 6px 20px rgba(0,0,0,0.06);">
+          <div style="color:#8A9A8B; font-size:13px; font-weight:700; margin-bottom:8px;">Grade Level</div>
+          <div style="font-family:'Quicksand',sans-serif; font-weight:700; font-size:30px; color:#2E3B2F;">Grade 1</div>
+        </div>
+        <div style="background:#FFFFFF; border-radius:16px; padding:22px; box-shadow:0 6px 20px rgba(0,0,0,0.06);">
+          <div style="color:#8A9A8B; font-size:13px; font-weight:700; margin-bottom:8px;">Avg. Overall Score</div>
+          <div style="font-family:'Quicksand',sans-serif; font-weight:700; font-size:30px; color:#6B8F71;">76%</div>
+        </div>
+      </div>
+
+      <div style="background:#FFFFFF; border-radius:20px; box-shadow:0 6px 20px rgba(0,0,0,0.06); padding:30px 32px; margin-bottom:20px;">
+        <div style="font-family:'Quicksand',sans-serif; font-weight:700; font-size:15px; color:#2E3B2F; margin-bottom:18px;">Difficulty Area Distribution (% of students flagged)</div>
+        <div style="display:flex; flex-direction:column; gap:16px;">
+          <sc-for list="{{ schoolSkills }}" as="sk" hint-placeholder-count="5">
+            <div>
+              <div style="display:flex; justify-content:space-between; font-size:14px; margin-bottom:6px;">
+                <span style="font-weight:700; color:#3A463B;">{{ sk.name }}</span>
+                <span style="font-weight:700; color:#8A6A50;">{{ sk.pct }}% flagged</span>
+              </div>
+              <div style="height:14px; background:#EFEAD9; border-radius:999px; overflow:hidden;">
+                <div style="height:100%; background:#C97B5F; width:{{ sk.pct }}%; border-radius:999px;"></div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="background:#EAF1E8; border-radius:16px; padding:22px 26px; color:#3A463B; font-size:14px; line-height:1.6;">
+        <strong style="color:#2E3B2F;">Planning note:</strong> Fluency and Sight Word Recognition are the most common flagged areas this cycle. Consider prioritizing intervention resources for these skill areas across Grade 1 classrooms.
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+]]>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+<![CDATA[
+const QUESTIONS = [
+  { skill: 'phonics', skillLabel: 'PHONICS', tileColor: '#6B8F71', isChoice: true,
+    prompt: "Tap the word that starts with the same sound as this: /b/", options: ['BALL', 'CAT', 'SUN'] },
+  { skill: 'sightWords', skillLabel: 'SIGHT WORDS', tileColor: '#C97B5F', isChoice: true,
+    prompt: 'Tap the word: "the"', options: ['THE', 'AND', 'SHE'] },
+  { skill: 'fluency', skillLabel: 'FLUENCY', tileColor: '#8B8365', isMic: true,
+    prompt: 'Tap the button and read this word out loud: "jump"' },
+  { skill: 'vocabulary', skillLabel: 'VOCABULARY', tileColor: '#6B8F71', isChoice: true,
+    prompt: "Which word means the same as \"happy\"?", options: ['JOYFUL', 'SAD', 'ANGRY'] },
+  { skill: 'comprehension', skillLabel: 'COMPREHENSION', tileColor: '#C97B5F', isChoice: true,
+    passage: 'The dog ran to the park. It was sunny outside.',
+    prompt: 'Where did the dog go?', options: ['THE PARK', 'THE STORE', 'SCHOOL'] },
+];
+
+const ROSTER = [
+  { id: 1, name: 'Amara Johnson', status: 'completed' },
+  { id: 2, name: 'Diego Martinez', status: 'completed' },
+  { id: 3, name: 'Priya Shah', status: 'in_progress' },
+  { id: 4, name: 'Noah Williams', status: 'not_started' },
+  { id: 5, name: 'Layla Chen', status: 'completed' },
+];
+
+const REPORTS = {
+  1: { name: 'Amara Johnson', date: 'Sep 18, 2026', overallLabel: 'On Track', overallBg: '#EAF1E8', overallColor: '#4A6B52',
+    skills: [
+      { name: 'Phonemic Awareness / Phonics', score: 88 },
+      { name: 'Fluency', score: 62 },
+      { name: 'Vocabulary', score: 91 },
+      { name: 'Comprehension', score: 84 },
+      { name: 'Sight Word Recognition', score: 79 },
+    ],
+    recommendations: [
+      { skill: 'Fluency', text: 'Practice repeated readings of grade-level passages (Read Well Unit 4) to build reading rate and expression.' },
+    ] },
+  2: { name: 'Diego Martinez', date: 'Sep 18, 2026', overallLabel: 'Needs Support', overallBg: '#FBF3EE', overallColor: '#A85C3F',
+    skills: [
+      { name: 'Phonemic Awareness / Phonics', score: 48 },
+      { name: 'Fluency', score: 55 },
+      { name: 'Vocabulary', score: 72 },
+      { name: 'Comprehension', score: 60 },
+      { name: 'Sight Word Recognition', score: 41 },
+    ],
+    recommendations: [
+      { skill: 'Phonemic Awareness / Phonics', text: 'Daily sound-blending drills from Read Well Foundations Level A, focusing on short-vowel patterns.' },
+      { skill: 'Sight Word Recognition', text: 'Flashcard review of the Read Well Grade 1 high-frequency word list, 10 minutes per day.' },
+    ] },
+  5: { name: 'Layla Chen', date: 'Sep 18, 2026', overallLabel: 'On Track', overallBg: '#EAF1E8', overallColor: '#4A6B52',
+    skills: [
+      { name: 'Phonemic Awareness / Phonics', score: 90 },
+      { name: 'Fluency', score: 85 },
+      { name: 'Vocabulary', score: 88 },
+      { name: 'Comprehension', score: 92 },
+      { name: 'Sight Word Recognition', score: 87 },
+    ],
+    recommendations: [
+      { skill: 'General', text: 'No flagged areas this cycle. Continue with grade-level independent reading.' },
+    ] },
+};
+
+const SCHOOL_SKILLS = [
+  { name: 'Fluency', pct: 34 },
+  { name: 'Sight Word Recognition', pct: 29 },
+  { name: 'Phonemic Awareness / Phonics', pct: 21 },
+  { name: 'Comprehension', pct: 18 },
+  { name: 'Vocabulary', pct: 12 },
+];
+
+class Component extends DCLogic {
+  state = { screen: 'login', qIndex: 0, selectedOption: null, micState: 'idle', selectedStudentId: null };
+
+  goTo(screen, extra) { this.setState(Object.assign({ screen }, extra)); }
+
+  startQuiz() { this.setState({ screen: 'studentQuiz', qIndex: 0, selectedOption: null, micState: 'idle' }); }
+
+  selectOption(idx) { this.setState({ selectedOption: idx }); }
+
+  toggleMic() {
+    if (this.state.micState === 'done') return;
+    this.setState({ micState: 'recording' });
+    setTimeout(() => this.setState({ micState: 'done' }), 1200);
+  }
+
+  nextQuestion() {
+    const isLast = this.state.qIndex >= QUESTIONS.length - 1;
+    if (isLast) { this.setState({ screen: 'studentDone' }); return; }
+    this.setState({ qIndex: this.state.qIndex + 1, selectedOption: null, micState: 'idle' });
+  }
+
+  viewReport(id) { this.goTo('teacherReport', { selectedStudentId: id }); }
+  startAssessment() { this.setState({ screen: 'studentQuiz', qIndex: 0, selectedOption: null, micState: 'idle' }); }
+
+  renderVals() {
+    const screen = this.state.screen;
+    const q = QUESTIONS[this.state.qIndex];
+    const selectedOption = this.state.selectedOption;
+    const micState = this.state.micState;
+
+    const currentQuestion = q ? {
+      skillLabel: q.skillLabel, tileColor: q.tileColor, prompt: q.prompt, passage: q.passage || null,
+      isChoice: !!q.isChoice, isMic: !!q.isMic,
+      options: (q.options || []).map((text, i) => ({
+        text, onSelect: () => this.selectOption(i),
+        buttonStyle: 'text-align:center; font-family:"Quicksand",sans-serif; font-weight:700; font-size:19px; padding:20px; border-radius:16px; cursor:pointer; border:2.5px solid ' +
+          (selectedOption === i ? '#6B8F71' : '#E3DAC0') + '; background:' + (selectedOption === i ? '#EAF1E8' : '#FFFFFF') + '; color:#2E3B2F;',
+      })),
+    } : null;
+
+    const canProceed = q && q.isChoice ? selectedOption !== null : q && q.isMic ? micState === 'done' : false;
+
+    const roster = ROSTER.map(s => {
+      const initials = s.name.split(' ').map(n => n[0]).join('');
+      const map = {
+        completed: { label: 'Completed', bg: '#EAF1E8', color: '#4A6B52', actionLabel: 'View Report', actionBg: '#FFFFFF', actionColor: '#4A6B52', actionBorder: '#B9CDBB' },
+        in_progress: { label: 'In Progress', bg: '#FBF0DE', color: '#8A6A32', actionLabel: 'Resume', actionBg: '#FFFFFF', actionColor: '#8A6A32', actionBorder: '#E3D3A8' },
+        not_started: { label: 'Not Started', bg: '#F1EEE4', color: '#8A8A78', actionLabel: 'Start Assessment', actionBg: '#6B8F71', actionColor: '#FFFFFF', actionBorder: '#6B8F71' },
+      }[s.status];
+      return {
+        initials, name: s.name, statusLabel: map.label, statusBg: map.bg, statusColor: map.color,
+        actionLabel: map.actionLabel, actionBg: map.actionBg, actionColor: map.actionColor, actionBorder: map.actionBorder,
+        action: s.status === 'completed' ? () => this.viewReport(s.id) : () => this.startAssessment(),
+      };
+    });
+
+    const r = REPORTS[this.state.selectedStudentId] || REPORTS[2];
+    const report = {
+      name: r.name, date: r.date, overallLabel: r.overallLabel, overallBg: r.overallBg, overallColor: r.overallColor,
+      skills: r.skills.map(sk => ({
+        name: sk.name, score: sk.score, scoreLabel: sk.score + '%',
+        textColor: sk.score < 65 ? '#A85C3F' : '#4A6B52',
+        barColor: sk.score < 65 ? '#C97B5F' : '#6B8F71',
+      })),
+      recommendations: r.recommendations,
+    };
+
+    return {
+      isLogin: screen === 'login', showTopBar: screen !== 'login',
+      isStudentIntro: screen === 'studentIntro', isStudentQuiz: screen === 'studentQuiz', isStudentDone: screen === 'studentDone',
+      isTeacherRoster: screen === 'teacherRoster', isTeacherReport: screen === 'teacherReport', isAdminDashboard: screen === 'adminDashboard',
+      selectRoleStudent: () => this.goTo('studentIntro'),
+      selectRoleTeacher: () => this.goTo('teacherRoster'),
+      selectRoleAdmin: () => this.goTo('adminDashboard'),
+      backToLogin: () => this.goTo('login'),
+      backToRoster: () => this.goTo('teacherRoster'),
+      startQuiz: () => this.startQuiz(),
+      nextQuestion: () => this.nextQuestion(),
+      toggleMic: () => this.toggleMic(),
+      currentQuestion, canProceed,
+      progressPercent: Math.round(((this.state.qIndex) / QUESTIONS.length) * 100 + (10)),
+      progressLabel: 'Question ' + (this.state.qIndex + 1) + ' of ' + QUESTIONS.length,
+      nextButtonLabel: this.state.qIndex >= QUESTIONS.length - 1 ? "I'm Done!" : 'Next',
+      micButtonColor: micState === 'done' ? '#6B8F71' : micState === 'recording' ? '#A85C3F' : '#C97B5F',
+      micStatusLabel: micState === 'done' ? 'Great reading! ✓' : micState === 'recording' ? 'Listening...' : 'Tap to read aloud',
+      roster, report, schoolSkills: SCHOOL_SKILLS,
+    };
+  }
+}
+]]>
+</script>
+</body>
+</html>
