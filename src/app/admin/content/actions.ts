@@ -97,3 +97,59 @@ export async function deleteRecommendationRule(formData: FormData) {
 
   revalidatePath("/admin/content");
 }
+
+export async function addSkillArea(formData: FormData) {
+  await requireAdmin();
+
+  const key = String(formData.get("key") ?? "").trim();
+  const name = String(formData.get("name") ?? "").trim();
+  if (!/^[a-zA-Z][a-zA-Z0-9]*$/.test(key)) {
+    throw new Error("Key must be letters/numbers only, starting with a letter (e.g. \"phonics\")");
+  }
+  if (!name) throw new Error("Name is required");
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("skill_areas").insert({ key, name });
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/admin/content");
+}
+
+export async function renameSkillArea(formData: FormData) {
+  await requireAdmin();
+
+  const id = String(formData.get("id") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  if (!id || !name) throw new Error("Name is required");
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("skill_areas").update({ name }).eq("id", id);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/admin/content");
+}
+
+/** Only allowed when nothing references it — see the inUse check built in
+ * AdminContentPage (scans every assessment's items and recommendation_rules). */
+export async function deleteSkillArea(formData: FormData) {
+  await requireAdmin();
+
+  const id = String(formData.get("id") ?? "");
+  const key = String(formData.get("key") ?? "");
+  const admin = createAdminClient();
+
+  const { count: ruleCount } = await admin
+    .from("recommendation_rules")
+    .select("id", { count: "exact", head: true })
+    .eq("skill_area_id", id);
+  if ((ruleCount ?? 0) > 0) throw new Error("This skill area is used by a recommendation rule — remove that first");
+
+  const { data: assessments } = await admin.from("assessments").select("items");
+  const inUseByItem = (assessments ?? []).some((a) => a.items.some((item) => item.skillAreaKey === key));
+  if (inUseByItem) throw new Error("This skill area is used by an assessment item — remove that first");
+
+  const { error } = await admin.from("skill_areas").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/admin/content");
+}

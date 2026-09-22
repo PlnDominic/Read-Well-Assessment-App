@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { AssessmentItemsEditor } from "./AssessmentItemsEditor";
+import { SkillAreasEditor } from "./SkillAreasEditor";
 import { addRecommendationRule, deleteRecommendationRule } from "./actions";
 
-const GRADE_LEVEL = 1; // only Grade 1 is in scope for this release (PRD §6)
+const GRADE_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8];
 
 type RuleRow = {
   id: string;
@@ -12,7 +14,14 @@ type RuleRow = {
   skill_areas: { id: string; name: string };
 };
 
-export default async function AdminContentPage() {
+export default async function AdminContentPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ grade?: string }>;
+}) {
+  const { grade: gradeParam } = await searchParams;
+  const GRADE_LEVEL = GRADE_OPTIONS.includes(Number(gradeParam)) ? Number(gradeParam) : 1;
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -23,6 +32,14 @@ export default async function AdminContentPage() {
   if (!profile || profile.role !== "administrator") redirect("/");
 
   const { data: skillAreas } = await supabase.from("skill_areas").select("id, key, name").order("name");
+
+  const { data: allAssessmentItems } = await supabase.from("assessments").select("items");
+  const usedSkillAreaKeys = new Set<string>();
+  for (const a of allAssessmentItems ?? []) {
+    for (const item of a.items) usedSkillAreaKeys.add(item.skillAreaKey);
+  }
+  const { data: allRuleSkillAreaIds } = await supabase.from("recommendation_rules").select("skill_area_id");
+  const usedSkillAreaIds = new Set((allRuleSkillAreaIds ?? []).map((r) => r.skill_area_id));
 
   const { data: assessment } = await supabase
     .from("assessments")
@@ -40,10 +57,37 @@ export default async function AdminContentPage() {
   return (
     <div className="w-full max-w-[920px]">
       <h1 className="font-heading font-bold text-[26px] text-[var(--color-sage-deep)] m-0 mb-1">Content</h1>
-      <p className="text-[var(--color-muted)] text-sm m-0 mb-6">
+      <p className="text-[var(--color-muted)] text-sm m-0 mb-5">
         Edits here don&apos;t require a code deploy — saving the assessment creates a new version so past
         sessions keep the content they were assessed against.
       </p>
+
+      <div className="flex gap-2 mb-6 flex-wrap">
+        {GRADE_OPTIONS.map((g) => (
+          <Link
+            key={g}
+            href={`/admin/content?grade=${g}`}
+            className="px-3.5 py-1.5 rounded-full text-xs font-bold no-underline"
+            style={{
+              background: g === GRADE_LEVEL ? "var(--color-sage)" : "white",
+              color: g === GRADE_LEVEL ? "white" : "var(--color-sage-dark)",
+              border: `1.5px solid ${g === GRADE_LEVEL ? "var(--color-sage)" : "var(--color-cream-border)"}`,
+            }}
+          >
+            Grade {g}
+          </Link>
+        ))}
+      </div>
+
+      <div className="bg-white rounded-[20px] shadow-[0_6px_20px_rgba(0,0,0,0.06)] px-8 py-7.5 mb-6">
+        <div className="font-heading font-bold text-sm text-[var(--color-sage-deep)] mb-4.5">Skill areas</div>
+        <SkillAreasEditor
+          skillAreas={(skillAreas ?? []).map((sa) => ({
+            ...sa,
+            inUse: usedSkillAreaKeys.has(sa.key) || usedSkillAreaIds.has(sa.id),
+          }))}
+        />
+      </div>
 
       <div className="bg-white rounded-[20px] shadow-[0_6px_20px_rgba(0,0,0,0.06)] px-8 py-7.5 mb-6">
         <div className="flex items-center justify-between mb-4.5">

@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
+import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
 import { createClient } from "@/lib/supabase/server";
-import { addStudentToOwnRoster, startOrResumeAssessment } from "./actions";
+import { addStudentToOwnRoster, cancelSession, startOrResumeAssessment } from "./actions";
 
 const STATUS_STYLE: Record<
   string,
@@ -166,19 +167,32 @@ export default async function TeacherRosterPage() {
                       {style.actionLabel}
                     </Link>
                   ) : (
-                    <form action={startOrResumeAssessment.bind(null, s.id)}>
-                      <button
-                        type="submit"
-                        className="font-bold text-sm px-4.5 py-2.25 rounded-full cursor-pointer"
-                        style={{
-                          background: style.actionBg,
-                          color: style.actionColor,
-                          border: `1.5px solid ${style.actionBorder}`,
-                        }}
-                      >
-                        {style.actionLabel}
-                      </button>
-                    </form>
+                    <>
+                      <form action={startOrResumeAssessment.bind(null, s.id)}>
+                        <button
+                          type="submit"
+                          className="font-bold text-sm px-4.5 py-2.25 rounded-full cursor-pointer"
+                          style={{
+                            background: style.actionBg,
+                            color: style.actionColor,
+                            border: `1.5px solid ${style.actionBorder}`,
+                          }}
+                        >
+                          {style.actionLabel}
+                        </button>
+                      </form>
+                      {profile.role === "teacher" && latest && (
+                        <form action={cancelSession}>
+                          <input type="hidden" name="sessionId" value={latest.id} />
+                          <ConfirmSubmitButton
+                            confirmMessage={`Cancel ${s.name}'s in-progress session? They'll need a new code to start over.`}
+                            className="text-[var(--color-terracotta-dark)] text-xs font-bold bg-none border-none cursor-pointer"
+                          >
+                            Cancel
+                          </ConfirmSubmitButton>
+                        </form>
+                      )}
+                    </>
                   )}
                 </div>
               </div>

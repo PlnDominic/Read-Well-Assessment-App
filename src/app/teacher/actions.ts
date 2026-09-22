@@ -105,3 +105,25 @@ export async function startOrResumeAssessment(studentId: string) {
 
   redirect(`/student/session/${sessionId}`);
 }
+
+/**
+ * Abandons a not-yet-completed session (e.g. started by mistake, or the
+ * kiosk device needs a fresh code). RLS
+ * (assessment_sessions_delete_staff, 0007) independently restricts this to
+ * teacher/administrator and blocks it for completed sessions.
+ */
+export async function cancelSession(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const sessionId = String(formData.get("sessionId") ?? "");
+  if (!sessionId) throw new Error("Missing session id");
+
+  const { error } = await supabase.from("assessment_sessions").delete().eq("id", sessionId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/teacher");
+}

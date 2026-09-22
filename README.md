@@ -69,7 +69,7 @@ You need a Supabase project (local via the CLI, or hosted at supabase.com).
 **Option A — hosted:**
 1. Create a project at [supabase.com](https://supabase.com).
 2. In the SQL editor, run the migrations in `supabase/migrations/` **in
-   order** (`0001_init.sql` through `0005_profiles_is_active.sql`).
+   order** (`0001_init.sql` through `0007_session_cancel_policy.sql`).
 3. Run `supabase/seed.sql` for demo data (Ms. Rivera's Grade 1 class at
    Lincoln Elementary — see below for login credentials). If seeding the two
    `auth.users` rows fails (GoTrue schema differences across versions),
@@ -113,12 +113,22 @@ Signed in as an administrator, the top nav under `/admin` has:
   change a staff member's role, deactivate/reactivate their account, or
   force a password reset (also shown once). An admin can't deactivate or
   demote themselves from this screen.
-- **Content** — edit the Grade 1 assessment's items (choice/mic, options,
-  correct answers) and the skill-area → recommendation mapping, without a
-  code deploy. Saving the assessment creates a new version rather than
-  mutating in place, so already-completed sessions keep pointing at the
-  exact content they were scored against
+- **Content** — pick a grade (1–8), then edit that grade's assessment items
+  (choice/mic, options, correct answers), its skill areas (add/rename;
+  delete only when unused), and its skill-area → recommendation mapping —
+  all without a code deploy. Saving the assessment creates a new version
+  rather than mutating in place, so already-completed sessions keep
+  pointing at the exact content they were scored against. A database
+  trigger (`0006_grade_match_guard.sql`) independently guarantees a
+  session's assessment always matches the student's own grade, regardless
+  of what the application code does
 - **Cycles** — close the current assessment cycle and start a new one
+- **Audit Log** — who viewed or exported which report, most recent first
+
+A teacher can cancel a not-yet-completed session directly from `/teacher`
+(e.g. one started by mistake, or to hand the student a fresh code) — this
+is blocked for already-completed sessions at the RLS layer, not just in
+the UI.
 
 A reading specialist signs in the same way (via the "I'm a Teacher" tile —
 the login form is really just "staff sign-in"; which dashboard they land on
