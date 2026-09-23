@@ -79,16 +79,16 @@ npm install
 
 You need a Supabase project (local via the CLI, or hosted at supabase.com).
 
-**Option A — hosted:**
+**Option A — hosted (production or any real deployment):**
 1. Create a project at [supabase.com](https://supabase.com).
-2. In the SQL editor, run the migrations in `supabase/migrations/` **in
-   order** (`0001_init.sql` through `0007_session_cancel_policy.sql`).
-3. Run `supabase/seed.sql` for demo data (Ms. Rivera's Grade 1 class at
-   Lincoln Elementary — see below for login credentials). If seeding the two
-   `auth.users` rows fails (GoTrue schema differences across versions),
-   create those two accounts instead via **Authentication → Add user** in
-   the dashboard, then re-run just the "Domain data" section of the seed
-   file with their real user ids substituted in.
+2. In the SQL editor, run every migration in `supabase/migrations/` **in
+   order** (`0001_init.sql` through the highest-numbered file present).
+3. Run `supabase/bootstrap.sql` to create your **real** first school and
+   administrator (it walks you through creating the account in
+   Authentication → Add user first, then linking it up).
+   **Do not run `supabase/seed.sql` here** — that file creates two demo
+   login accounts with a password published in this public repo
+   (`readwell-demo`); it's only safe against a local, throwaway database.
 4. Copy `.env.example` to `.env.local` and fill in your project's URL, anon
    key, and service role key (Project Settings → API).
 
@@ -105,16 +105,23 @@ Then copy the local URL/keys `supabase start` prints into `.env.local`.
 npm run dev
 ```
 
-Visit `http://localhost:3000`. Demo staff logins (password `readwell-demo`
-for both):
-- Teacher: `rivera@lincoln-elementary.edu`
-- Administrator: `chen@lincoln-elementary.edu`
+Visit `http://localhost:3000`.
 
-To try the student flow: sign in as the teacher, click **Start Assessment**
-next to a student on the roster — this redirects straight into that
-student's assessment (simulating handing the device to them). To test the
-separate-device kiosk path instead, note the `session_code` on that
-`assessment_sessions` row and enter it at `/student/join`.
+**If you seeded demo data (Option B, or ran `seed.sql` by hand):** sign in
+with `rivera@lincoln-elementary.edu` (teacher) or
+`chen@lincoln-elementary.edu` (administrator), password `readwell-demo` for
+both — these only exist in that local database, never in a hosted one (see
+the warning in `supabase/seed.sql`). To try the student flow: sign in as
+the teacher, click **Start Assessment** next to a student on the roster —
+this redirects straight into that student's assessment (simulating handing
+the device to them). To test the separate-device kiosk path instead, note
+the `session_code` on that `assessment_sessions` row and enter it at
+`/student/join`.
+
+**If you bootstrapped a real deployment (Option A):** sign in with the
+administrator account you created in `supabase/bootstrap.sql`, then use
+`/admin/staff` to add real teachers/specialists and `/admin/students` (or
+a teacher's own roster page) to add real students.
 
 ### Offline handling
 
@@ -316,7 +323,8 @@ src/lib/
   kiosk.ts                Student-session helpers (response evaluation, codes)
 supabase/
   migrations/             Schema + RLS + storage bucket
-  seed.sql                Demo data
+  seed.sql                Demo data — LOCAL DEV ONLY, never run against a hosted project
+  bootstrap.sql           Creates your real first school + administrator on a hosted project
 design-handoff/           Original Claude Design bundle (BRD/PRD/TRD, chat transcript, prototype)
 ```
 

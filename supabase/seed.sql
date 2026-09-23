@@ -1,4 +1,11 @@
--- Demo/dev seed data for local development.
+-- ⚠️  LOCAL DEVELOPMENT ONLY. DO NOT RUN THIS AGAINST A HOSTED/PRODUCTION
+-- SUPABASE PROJECT. ⚠️
+--
+-- It creates two live login accounts with a password published in this
+-- public repo ("readwell-demo") — fine on a throwaway local Postgres
+-- instance, a real security hole on anything reachable from the internet.
+-- For a real deployment, use supabase/bootstrap.sql to create your actual
+-- first school and administrator instead.
 --
 -- Mirrors the mock data from the original clickable prototype (Ms. Rivera's
 -- Grade 1 roster, Lincoln Elementary, the 5-item sample assessment) so the
@@ -8,12 +15,11 @@
 -- re-run against a fresh `supabase db reset` and so the demo login ids are
 -- easy to reference from docs/tests.
 --
--- NOTE: seeding rows directly into auth.users/auth.identities is a
--- local-dev convenience that depends on the GoTrue schema shipped with the
--- Supabase CLI's Postgres image. If it errors on your CLI version, create
--- the two staff accounts instead via Supabase Studio → Authentication →
--- "Add user" (use the emails below), then re-run just the "Domain data"
--- section with their real user ids substituted for the ids below.
+-- NOTE: seeding rows directly into auth.users/auth.identities depends on
+-- the GoTrue schema shipped with the Supabase CLI's local Postgres image.
+-- It is not something to replicate against a hosted project even for a
+-- one-off — see supabase/bootstrap.sql for the supported way to create a
+-- real account there.
 
 begin;
 
