@@ -6,8 +6,17 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { computeOverallLabel } from "@/lib/scoring";
 import { retryStudentReport } from "./actions";
+import type { AssessmentItem } from "@/lib/database.types";
 
 type ResultRow = { score: number; flagged_as_difficulty: boolean; skill_areas: { id: string; name: string } };
+
+function formatAnswer(item: AssessmentItem, answer: unknown): string {
+  if (item.type === "mic") {
+    if (typeof answer === "string" && answer && answer !== "attempted") return `"${answer}"`;
+    return "Read aloud (attempted)";
+  }
+  return typeof answer === "string" ? answer : "—";
+}
 
 export default async function StudentReportPage({
   params,
@@ -47,10 +56,23 @@ export default async function StudentReportPage({
 
   const { data: session } = await supabase
     .from("assessment_sessions")
-    .select("id, completed_at")
+    .select("id, completed_at, assessment_id")
     .eq("id", sessionId)
     .single();
   if (!session) notFound();
+
+  const { data: assessment } = await supabase
+    .from("assessments")
+    .select("items")
+    .eq("id", session.assessment_id)
+    .single();
+  const items = (assessment?.items ?? []) as AssessmentItem[];
+
+  const { data: responses } = await supabase
+    .from("responses")
+    .select("item_id, answer, is_correct")
+    .eq("session_id", sessionId);
+  const responseByItemId = new Map((responses ?? []).map((r) => [r.item_id, r]));
 
   const { data: results, error: resultsError } = await supabase
     .from("results")
@@ -167,6 +189,40 @@ export default async function StudentReportPage({
                         background: flagged ? "var(--color-terracotta)" : "var(--color-sage)",
                       }}
                     />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-[20px] shadow-[0_6px_20px_rgba(0,0,0,0.06)] px-8 py-7.5 mb-5">
+          <div className="font-heading font-bold text-sm text-[var(--color-sage-deep)] mb-4">
+            Question-by-Question
+          </div>
+          <div className="flex flex-col gap-3">
+            {items.map((item, i) => {
+              const response = responseByItemId.get(item.id);
+              const isCorrect = response?.is_correct === true;
+              return (
+                <div
+                  key={item.id}
+                  className="flex items-start gap-3.5 bg-[var(--color-cream)] rounded-xl px-4.5 py-3.5"
+                >
+                  <span
+                    className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold text-white mt-0.5"
+                    style={{ background: isCorrect ? "var(--color-sage)" : "var(--color-terracotta)" }}
+                  >
+                    {isCorrect ? "✓" : "✕"}
+                  </span>
+                  <div>
+                    <div className="text-[var(--color-muted)] text-xs font-bold uppercase mb-0.5">
+                      Question {i + 1}
+                    </div>
+                    <div className="text-[var(--color-ink-soft)] text-sm mb-1">{item.prompt}</div>
+                    <div className="text-[var(--color-body)] text-sm">
+                      Answer: {response ? formatAnswer(item, response.answer) : "Not answered"}
+                    </div>
                   </div>
                 </div>
               );

@@ -38,12 +38,25 @@ A few things the PRD/TRD left open that needed a concrete decision to ship:
   there's no `auth.uid()` for RLS to key off of; authorization is instead
   enforced in application code against the session id / code. See the header
   comment in `supabase/migrations/0002_rls.sql` for the full rationale.
-- **Fluency scoring is simulated.** The PRD/TRD don't specify a
-  speech-recognition/oral-reading-fluency grading integration, and building
-  one is well beyond this scope. The mic item just records that the student
-  attempted it (matching the original prototype's simulated mic flow) and
-  scores it correct — see `evaluateResponse` in `src/lib/kiosk.ts`. Swapping
-  in real fluency scoring later only touches that one function.
+- **Fluency scoring uses the browser's Web Speech API.** The PRD/TRD don't
+  name a specific ASR vendor, and every paid option (Whisper, Deepgram,
+  AssemblyAI, Google Speech-to-Text) needs an account/API key this project
+  doesn't have — so mic items are scored with `SpeechRecognition` /
+  `webkitSpeechRecognition`, which is free and built into Chrome and Edge
+  (see `src/types/speech-recognition.d.ts` for the ambient types it needs,
+  since they're not in `lib.dom.d.ts`). **Firefox and Safari don't
+  implement it** — `StudentAssessmentRunner.tsx`'s `toggleMic` detects that
+  and falls back to the original "tap to mark attempted" flow.
+  Each mic item can define an `expectedText` (set via the "Expected
+  word/phrase" field in the admin content editor); `evaluateResponse` in
+  `src/lib/kiosk.ts` normalizes both the transcript and `expectedText`
+  (lowercase, strip punctuation, collapse whitespace) and does a lenient
+  substring match rather than exact equality, since early readers'
+  transcripts are noisy and a false "wrong" is worse than a false "right"
+  here. Two fallbacks keep old behavior intact: the `"attempted"` sentinel
+  (from the no-SpeechRecognition-support path) always counts as correct,
+  and a mic item with no `expectedText` configured counts any non-empty
+  attempt as correct.
 - **Overall report label.** "On Track" vs. "Needs Support" wasn't specified
   as a formula anywhere. `computeOverallLabel` in `src/lib/scoring.ts` uses
   "2+ flagged skill areas → Needs Support", chosen because it reproduces the
@@ -154,6 +167,8 @@ Signed in as an administrator, the top nav under `/admin` has:
   of what the application code does
 - **Cycles** — close the current assessment cycle and start a new one
 - **Audit Log** — who viewed or exported which report, most recent first
+- **Settings** — set (or clear) the school's data retention period; see
+  "Data retention" below
 
 A teacher can cancel a not-yet-completed session directly from `/teacher`
 (e.g. one started by mistake, or to hand the student a fresh code) — this
@@ -199,6 +214,35 @@ dashboard, respectively. It re-runs `generateStudentReport`/
 `generateSchoolReport` synchronously so the page shows the outcome
 immediately.
 
+### Data retention
+
+The PRD/TRD flag the actual retention policy as unconfirmed, so this is
+opt-in and defaults to off. An administrator sets "days to keep completed
+assessments" at `/admin/settings`, which writes `schools.data_retention_days`
+(`supabase/migrations/0008_data_retention.sql`). A daily Vercel Cron Job
+(`vercel.json`, 3am UTC) hits `/api/cron/purge-expired-data`, which deletes
+completed `assessment_sessions` older than that many days for schools that
+opted in — the foreign keys cascade to `responses`, `results`, and
+`student_reports`, and the route also removes the corresponding PDF from
+Storage first so nothing is orphaned in the `reports` bucket. Each purge run
+logs one `audit_log` row per school (`action: 'data.purge_expired'`).
+
+The route is protected by a `CRON_SECRET` env var: Vercel automatically
+sends it as `Authorization: Bearer $CRON_SECRET` to its own Cron Job
+requests once that variable is set on the project, and the route rejects
+anything else. See `.env.example`.
+
+### Notifications
+
+A bell icon in the top bar (any signed-in teacher/administrator/specialist
+page) links to `/notifications` and shows an unread count. Rows are written
+by `src/lib/reports.ts` when report generation succeeds — a student's
+teacher on `student_report_ready`, every administrator at the school on
+`school_report_ready` — via the service-role client, same as `audit_log`;
+there's no client-facing insert policy (`0009_notifications.sql`), only
+`select`/`update` scoped to `recipient_id = auth.uid()` so a user can read
+and mark as read their own notifications only.
+
 ### Testing & CI
 
 Unit tests (Vitest) cover the pure logic: response scoring
@@ -242,10 +286,11 @@ above about no browser/AT tooling being available here.
 ## Deploying
 
 1. Push this repo to GitHub.
-2. Import it into Vercel; set the three env vars from `.env.example` as
-   Vercel project environment variables (development/preview/production, per
-   the TRD's isolated-environments requirement — use separate Supabase
-   projects per environment).
+2. Import it into Vercel; set the env vars from `.env.example` as Vercel
+   project environment variables (development/preview/production, per the
+   TRD's isolated-environments requirement — use separate Supabase projects
+   per environment). `CRON_SECRET` can be any random string — Vercel
+   detects it and starts sending it to the cron route automatically.
 3. Run the migrations against your production Supabase project before the
    first deploy that needs them.
 
@@ -258,9 +303,11 @@ src/app/                 Routes (App Router)
   student/session/[id]/  The assessment itself (unauthenticated, service-role backed)
   teacher/                Roster + per-student report (RLS-scoped to the signed-in teacher/specialist)
   specialist/             Read-only roster of a specialist's assigned students
-  admin/                  Dashboard, students, staff, content, cycles (administrator only)
+  admin/                  Dashboard, students, staff, content, cycles, settings (administrator only)
+  notifications/          Bell-icon inbox (RLS-scoped to the signed-in user)
   api/kiosk/              Session start/autosave/complete (service-role)
   api/reports/            Signed PDF download + audit log
+  api/cron/               Data-retention purge (Vercel Cron, CRON_SECRET-gated)
 src/lib/
   supabase/               Browser / server (RLS) / admin (service-role) clients
   scoring.ts              Scoring Service (TRD §4.2)

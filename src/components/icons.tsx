@@ -90,3 +90,17 @@ export function MicIcon({ size = 46 }: { size?: number }) {
     </svg>
   );
 }
+
+export function BellIcon({ size = 20, color = colors.sageDark }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path
+        d="M18 16v-5a6 6 0 0 0-12 0v5l-1.5 2.5h15L18 16Z"
+        stroke={color}
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path d="M10 20.5a2 2 0 0 0 4 0" stroke={color} strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}

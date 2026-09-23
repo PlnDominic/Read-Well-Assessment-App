@@ -110,7 +110,8 @@ insert into public.assessments (id, grade_level, version, items, is_active) valu
     },
     {
       "id": "q3", "skillAreaKey": "fluency", "type": "mic",
-      "prompt": "Tap the button and read this word out loud: \"jump\""
+      "prompt": "Tap the button and read this word out loud: \"jump\"",
+      "expectedText": "jump"
     },
     {
       "id": "q4", "skillAreaKey": "vocabulary", "type": "choice",

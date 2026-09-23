@@ -22,6 +22,13 @@ export interface AssessmentItem {
   prompt: string;
   passage?: string;
   options?: AssessmentItemOption[];
+  /**
+   * The exact word/phrase a mic item expects the student to read aloud,
+   * used to score the browser's speech-to-text transcript in
+   * evaluateResponse (src/lib/kiosk.ts). Optional: a mic item with no
+   * expectedText configured falls back to "any attempt counts."
+   */
+  expectedText?: string;
 }
 
 type Table<Row, Insert, Update = Partial<Insert>> = {
@@ -35,8 +42,14 @@ export interface Database {
   public: {
     Tables: {
       schools: Table<
-        { id: string; name: string; address: string | null; created_at: string },
-        { id?: string; name: string; address?: string | null }
+        {
+          id: string;
+          name: string;
+          address: string | null;
+          data_retention_days: number | null;
+          created_at: string;
+        },
+        { id?: string; name: string; address?: string | null; data_retention_days?: number | null }
       >;
       profiles: Table<
         {
@@ -223,6 +236,25 @@ export interface Database {
           cycle_id: string;
           pdf_path?: string | null;
           status?: ReportStatus;
+        }
+      >;
+      notifications: Table<
+        {
+          id: string;
+          recipient_id: string;
+          type: string;
+          message: string;
+          link: string | null;
+          read: boolean;
+          created_at: string;
+        },
+        {
+          id?: string;
+          recipient_id: string;
+          type: string;
+          message: string;
+          link?: string | null;
+          read?: boolean;
         }
       >;
       audit_log: Table<

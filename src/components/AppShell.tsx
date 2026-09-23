@@ -1,5 +1,6 @@
 import { ReadWellMark } from "@/components/icons";
 import { SwitchRoleButton } from "@/components/SwitchRoleButton";
+import { NotificationBell } from "@/components/NotificationBell";
 
 export function AppShell({
   children,
@@ -20,7 +21,10 @@ export function AppShell({
               Read Well
             </span>
           </div>
-          <SwitchRoleButton />
+          <div className="flex items-center gap-2.5">
+            <NotificationBell />
+            <SwitchRoleButton />
+          </div>
         </div>
       )}
       {children}

@@ -4,19 +4,39 @@ import type { AssessmentItem } from "@/lib/database.types";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
+/** Lowercase, strip punctuation, collapse whitespace — for comparing a
+ * spoken-word transcript against an item's expected text without being
+ * thrown off by case, a trailing period Chrome sometimes adds, etc. */
+export function normalizeSpokenText(s: string): string {
+  return s
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s]/g, "")
+    .replace(/\s+/g, " ");
+}
+
 /**
  * Evaluates a single response against its item definition.
  *
- * Fluency items are a microphone "read this aloud" prompt with no real
- * speech-recognition/grading integration (out of scope of the PRD/TRD,
- * which don't specify one) — any completed attempt is scored correct,
- * matching the original prototype's simulated mic flow. A future revision
- * that wires in real oral-reading-fluency scoring would only need to
- * change this one function.
+ * Fluency (mic) items are scored by comparing the browser's Web Speech API
+ * transcript (see StudentAssessmentRunner.tsx — Chrome/Edge only, no
+ * backend/API key needed) against `item.expectedText`. Two graceful
+ * fallbacks preserve the original "any attempt counts" behavior where real
+ * scoring isn't possible: the literal sentinel "attempted" (sent by
+ * browsers without SpeechRecognition support), and mic items with no
+ * expectedText configured (content authored before this existed, or where
+ * the program team didn't set a rubric). The match is a lenient substring
+ * check, not exact equality — early readers' transcripts are noisy, and a
+ * false "wrong" is a worse failure mode here than a false "right".
  */
 export function evaluateResponse(item: AssessmentItem, answer: unknown): boolean {
   if (item.type === "mic") {
-    return answer === "attempted";
+    if (typeof answer !== "string" || answer.length === 0) return false;
+    if (answer === "attempted") return true;
+    if (!item.expectedText) return true;
+    const spoken = normalizeSpokenText(answer);
+    const expected = normalizeSpokenText(item.expectedText);
+    return expected.length > 0 && spoken.includes(expected);
   }
   if (item.type === "choice") {
     const chosen = item.options?.find((o) => o.text === answer);

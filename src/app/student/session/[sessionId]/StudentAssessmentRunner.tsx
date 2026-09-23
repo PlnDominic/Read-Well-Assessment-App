@@ -218,11 +218,39 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
 
   function toggleMic(alreadyDone: boolean) {
     if (alreadyDone || !state) return;
+    const itemId = state.items[qIndex].id;
+    const Recognition = window.SpeechRecognition ?? window.webkitSpeechRecognition;
+    // Chrome/Edge only — Firefox and Safari don't implement SpeechRecognition.
+    // Fall back to the old "tap to mark attempted" flow there so the
+    // assessment still works, just without real transcript scoring.
+    if (!Recognition) {
+      setRecording(true);
+      setTimeout(() => {
+        setRecording(false);
+        saveAnswer(itemId, "attempted");
+      }, 1200);
+      return;
+    }
+
+    const recognition = new Recognition();
+    recognition.lang = "en-US";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
     setRecording(true);
-    setTimeout(() => {
+    recognition.onresult = (event) => {
+      const transcript = event.results[0]?.[0]?.transcript ?? "attempted";
+      saveAnswer(itemId, transcript);
+    };
+    recognition.onerror = () => {
+      // Mic denied, no speech detected, etc. — still record an attempt so
+      // the student isn't stuck unable to proceed.
+      saveAnswer(itemId, "attempted");
+    };
+    recognition.onend = () => {
       setRecording(false);
-      saveAnswer(state.items[qIndex].id, "attempted");
-    }, 1200);
+    };
+    recognition.start();
   }
 
   async function goNext() {
@@ -342,7 +370,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
   const tileColor = SKILL_AREA_TILE_COLOR[item.skillAreaKey as SkillAreaKey] ?? "var(--color-sage)";
   const savedAnswer = state.answersByItemId[item.id];
   const selectedOption = typeof savedAnswer === "string" ? savedAnswer : null;
-  const micDone = savedAnswer === "attempted";
+  const micDone = typeof savedAnswer === "string" && savedAnswer.length > 0;
   const micStatus = recording ? "recording" : micDone ? "done" : "idle";
   const canProceed = item.type === "choice" ? selectedOption !== null : micDone;
   const progressPercent = Math.round((qIndex / state.items.length) * 100 + 10);

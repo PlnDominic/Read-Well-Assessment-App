@@ -5,6 +5,13 @@ import { createAdminClient } from "@/lib/supabase/admin";
 const ACTION_LABELS: Record<string, string> = {
   "report.view": "Viewed",
   "report.export": "Exported",
+  "settings.data_retention_updated": "Updated",
+};
+
+const RESOURCE_LABELS: Record<string, string> = {
+  student_report: "a student report",
+  school_report: "the school-wide report",
+  school: "the school's settings",
 };
 
 export default async function AdminAuditPage() {
@@ -58,7 +65,7 @@ export default async function AdminAuditPage() {
               </span>{" "}
               {ACTION_LABELS[log.action] ?? log.action}{" "}
               <span className="text-[var(--color-muted)]">
-                {log.resource_type === "student_report" ? "a student report" : "the school-wide report"}
+                {RESOURCE_LABELS[log.resource_type] ?? log.resource_type}
               </span>
             </div>
             <span className="text-xs text-[var(--color-muted-light)] whitespace-nowrap">

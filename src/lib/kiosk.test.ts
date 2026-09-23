@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { evaluateResponse, generateSessionCode, normalizeSessionCode } from "./kiosk";
+import { evaluateResponse, generateSessionCode, normalizeSessionCode, normalizeSpokenText } from "./kiosk";
 import type { AssessmentItem } from "./database.types";
 
 describe("evaluateResponse", () => {
@@ -21,6 +21,11 @@ describe("evaluateResponse", () => {
     prompt: 'Read this word aloud: "jump"',
   };
 
+  const micItemWithExpectedText: AssessmentItem = {
+    ...micItem,
+    expectedText: "jump",
+  };
+
   it("marks the correct option as correct", () => {
     expect(evaluateResponse(choiceItem, "BALL")).toBe(true);
   });
@@ -33,12 +38,33 @@ describe("evaluateResponse", () => {
     expect(evaluateResponse(choiceItem, "DOG")).toBe(false);
   });
 
-  it("marks a completed mic attempt as correct (no real speech scoring — see README)", () => {
+  it("marks a completed mic attempt as correct when no expectedText is configured (legacy fallback)", () => {
     expect(evaluateResponse(micItem, "attempted")).toBe(true);
+    expect(evaluateResponse(micItem, "anything at all")).toBe(true);
   });
 
-  it("marks anything other than 'attempted' as incorrect for a mic item", () => {
-    expect(evaluateResponse(micItem, "idle")).toBe(false);
+  it("marks an empty mic answer as incorrect even with no expectedText", () => {
+    expect(evaluateResponse(micItem, "")).toBe(false);
+  });
+
+  it("treats the 'attempted' sentinel as correct even when expectedText is set (unsupported-browser fallback)", () => {
+    expect(evaluateResponse(micItemWithExpectedText, "attempted")).toBe(true);
+  });
+
+  it("marks a transcript containing the expected word as correct", () => {
+    expect(evaluateResponse(micItemWithExpectedText, "Jump.")).toBe(true);
+    expect(evaluateResponse(micItemWithExpectedText, "jump")).toBe(true);
+  });
+
+  it("marks a transcript not containing the expected word as incorrect", () => {
+    expect(evaluateResponse(micItemWithExpectedText, "run")).toBe(false);
+  });
+});
+
+describe("normalizeSpokenText", () => {
+  it("lowercases, strips punctuation, and collapses whitespace", () => {
+    expect(normalizeSpokenText("Jump.")).toBe("jump");
+    expect(normalizeSpokenText("  The   Cat!  ")).toBe("the cat");
   });
 });
 

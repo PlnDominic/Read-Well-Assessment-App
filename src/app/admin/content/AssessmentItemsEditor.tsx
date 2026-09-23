@@ -160,6 +160,24 @@ export function AssessmentItemsEditor({
               />
             </label>
 
+            {item.type === "mic" && (
+              <label className="flex flex-col gap-1.5 text-sm mb-3">
+                <span className="font-bold text-[var(--color-muted)] text-xs uppercase">
+                  Expected word/phrase (for scoring)
+                </span>
+                <input
+                  value={item.expectedText ?? ""}
+                  onChange={(e) => updateItem(i, { expectedText: e.target.value || undefined })}
+                  placeholder="e.g. jump"
+                  className="border-2 border-[var(--color-cream-border)] rounded-xl px-3.5 py-2.5"
+                />
+                <span className="text-[var(--color-muted)] text-xs">
+                  Scored against the student&apos;s spoken transcript (Chrome/Edge Web Speech API). Leave blank to
+                  count any attempt as correct.
+                </span>
+              </label>
+            )}
+
             {item.type === "choice" && (
               <div className="flex flex-col gap-2">
                 <span className="font-bold text-[var(--color-muted)] text-xs uppercase">

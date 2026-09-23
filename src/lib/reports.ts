@@ -26,7 +26,7 @@ export async function generateStudentReport(sessionId: string): Promise<void> {
 
   const { data: student, error: studentError } = await admin
     .from("students")
-    .select("name, grade")
+    .select("name, grade, teacher_id")
     .eq("id", session.student_id)
     .single();
   if (studentError || !student) throw new Error(`Student for session ${sessionId} not found`);
@@ -86,6 +86,13 @@ export async function generateStudentReport(sessionId: string): Promise<void> {
       { onConflict: "session_id" }
     );
   if (upsertError) throw upsertError;
+
+  await admin.from("notifications").insert({
+    recipient_id: student.teacher_id,
+    type: "student_report_ready",
+    message: `${student.name}'s report is ready.`,
+    link: `/teacher/students/${session.student_id}/report?session=${sessionId}`,
+  });
 }
 
 /**
@@ -195,4 +202,20 @@ export async function generateSchoolReport(schoolId: string, cycleId: string): P
     .from("school_reports")
     .upsert({ school_id: schoolId, cycle_id: cycleId, pdf_path: pdfPath, status: "ready" }, { onConflict: "school_id,cycle_id" });
   if (upsertError) throw upsertError;
+
+  const { data: admins } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("school_id", schoolId)
+    .eq("role", "administrator");
+  if (admins && admins.length > 0) {
+    await admin.from("notifications").insert(
+      admins.map((a) => ({
+        recipient_id: a.id,
+        type: "school_report_ready",
+        message: `The ${cycle.name} school-wide report is ready.`,
+        link: "/admin",
+      }))
+    );
+  }
 }
