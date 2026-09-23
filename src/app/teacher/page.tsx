@@ -3,7 +3,8 @@ import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
 import { createClient } from "@/lib/supabase/server";
-import { addStudentToOwnRoster, cancelSession, startOrResumeAssessment } from "./actions";
+import { cancelSession, startOrResumeAssessment } from "./actions";
+import { AddStudentForm } from "./AddStudentForm";
 
 const STATUS_STYLE: Record<
   string,
@@ -64,16 +65,16 @@ export default async function TeacherRosterPage() {
   const { data: sessions } = cycle && studentIds.length > 0
     ? await supabase
         .from("assessment_sessions")
-        .select("id, student_id, status, created_at")
+        .select("id, student_id, status, session_code, created_at")
         .in("student_id", studentIds)
         .eq("cycle_id", cycle.id)
         .order("created_at", { ascending: false })
     : { data: [] };
 
-  const latestSessionByStudent = new Map<string, { id: string; status: string }>();
+  const latestSessionByStudent = new Map<string, { id: string; status: string; sessionCode: string }>();
   for (const s of sessions ?? []) {
     if (!latestSessionByStudent.has(s.student_id)) {
-      latestSessionByStudent.set(s.student_id, { id: s.id, status: s.status });
+      latestSessionByStudent.set(s.student_id, { id: s.id, status: s.status, sessionCode: s.session_code });
     }
   }
 
@@ -89,34 +90,7 @@ export default async function TeacherRosterPage() {
 
         {profile.role === "teacher" && (
           <div className="bg-white rounded-[20px] shadow-[0_6px_20px_rgba(0,0,0,0.06)] px-6 py-5 mb-5">
-            <form action={addStudentToOwnRoster} className="flex flex-wrap items-end gap-3">
-              <label className="flex flex-col gap-1.5 text-sm flex-1 min-w-[160px]">
-                <span className="font-bold text-[var(--color-muted)] text-xs uppercase">Add a student</span>
-                <input
-                  name="name"
-                  placeholder="Student name"
-                  required
-                  className="border-2 border-[var(--color-cream-border)] rounded-xl px-3.5 py-2.5"
-                />
-              </label>
-              <select
-                name="grade"
-                defaultValue={1}
-                className="border-2 border-[var(--color-cream-border)] rounded-xl px-3.5 py-2.5 text-sm"
-              >
-                {Array.from({ length: 12 }, (_, i) => i + 1).map((g) => (
-                  <option key={g} value={g}>
-                    Grade {g}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="submit"
-                className="bg-[var(--color-sage)] text-white border-none rounded-full font-bold text-sm px-4.5 py-2.5 cursor-pointer"
-              >
-                Add
-              </button>
-            </form>
+            <AddStudentForm />
           </div>
         )}
 
@@ -154,18 +128,36 @@ export default async function TeacherRosterPage() {
                   >
                     {style.label}
                   </span>
-                  {status === "completed" && latest ? (
-                    <Link
-                      href={`/teacher/students/${s.id}/report?session=${latest.id}`}
-                      className="font-bold text-sm px-4.5 py-2.25 rounded-full no-underline"
-                      style={{
-                        background: style.actionBg,
-                        color: style.actionColor,
-                        border: `1.5px solid ${style.actionBorder}`,
-                      }}
+                  {status !== "completed" && latest && (
+                    <span
+                      className="text-xs font-bold text-[var(--color-muted)]"
+                      title="Enter this at /student/join on the student's device"
                     >
-                      {style.actionLabel}
-                    </Link>
+                      Code: <code className="bg-[var(--color-cream)] px-2 py-1 rounded font-bold">{latest.sessionCode}</code>
+                    </span>
+                  )}
+                  {status === "completed" && latest ? (
+                    <>
+                      <Link
+                        href={`/teacher/students/${s.id}/report?session=${latest.id}`}
+                        className="font-bold text-sm px-4.5 py-2.25 rounded-full no-underline"
+                        style={{
+                          background: style.actionBg,
+                          color: style.actionColor,
+                          border: `1.5px solid ${style.actionBorder}`,
+                        }}
+                      >
+                        {style.actionLabel}
+                      </Link>
+                      <form action={startOrResumeAssessment.bind(null, s.id)}>
+                        <button
+                          type="submit"
+                          className="font-bold text-sm px-4.5 py-2.25 rounded-full cursor-pointer bg-white border-[1.5px] border-[var(--color-cream-border-strong)] text-[var(--color-sage-dark)]"
+                        >
+                          Start New Assessment
+                        </button>
+                      </form>
+                    </>
                   ) : (
                     <>
                       <form action={startOrResumeAssessment.bind(null, s.id)}>

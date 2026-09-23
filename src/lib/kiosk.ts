@@ -1,6 +1,7 @@
 import "server-only";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { createAdminClient } from "@/lib/supabase/admin";
-import type { AssessmentItem } from "@/lib/database.types";
+import type { AssessmentItem, Database } from "@/lib/database.types";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
@@ -56,6 +57,66 @@ export function generateSessionCode(): string {
     code += alphabet[Math.floor(Math.random() * alphabet.length)];
   }
   return code;
+}
+
+export type CreateSessionResult =
+  | { ok: true; id: string; sessionCode: string }
+  | { ok: false; reason: "no_cycle" | "no_assessment" };
+
+/**
+ * Creates a fresh not-yet-started session (and its kiosk code) for a
+ * student, against the school's current cycle and the active assessment
+ * for their grade. Shared by the "add a student" flows (so a code exists
+ * the moment a student is added — most students are on a different device
+ * than the staff member adding them) and by startOrResumeAssessment (which
+ * additionally checks for a non-completed session to resume first, so a
+ * student can be re-run through a fresh assessment once their prior one
+ * in this cycle is complete rather than being stuck on "View Report").
+ *
+ * Returns `ok: false` rather than throwing when there's no active cycle or
+ * no active assessment for the grade yet — those are normal, fixable setup
+ * gaps (visit /admin/cycles or /admin/content), not really errors, and the
+ * student should still get added to the roster either way.
+ */
+export async function createSessionForStudent(
+  supabase: SupabaseClient<Database>,
+  params: { studentId: string; schoolId: string; grade: number; createdBy: string }
+): Promise<CreateSessionResult> {
+  const { data: cycle } = await supabase
+    .from("assessment_cycles")
+    .select("id")
+    .eq("school_id", params.schoolId)
+    .eq("is_current", true)
+    .maybeSingle();
+  if (!cycle) return { ok: false, reason: "no_cycle" };
+
+  const { data: assessment } = await supabase
+    .from("assessments")
+    .select("id")
+    .eq("grade_level", params.grade)
+    .eq("is_active", true)
+    .order("version", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!assessment) return { ok: false, reason: "no_assessment" };
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const sessionCode = generateSessionCode();
+    const { data: created, error } = await supabase
+      .from("assessment_sessions")
+      .insert({
+        student_id: params.studentId,
+        assessment_id: assessment.id,
+        cycle_id: cycle.id,
+        session_code: sessionCode,
+        created_by: params.createdBy,
+      })
+      .select("id")
+      .single();
+    if (created) return { ok: true, id: created.id, sessionCode };
+    if (error && !error.message.includes("session_code")) throw error;
+  }
+  throw new Error("Could not allocate a session code — try again");
 }
 
 export async function loadSessionForKiosk(admin: AdminClient, sessionId: string) {

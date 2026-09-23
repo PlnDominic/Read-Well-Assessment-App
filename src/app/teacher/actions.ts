@@ -3,7 +3,19 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { generateSessionCode } from "@/lib/kiosk";
+import { createSessionForStudent } from "@/lib/kiosk";
+
+export interface AddStudentState {
+  error: string | null;
+  result: { name: string; sessionCode: string | null; note: string | null } | null;
+}
+
+const NO_SESSION_NOTES: Record<"no_cycle" | "no_assessment", (grade: number) => string> = {
+  no_cycle: () =>
+    "No active assessment cycle yet — an administrator needs to start one at /admin/cycles. Come back and click \"Start Assessment\" once that's done.",
+  no_assessment: (grade) =>
+    `No active assessment configured for grade ${grade} yet — an administrator needs to set one up at /admin/content. Come back and click "Start Assessment" once that's done.`,
+};
 
 /**
  * Lets a teacher add a student to their own roster. RLS
@@ -11,7 +23,10 @@ import { generateSessionCode } from "@/lib/kiosk";
  * and teacher_id=auth.uid(), so this can't be used to add a student under
  * anyone else even if called directly.
  */
-export async function addStudentToOwnRoster(formData: FormData) {
+export async function addStudentToOwnRoster(
+  _prevState: AddStudentState,
+  formData: FormData
+): Promise<AddStudentState> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -19,21 +34,37 @@ export async function addStudentToOwnRoster(formData: FormData) {
   if (!user) redirect("/login");
 
   const { data: profile } = await supabase.from("profiles").select("role, school_id").eq("id", user.id).single();
-  if (!profile || profile.role !== "teacher") throw new Error("Only teachers can add students here");
+  if (!profile || profile.role !== "teacher") {
+    return { error: "Only teachers can add students here", result: null };
+  }
 
   const name = String(formData.get("name") ?? "").trim();
   const grade = Number(formData.get("grade") ?? 1);
-  if (!name) throw new Error("Name is required");
+  if (!name) return { error: "Name is required", result: null };
 
-  const { error } = await supabase.from("students").insert({
-    school_id: profile.school_id,
-    teacher_id: user.id,
-    name,
+  const { data: created, error } = await supabase
+    .from("students")
+    .insert({ school_id: profile.school_id, teacher_id: user.id, name, grade })
+    .select("id")
+    .single();
+  if (error || !created) return { error: error?.message ?? "Could not add student", result: null };
+
+  const session = await createSessionForStudent(supabase, {
+    studentId: created.id,
+    schoolId: profile.school_id,
     grade,
+    createdBy: user.id,
   });
-  if (error) throw new Error(error.message);
 
   revalidatePath("/teacher");
+  return {
+    error: null,
+    result: {
+      name,
+      sessionCode: session.ok ? session.sessionCode : null,
+      note: session.ok ? null : NO_SESSION_NOTES[session.reason](grade),
+    },
+  };
 }
 
 /**
@@ -73,37 +104,21 @@ export async function startOrResumeAssessment(studentId: string) {
 
   if (existing) redirect(`/student/session/${existing.id}`);
 
-  const { data: assessment, error: assessmentError } = await supabase
-    .from("assessments")
-    .select("id")
-    .eq("grade_level", student.grade)
-    .eq("is_active", true)
-    .order("version", { ascending: false })
-    .limit(1)
-    .single();
-  if (assessmentError || !assessment) {
-    throw new Error(`No active assessment configured for grade ${student.grade}`);
+  const session = await createSessionForStudent(supabase, {
+    studentId,
+    schoolId: student.school_id,
+    grade: student.grade,
+    createdBy: user.id,
+  });
+  if (!session.ok) {
+    throw new Error(
+      session.reason === "no_cycle"
+        ? "No active assessment cycle for this school"
+        : `No active assessment configured for grade ${student.grade}`
+    );
   }
 
-  let sessionId: string | null = null;
-  for (let attempt = 0; attempt < 5 && !sessionId; attempt++) {
-    const { data: created, error: createError } = await supabase
-      .from("assessment_sessions")
-      .insert({
-        student_id: studentId,
-        assessment_id: assessment.id,
-        cycle_id: cycle.id,
-        session_code: generateSessionCode(),
-        created_by: user.id,
-      })
-      .select("id")
-      .single();
-    if (created) sessionId = created.id;
-    else if (createError && !createError.message.includes("session_code")) throw createError;
-  }
-  if (!sessionId) throw new Error("Could not allocate a session code — try again");
-
-  redirect(`/student/session/${sessionId}`);
+  redirect(`/student/session/${session.id}`);
 }
 
 /**

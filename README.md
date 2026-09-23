@@ -27,16 +27,26 @@ Storage), matching the TRD's recommended stack.
 A few things the PRD/TRD left open that needed a concrete decision to ship:
 
 - **Students never authenticate.** Per TRD §6 ("kiosk-style, teacher-initiated"),
-  a teacher starts or resumes a student's session from the roster
-  (`startOrResumeAssessment` in `src/app/teacher/actions.ts`), which creates
-  an `assessment_sessions` row with a random 6-character `session_code` and
-  redirects straight into `/student/session/[id]`. If the student is on a
-  *different* device, the teacher can instead read them that code to enter
-  at `/student/join` — this is what the design's "I'm a Student" login tile
-  leads to. All student-facing reads/writes go through Route Handlers using
-  the Supabase **service-role** client (`src/lib/supabase/admin.ts`), since
-  there's no `auth.uid()` for RLS to key off of; authorization is instead
-  enforced in application code against the session id / code. See the header
+  a kiosk code (`session_code`, 6 random characters excluding 0/O/1/I) is
+  created automatically the moment a student is added to the roster — see
+  `createSessionForStudent` in `src/lib/kiosk.ts`, called from both
+  `addStudent`/`addStudentToOwnRoster` (adding a student) and
+  `startOrResumeAssessment` (adding a student is the common case, since most
+  students are on a separate device from the staff member who added them;
+  this covers the same-device case too, and re-running it after a student
+  completes an assessment starts a fresh one with a new code, cycle
+  permitting). The code is shown once in a banner right after adding the
+  student, and persists visibly on that student's roster row at `/teacher`
+  (labeled "Code: …") for as long as the session is `not_started` or
+  `in_progress`, so it isn't a one-time value staff have to remember or look
+  up in the database. The student enters it at `/student/join`. If the
+  student is on the *same* device as the teacher, clicking **Start
+  Assessment**/**Resume** on the roster redirects straight into
+  `/student/session/[id]` instead of requiring the code. All student-facing
+  reads/writes go through Route Handlers using the Supabase **service-role**
+  client (`src/lib/supabase/admin.ts`), since there's no `auth.uid()` for
+  RLS to key off of; authorization is instead enforced in application code
+  against the session id / code. See the header
   comment in `supabase/migrations/0002_rls.sql` for the full rationale.
 - **Fluency scoring uses the browser's Web Speech API.** The PRD/TRD don't
   name a specific ASR vendor, and every paid option (Whisper, Deepgram,
@@ -112,16 +122,19 @@ with `rivera@lincoln-elementary.edu` (teacher) or
 `chen@lincoln-elementary.edu` (administrator), password `readwell-demo` for
 both — these only exist in that local database, never in a hosted one (see
 the warning in `supabase/seed.sql`). To try the student flow: sign in as
-the teacher, click **Start Assessment** next to a student on the roster —
-this redirects straight into that student's assessment (simulating handing
-the device to them). To test the separate-device kiosk path instead, note
-the `session_code` on that `assessment_sessions` row and enter it at
-`/student/join`.
+the teacher, add a new student — a kiosk code appears in a banner right
+away (and stays visible on their roster row after that). Enter it at
+`/student/join` to test the separate-device path, or click **Start
+Assessment** next to a student on the roster instead to go straight into
+that student's assessment on the current device (simulating handing it to
+them).
 
 **If you bootstrapped a real deployment (Option A):** sign in with the
 administrator account you created in `supabase/bootstrap.sql`, then use
 `/admin/staff` to add real teachers/specialists and `/admin/students` (or
-a teacher's own roster page) to add real students.
+a teacher's own roster page) to add real students — each one gets a kiosk
+code immediately, as long as a cycle (`/admin/cycles`) and an active
+assessment for their grade (`/admin/content`) already exist.
 
 ### Offline handling
 

@@ -2,24 +2,54 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/authz";
+import { createSessionForStudent } from "@/lib/kiosk";
 
-export async function addStudent(formData: FormData) {
+export interface AddStudentState {
+  error: string | null;
+  result: { name: string; sessionCode: string | null; note: string | null } | null;
+}
+
+const NO_SESSION_NOTES: Record<"no_cycle" | "no_assessment", (grade: number) => string> = {
+  no_cycle: () =>
+    "No active assessment cycle yet — start one on the Cycles tab first, then use Start Assessment on the Teacher roster once that's done.",
+  no_assessment: (grade) =>
+    `No active assessment configured for grade ${grade} yet — set one up on the Content tab first, then use Start Assessment on the Teacher roster once that's done.`,
+};
+
+export async function addStudent(
+  _prevState: AddStudentState,
+  formData: FormData
+): Promise<AddStudentState> {
   const { supabase, profile } = await requireAdmin();
 
   const name = String(formData.get("name") ?? "").trim();
   const grade = Number(formData.get("grade") ?? 1);
   const teacherId = String(formData.get("teacherId") ?? "");
-  if (!name || !teacherId) throw new Error("Name and teacher are required");
+  if (!name || !teacherId) return { error: "Name and teacher are required", result: null };
 
-  const { error } = await supabase.from("students").insert({
-    school_id: profile.school_id,
-    teacher_id: teacherId,
-    name,
+  const { data: created, error } = await supabase
+    .from("students")
+    .insert({ school_id: profile.school_id, teacher_id: teacherId, name, grade })
+    .select("id")
+    .single();
+  if (error || !created) return { error: error?.message ?? "Could not add student", result: null };
+
+  const session = await createSessionForStudent(supabase, {
+    studentId: created.id,
+    schoolId: profile.school_id,
     grade,
+    createdBy: profile.id,
   });
-  if (error) throw new Error(error.message);
 
   revalidatePath("/admin/students");
+  return {
+    error: null,
+    result: {
+      name,
+      sessionCode: session.ok ? session.sessionCode : null,
+      note: session.ok ? null : NO_SESSION_NOTES[session.reason](grade),
+    },
+  };
 }
 
 export async function updateStudent(formData: FormData) {
