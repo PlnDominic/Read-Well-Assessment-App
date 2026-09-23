@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "crypto";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
@@ -42,15 +43,19 @@ export async function addStudentToOwnRoster(
   const grade = Number(formData.get("grade") ?? 1);
   if (!name) return { error: "Name is required", result: null };
 
-  const { data: created, error } = await supabase
+  // Generating the id ourselves (rather than chaining .select() to read it
+  // back via RETURNING) sidesteps a Postgres RLS quirk verified on this
+  // project: INSERT ... RETURNING can fail the students SELECT policy even
+  // though the identical row is immediately selectable via a plain,
+  // separate SELECT through that same policy.
+  const studentId = randomUUID();
+  const { error } = await supabase
     .from("students")
-    .insert({ school_id: profile.school_id, teacher_id: user.id, name, grade })
-    .select("id")
-    .single();
-  if (error || !created) return { error: error?.message ?? "Could not add student", result: null };
+    .insert({ id: studentId, school_id: profile.school_id, teacher_id: user.id, name, grade });
+  if (error) return { error: error.message, result: null };
 
   const session = await createSessionForStudent(supabase, {
-    studentId: created.id,
+    studentId,
     schoolId: profile.school_id,
     grade,
     createdBy: user.id,

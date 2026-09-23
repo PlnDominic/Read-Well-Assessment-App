@@ -1,4 +1,5 @@
 import "server-only";
+import { randomUUID } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import type { AssessmentItem, Database } from "@/lib/database.types";
@@ -101,20 +102,24 @@ export async function createSessionForStudent(
   if (!assessment) return { ok: false, reason: "no_assessment" };
 
   for (let attempt = 0; attempt < 5; attempt++) {
+    const id = randomUUID();
     const sessionCode = generateSessionCode();
-    const { data: created, error } = await supabase
-      .from("assessment_sessions")
-      .insert({
-        student_id: params.studentId,
-        assessment_id: assessment.id,
-        cycle_id: cycle.id,
-        session_code: sessionCode,
-        created_by: params.createdBy,
-      })
-      .select("id")
-      .single();
-    if (created) return { ok: true, id: created.id, sessionCode };
-    if (error && !error.message.includes("session_code")) throw error;
+    // Deliberately not chaining .select() here (which asks PostgREST for the
+    // row back via RETURNING): under this project's Postgres, an INSERT ...
+    // RETURNING can fail RLS even though the exact same row is immediately
+    // selectable via a separate, ordinary SELECT through the same policy —
+    // verified directly in the SQL editor. Generating the id ourselves means
+    // we never need the row back, sidestepping that entirely.
+    const { error } = await supabase.from("assessment_sessions").insert({
+      id,
+      student_id: params.studentId,
+      assessment_id: assessment.id,
+      cycle_id: cycle.id,
+      session_code: sessionCode,
+      created_by: params.createdBy,
+    });
+    if (!error) return { ok: true, id, sessionCode };
+    if (!error.message.includes("session_code")) throw error;
   }
   throw new Error("Could not allocate a session code — try again");
 }
