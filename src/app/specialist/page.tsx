@@ -20,7 +20,7 @@ export default async function SpecialistPage() {
   if (!profile || profile.role !== "reading_specialist") redirect("/");
 
   // RLS (can_access_student) already scopes this to the specialist's
-  // assigned students — no need to join specialist_assignments explicitly.
+  // assigned students; no need to join specialist_assignments explicitly.
   const { data: students } = await supabase.from("students").select("id, name, grade").order("name");
 
   const { data: cycle } = await supabase
@@ -56,7 +56,7 @@ export default async function SpecialistPage() {
         <div className="bg-white rounded-[20px] shadow-[0_6px_20px_rgba(0,0,0,0.06)] overflow-hidden">
           {(students ?? []).length === 0 && (
             <div className="px-6 py-8 text-[var(--color-muted)] text-center">
-              No students assigned to you yet — ask an administrator to assign one from the Students admin page.
+              No students assigned to you yet. Ask an administrator to assign one from the Students admin page.
             </div>
           )}
           {(students ?? []).map((s) => {

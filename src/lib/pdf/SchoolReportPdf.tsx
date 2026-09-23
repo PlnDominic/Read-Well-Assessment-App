@@ -50,7 +50,7 @@ export function SchoolReportPdf({
   planningNote,
 }: SchoolReportPdfProps) {
   return (
-    <Document title={`${schoolName} — School-Wide Reading Report`}>
+    <Document title={`${schoolName}: School-Wide Reading Report`}>
       <Page size="A4" style={styles.page}>
         <View style={styles.headerRow}>
           <View>

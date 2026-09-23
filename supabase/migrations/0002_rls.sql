@@ -3,8 +3,8 @@
 -- Architecture note: students never authenticate (TRD §6), so the
 -- student-facing assessment flow (redeeming a session code, autosaving
 -- responses, completing a session) is served by Next.js Route Handlers
--- using the Supabase *service role* key — a server-only credential that
--- bypasses RLS — with authorization enforced in application code against
+-- using the Supabase *service role* key, a server-only credential that
+-- bypasses RLS, with authorization enforced in application code against
 -- the session_code. RLS below governs everything staff (teacher / reading
 -- specialist / administrator) access through their own authenticated
 -- session, which is the boundary the TRD requires to be enforced at the

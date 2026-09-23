@@ -21,7 +21,7 @@
   --color-ink: #2e3b2f;
   --color-ink-soft: #3a463b;
   --color-body: #5c6b5d;
-  /* Originally #7a8a7c / #8a9a8b — both failed WCAG AA contrast (~3.2:1 and
+  /* Originally #7a8a7c / #8a9a8b, both failed WCAG AA contrast (~3.2:1 and
      ~2.6:1) against the cream/white backgrounds they're used on for normal
      (non-large) text. Darkened to a verified ~4.8-5:1; there isn't much
      room to keep them visually distinct from each other while both passing

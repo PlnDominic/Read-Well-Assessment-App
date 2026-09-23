@@ -7,7 +7,7 @@ export const colors = {
   sageTintBorder: "#B9CDBB",
 
   terracotta: "#C97B5F",
-  // Originally #A85C3F — see globals.css for the contrast numbers behind
+  // Originally #A85C3F; see globals.css for the contrast numbers behind
   // this and the other darkened tokens below; keep these two files in
   // sync since this one feeds PDF/inline-SVG rendering, which can't read
   // CSS custom properties.

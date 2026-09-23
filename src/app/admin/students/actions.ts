@@ -12,9 +12,9 @@ export interface AddStudentState {
 
 const NO_SESSION_NOTES: Record<"no_cycle" | "no_assessment", (grade: number) => string> = {
   no_cycle: () =>
-    "No active assessment cycle yet — start one on the Cycles tab first, then use Start Assessment on the Teacher roster once that's done.",
+    "No active assessment cycle yet. Start one on the Cycles tab first, then use Start Assessment on the Teacher roster once that's done.",
   no_assessment: (grade) =>
-    `No active assessment configured for grade ${grade} yet — set one up on the Content tab first, then use Start Assessment on the Teacher roster once that's done.`,
+    `No active assessment configured for grade ${grade} yet. Set one up on the Content tab first, then use Start Assessment on the Teacher roster once that's done.`,
 };
 
 export async function addStudent(
@@ -95,7 +95,7 @@ export interface ImportCsvState {
 
 /**
  * Expects a CSV with a header row: name,grade,teacher_email
- * (a simple comma split — fields containing commas aren't supported).
+ * (a simple comma split, fields containing commas aren't supported).
  */
 export async function importStudentsCsv(
   _prevState: ImportCsvState,

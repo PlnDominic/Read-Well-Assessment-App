@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 /**
  * Several tables (assessments, recommendation_rules, profiles) have no
  * client-facing write policies in supabase/migrations/0002_rls.sql on
- * purpose — those writes are meant to go through the service-role client.
+ * purpose; those writes are meant to go through the service-role client.
  * This helper is the gate in front of that: it confirms, via the caller's
  * own RLS-scoped session, that they really are an administrator of a
  * school before any server action reaches for the service-role client.

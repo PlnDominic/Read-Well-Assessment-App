@@ -7,7 +7,7 @@ import { generateStudentReport } from "@/lib/reports";
 
 /**
  * Manual retry for a failed/stuck PDF (TRD §7: "catch failed report
- * generation before a teacher notices" — this is the fix-it-yourself
+ * generation before a teacher notices"; this is the fix-it-yourself
  * counterpart). Runs synchronously (unlike the automatic post-completion
  * path, which uses after()) since a deliberate button click can reasonably
  * wait a few seconds for the render.

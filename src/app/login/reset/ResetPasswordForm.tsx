@@ -17,7 +17,7 @@ export function ResetPasswordForm() {
     const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
     const description = hash.get("error_description");
     // Reading a browser-only API (the URL hash Supabase's redirect sets) on
-    // mount, not a value derivable during render — an effect is correct
+    // mount, not a value derivable during render, so an effect is correct
     // here despite the lint rule's default suspicion of setState-in-effect.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (description) setLinkError(description.replace(/\+/g, " "));

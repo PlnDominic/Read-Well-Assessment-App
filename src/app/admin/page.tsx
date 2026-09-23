@@ -125,7 +125,7 @@ export default async function AdminDashboardPage() {
                 type="submit"
                 className="bg-[var(--color-terracotta-tint)] border-[1.5px] border-[var(--color-terracotta)] text-[var(--color-terracotta-dark)] font-bold text-sm px-4.5 py-2.5 rounded-full cursor-pointer"
               >
-                PDF failed — Retry
+                Retry PDF
               </button>
             </form>
           ) : (

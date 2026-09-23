@@ -4,7 +4,7 @@ import { BellIcon } from "@/components/icons";
 
 /**
  * Only rendered inside AppShell's topbar, which itself only appears on
- * authenticated staff pages (teacher/admin/specialist) — student-facing
+ * authenticated staff pages (teacher/admin/specialist); student-facing
  * pages pass showTopBar={false} since students have no profile row to key
  * a recipient_id off of. Renders nothing if there's somehow no user, same
  * defensive posture as the rest of those pages.

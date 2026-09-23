@@ -1,4 +1,4 @@
--- Read Well Assessment App — core schema
+-- Read Well Assessment App: core schema
 -- Implements the data model from the TRD (section 3) plus supporting
 -- tables (assessment_cycles, audit_log) needed to make the school-wide
 -- report and access-audit requirements concrete.

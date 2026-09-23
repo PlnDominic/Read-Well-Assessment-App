@@ -2,7 +2,7 @@
 -- to a Grade 1 student is blocked." The application always resolves a
 -- session's assessment by the student's own grade (see
 -- startOrResumeAssessment in src/app/teacher/actions.ts), so a mismatch
--- can't currently happen through the UI — but that's a property of today's
+-- can't currently happen through the UI, but that's a property of today's
 -- application code, not a guarantee. Enforce it at the database layer too
 -- (TRD §6: "All access rules enforced at the API/database layer, not just
 -- the UI"), so it holds regardless of future code paths.

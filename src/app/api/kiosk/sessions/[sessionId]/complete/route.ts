@@ -5,7 +5,7 @@ import { scoreSession } from "@/lib/scoring";
 import { generateSchoolReport, generateStudentReport } from "@/lib/reports";
 
 /**
- * POST /api/kiosk/sessions/:id/complete — Assessment Service "complete"
+ * POST /api/kiosk/sessions/:id/complete: Assessment Service "complete"
  * endpoint (TRD §4.1). Marks the session done, runs the Scoring Service
  * synchronously (fast: a handful of rows), then schedules PDF report
  * generation with `after()` so it never blocks this response (TRD §5).

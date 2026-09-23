@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 // /api/kiosk serves the unauthenticated student flow (authorized by session
 // id/code in the route itself); /api/cron is authorized by CRON_SECRET.
-// Redirecting either to /login breaks them — the kiosk fetch would get the
+// Redirecting either to /login breaks them: the kiosk fetch would get the
 // login page's HTML instead of JSON.
 const PUBLIC_PATHS = ["/login", "/student", "/api/kiosk", "/api/cron"];
 

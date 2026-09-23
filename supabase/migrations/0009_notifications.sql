@@ -1,9 +1,9 @@
 -- In-app notifications: a teacher is notified when their student's report
 -- finishes generating; every administrator at a school is notified when
 -- the school-wide report finishes. Rows are written by the report
--- generation service (src/lib/reports.ts) via the service-role client —
+-- generation service (src/lib/reports.ts) via the service-role client;
 -- there is deliberately no client-facing insert policy, same pattern as
--- audit_log — but a recipient can read and mark their own as read.
+-- audit_log, but a recipient can read and mark their own as read.
 
 create table public.notifications (
   id uuid primary key default gen_random_uuid(),
@@ -24,7 +24,7 @@ create policy notifications_select_own on public.notifications
   for select to authenticated
   using (recipient_id = auth.uid());
 
--- Only lets a recipient flip their own `read` flag — the with check mirrors
+-- Only lets a recipient flip their own `read` flag; the with check mirrors
 -- `using` rather than re-validating other columns, since there's nothing
 -- else on the row a client should be able to change.
 create policy notifications_update_own on public.notifications

@@ -110,7 +110,7 @@ export function StaffRow({
       {resetState.error && <p className="text-[var(--color-terracotta-dark)] text-xs m-0">{resetState.error}</p>}
       {resetState.result && (
         <div className="bg-[var(--color-sage-tint)] rounded-lg px-3.5 py-2.5 text-xs text-[var(--color-ink-soft)]">
-          New temporary password (shown once — share it securely):{" "}
+          New temporary password (shown once; share it securely):{" "}
           <code className="bg-white px-1.5 py-0.5 rounded font-bold">{resetState.result.tempPassword}</code>
         </div>
       )}

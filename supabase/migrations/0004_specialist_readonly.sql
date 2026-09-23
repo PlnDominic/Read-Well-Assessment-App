@@ -1,5 +1,5 @@
 -- Reading specialists can view reports for their assigned students (PRD
--- §4.5) but should not be able to administer assessments themselves — only
+-- §4.5) but should not be able to administer assessments themselves, only
 -- teachers and administrators start/resume a session. The original
 -- assessment_sessions_insert_staff policy only checked can_access_student(),
 -- which (correctly) also returns true for an assigned specialist, so it

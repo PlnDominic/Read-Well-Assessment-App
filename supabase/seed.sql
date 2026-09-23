@@ -2,7 +2,7 @@
 -- SUPABASE PROJECT. ⚠️
 --
 -- It creates two live login accounts with a password published in this
--- public repo ("readwell-demo") — fine on a throwaway local Postgres
+-- public repo ("readwell-demo"), fine on a throwaway local Postgres
 -- instance, a real security hole on anything reachable from the internet.
 -- For a real deployment, use supabase/bootstrap.sql to create your actual
 -- first school and administrator instead.
@@ -18,7 +18,7 @@
 -- NOTE: seeding rows directly into auth.users/auth.identities depends on
 -- the GoTrue schema shipped with the Supabase CLI's local Postgres image.
 -- It is not something to replicate against a hosted project even for a
--- one-off — see supabase/bootstrap.sql for the supported way to create a
+-- one-off; see supabase/bootstrap.sql for the supported way to create a
 -- real account there.
 
 begin;

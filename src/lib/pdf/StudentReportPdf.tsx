@@ -52,7 +52,7 @@ export function StudentReportPdf({
 }: StudentReportPdfProps) {
   const isOnTrack = overallLabel === "On Track";
   return (
-    <Document title={`${studentName} — Reading Assessment Report`}>
+    <Document title={`${studentName}: Reading Assessment Report`}>
       <Page size="A4" style={styles.page}>
         <View style={styles.headerRow}>
           <View>

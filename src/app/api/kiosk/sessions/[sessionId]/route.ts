@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { evaluateResponse, loadSessionForKiosk } from "@/lib/kiosk";
 
 /**
- * Kiosk endpoints (student-facing, no auth — see supabase/migrations/0002_rls.sql
+ * Kiosk endpoints (student-facing, no auth; see supabase/migrations/0002_rls.sql
  * for why these use the service-role client instead of RLS).
  */
 

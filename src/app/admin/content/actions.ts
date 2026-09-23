@@ -129,7 +129,7 @@ export async function renameSkillArea(formData: FormData) {
   revalidatePath("/admin/content");
 }
 
-/** Only allowed when nothing references it — see the inUse check built in
+/** Only allowed when nothing references it; see the inUse check built in
  * AdminContentPage (scans every assessment's items and recommendation_rules). */
 export async function deleteSkillArea(formData: FormData) {
   await requireAdmin();
@@ -142,11 +142,11 @@ export async function deleteSkillArea(formData: FormData) {
     .from("recommendation_rules")
     .select("id", { count: "exact", head: true })
     .eq("skill_area_id", id);
-  if ((ruleCount ?? 0) > 0) throw new Error("This skill area is used by a recommendation rule — remove that first");
+  if ((ruleCount ?? 0) > 0) throw new Error("This skill area is used by a recommendation rule. Remove that first.");
 
   const { data: assessments } = await admin.from("assessments").select("items");
   const inUseByItem = (assessments ?? []).some((a) => a.items.some((item) => item.skillAreaKey === key));
-  if (inUseByItem) throw new Error("This skill area is used by an assessment item — remove that first");
+  if (inUseByItem) throw new Error("This skill area is used by an assessment item. Remove that first.");
 
   const { error } = await admin.from("skill_areas").delete().eq("id", id);
   if (error) throw new Error(error.message);

@@ -58,7 +58,7 @@ export default async function AdminContentPage({
     <div className="w-full max-w-[920px]">
       <h1 className="font-heading font-bold text-[26px] text-[var(--color-sage-deep)] m-0 mb-1">Content</h1>
       <p className="text-[var(--color-muted)] text-sm m-0 mb-5">
-        Edits here don&apos;t require a code deploy — saving the assessment creates a new version so past
+        Edits here don&apos;t require a code deploy. Saving the assessment creates a new version so past
         sessions keep the content they were assessed against.
       </p>
 

@@ -29,7 +29,7 @@ jobs:
         run: npm test
 
       - name: Build
-        # No real Supabase project in CI — these are placeholders so the
+        # No real Supabase project in CI; these are placeholders so the
         # build can complete. Actual Supabase env vars are configured on the
         # Vercel project itself for deploys, not here.
         env:

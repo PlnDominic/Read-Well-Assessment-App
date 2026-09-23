@@ -25,7 +25,7 @@ export default async function AdminSettingsPage() {
       <div className="bg-white rounded-[20px] shadow-[0_6px_20px_rgba(0,0,0,0.06)] px-8 py-7.5">
         <div className="font-heading font-bold text-sm text-[var(--color-sage-deep)] mb-4">Data retention</div>
         <p className="text-[var(--color-muted)] text-sm mb-4 mt-0">
-          Automatically deletes completed assessment sessions — and their responses, results, and reports — older
+          Automatically deletes completed assessment sessions (and their responses, results, and reports) older
           than this many days. A daily job checks this setting; leave it blank to keep data indefinitely.
         </p>
         <form action={updateDataRetention} className="flex flex-wrap items-end gap-3.5">

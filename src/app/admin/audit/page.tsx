@@ -25,7 +25,7 @@ export default async function AdminAuditPage() {
   if (!profile || profile.role !== "administrator") redirect("/");
 
   // audit_log has no client-facing RLS policy by design (written/read via
-  // service role only) — this is the one place that reads it, gated by the
+  // service role only); this is the one place that reads it, gated by the
   // administrator check above, same pattern as the other admin-only reads
   // that lack RLS policies (assessments, recommendation_rules).
   const { data: staff } = await supabase.from("profiles").select("id, name").eq("school_id", profile.school_id);

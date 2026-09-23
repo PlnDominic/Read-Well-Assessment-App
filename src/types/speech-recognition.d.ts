@@ -1,6 +1,6 @@
 /**
  * Minimal ambient types for the Web Speech API's SpeechRecognition
- * interface — not part of standard lib.dom.d.ts. Chrome/Edge only expose
+ * interface, not part of standard lib.dom.d.ts. Chrome/Edge only expose
  * it as the vendor-prefixed `webkitSpeechRecognition`; only the members
  * StudentAssessmentRunner.tsx actually uses are declared.
  */

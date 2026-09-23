@@ -15,7 +15,7 @@ Storage), matching the TRD's recommended stack.
 ## Stack
 
 - **Frontend**: Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4
-- **Backend**: Supabase — Postgres, Auth, Storage; Next.js Route Handlers for
+- **Backend**: Supabase (Postgres, Auth, Storage); Next.js Route Handlers for
   the assessment/scoring/report APIs
 - **PDF generation**: `@react-pdf/renderer`, run via Next's `after()` so it
   never blocks the assessment-completion response
@@ -28,7 +28,7 @@ A few things the PRD/TRD left open that needed a concrete decision to ship:
 
 - **Students never authenticate.** Per TRD §6 ("kiosk-style, teacher-initiated"),
   a kiosk code (`session_code`, 6 random characters excluding 0/O/1/I) is
-  created automatically the moment a student is added to the roster — see
+  created automatically the moment a student is added to the roster; see
   `createSessionForStudent` in `src/lib/kiosk.ts`, called from both
   `addStudent`/`addStudentToOwnRoster` (adding a student) and
   `startOrResumeAssessment` (adding a student is the common case, since most
@@ -51,11 +51,11 @@ A few things the PRD/TRD left open that needed a concrete decision to ship:
 - **Fluency scoring uses the browser's Web Speech API.** The PRD/TRD don't
   name a specific ASR vendor, and every paid option (Whisper, Deepgram,
   AssemblyAI, Google Speech-to-Text) needs an account/API key this project
-  doesn't have — so mic items are scored with `SpeechRecognition` /
+  doesn't have, so mic items are scored with `SpeechRecognition` /
   `webkitSpeechRecognition`, which is free and built into Chrome and Edge
   (see `src/types/speech-recognition.d.ts` for the ambient types it needs,
   since they're not in `lib.dom.d.ts`). **Firefox and Safari don't
-  implement it** — `StudentAssessmentRunner.tsx`'s `toggleMic` detects that
+  implement it**; `StudentAssessmentRunner.tsx`'s `toggleMic` detects that
   and falls back to the original "tap to mark attempted" flow.
   Each mic item can define an `expectedText` (set via the "Expected
   word/phrase" field in the admin content editor); `evaluateResponse` in
@@ -89,20 +89,20 @@ npm install
 
 You need a Supabase project (local via the CLI, or hosted at supabase.com).
 
-**Option A — hosted (production or any real deployment):**
+**Option A: hosted (production or any real deployment):**
 1. Create a project at [supabase.com](https://supabase.com).
 2. In the SQL editor, run every migration in `supabase/migrations/` **in
    order** (`0001_init.sql` through the highest-numbered file present).
 3. Run `supabase/bootstrap.sql` to create your **real** first school and
    administrator (it walks you through creating the account in
    Authentication → Add user first, then linking it up).
-   **Do not run `supabase/seed.sql` here** — that file creates two demo
+   **Do not run `supabase/seed.sql` here**: that file creates two demo
    login accounts with a password published in this public repo
    (`readwell-demo`); it's only safe against a local, throwaway database.
 4. Copy `.env.example` to `.env.local` and fill in your project's URL, anon
    key, and service role key (Project Settings → API).
 
-**Option B — local (Supabase CLI):**
+**Option B: local (Supabase CLI):**
 ```bash
 supabase start
 supabase db reset   # applies migrations + seed.sql
@@ -120,9 +120,9 @@ Visit `http://localhost:3000`.
 **If you seeded demo data (Option B, or ran `seed.sql` by hand):** sign in
 with `rivera@lincoln-elementary.edu` (teacher) or
 `chen@lincoln-elementary.edu` (administrator), password `readwell-demo` for
-both — these only exist in that local database, never in a hosted one (see
+both. These only exist in that local database, never in a hosted one (see
 the warning in `supabase/seed.sql`). To try the student flow: sign in as
-the teacher, add a new student — a kiosk code appears in a banner right
+the teacher, add a new student and a kiosk code appears in a banner right
 away (and stays visible on their roster row after that). Enter it at
 `/student/join` to test the separate-device path, or click **Start
 Assessment** next to a student on the roster instead to go straight into
@@ -132,7 +132,7 @@ them).
 **If you bootstrapped a real deployment (Option A):** sign in with the
 administrator account you created in `supabase/bootstrap.sql`, then use
 `/admin/staff` to add real teachers/specialists and `/admin/students` (or
-a teacher's own roster page) to add real students — each one gets a kiosk
+a teacher's own roster page) to add real students. Each one gets a kiosk
 code immediately, as long as a cycle (`/admin/cycles`) and an active
 assessment for their grade (`/admin/content`) already exist.
 
@@ -142,18 +142,18 @@ TRD §7 asks the assessment client to "tolerate brief connectivity drops
 without losing in-progress answers." `StudentAssessmentRunner` caches three
 things in `localStorage`, keyed by session id, to make that concrete:
 
-- **Unsent answers** — every response is queued locally the instant it's
+- **Unsent answers**: every response is queued locally the instant it's
   picked, then flushed to the server in the background (on selection, every
   6s while anything's queued, and immediately on the browser's `online`
   event). A student can keep answering questions while offline; nothing is
   lost, it just syncs late.
-- **Last-known server state** — if the *very first* load of the assessment
+- **Last-known server state**: if the *very first* load of the assessment
   happens while offline (`fetch` throws rather than resolving), the runner
   falls back to whatever was cached from the last successful load instead
   of showing a dead-end error, and shows a persistent "You're offline"
   banner. It retries the real fetch automatically once the `online` event
   fires.
-- **A pending-finish flag** — if the final "I'm Done!" tap can't reach the
+- **A pending-finish flag**: if the final "I'm Done!" tap can't reach the
   server (offline, or a one-off failure), the student sees an "Almost
   done!" screen instead of a false "You're all done," and completion is
   retried automatically on reconnect (or manually via a "Try again"
@@ -161,7 +161,7 @@ things in `localStorage`, keyed by session id, to make that concrete:
   kiosk tab doesn't lose the fact that the student already tried to finish.
 
 This covers brief drops on a single device, not full offline-first
-operation — the initial page load and sign-in still need a network
+operation; the initial page load and sign-in still need a network
 connection; there's no service worker/app-shell caching. That's
 intentional scope: PRD/TRD only ask for tolerance of brief drops during an
 in-progress assessment, not a fully installable offline app.
@@ -169,39 +169,39 @@ in-progress assessment, not a fully installable offline app.
 ### Admin tooling
 
 Signed in as an administrator, the top nav under `/admin` has:
-- **Students** — add, edit, or delete a student; assign/unassign a reading
+- **Students**: add, edit, or delete a student; assign/unassign a reading
   specialist; bulk-import a roster from a CSV (`name,grade,teacher_email`)
-- **Staff** — invite a teacher/reading-specialist/administrator (creates the
+- **Staff**: invite a teacher/reading-specialist/administrator (creates the
   Supabase Auth user via service role and shows a one-time temp password);
   change a staff member's role, deactivate/reactivate their account, or
   force a password reset (also shown once). An admin can't deactivate or
   demote themselves from this screen.
-- **Content** — pick a grade (1–8), then edit that grade's assessment items
+- **Content**: pick a grade (1–8), then edit that grade's assessment items
   (choice/mic, options, correct answers), its skill areas (add/rename;
-  delete only when unused), and its skill-area → recommendation mapping —
+  delete only when unused), and its skill-area → recommendation mapping,
   all without a code deploy. Saving the assessment creates a new version
   rather than mutating in place, so already-completed sessions keep
   pointing at the exact content they were scored against. A database
   trigger (`0006_grade_match_guard.sql`) independently guarantees a
   session's assessment always matches the student's own grade, regardless
   of what the application code does
-- **Cycles** — close the current assessment cycle and start a new one
-- **Audit Log** — who viewed or exported which report, most recent first
-- **Settings** — set (or clear) the school's data retention period; see
+- **Cycles**: close the current assessment cycle and start a new one
+- **Audit Log**: who viewed or exported which report, most recent first
+- **Settings**: set (or clear) the school's data retention period; see
   "Data retention" below
 
 A teacher can cancel a not-yet-completed session directly from `/teacher`
-(e.g. one started by mistake, or to hand the student a fresh code) — this
+(e.g. one started by mistake, or to hand the student a fresh code); this
 is blocked for already-completed sessions at the RLS layer, not just in
 the UI.
 
-A reading specialist signs in the same way (via the "I'm a Teacher" tile —
+A reading specialist signs in the same way (via the "I'm a Teacher" tile,
 the login form is really just "staff sign-in"; which dashboard they land on
 is driven by their actual `profiles.role`) and lands on `/specialist`, a
 read-only roster of the students an administrator has assigned to them.
 
 A teacher can also add students to their own roster directly from `/teacher`
-(no admin needed) — RLS restricts this to students where `teacher_id` is
+(no admin needed); RLS restricts this to students where `teacher_id` is
 themselves.
 
 ### Password reset
@@ -210,7 +210,7 @@ themselves.
 calls `supabase.auth.resetPasswordForEmail`. **For the emailed link to
 redirect back correctly, set the Supabase project's Authentication → URL
 Configuration → Site URL (and add a Redirect URL) to your actual deployed
-origin** — by default it's `http://localhost:3000`, which only works for
+origin**; by default it's `http://localhost:3000`, which only works for
 local dev. This also requires the project's email sending to be working
 (Supabase's built-in email service has low rate limits; configure custom
 SMTP for real usage). An administrator can also force a reset for any staff
@@ -229,7 +229,7 @@ npm run build
 
 If a student or school report's PDF generation fails (`student_reports`/
 `school_reports.status = 'failed'`), a **Retry** button appears right where
-the "Export PDF" button would be — on the student report page and the admin
+the "Export PDF" button would be: on the student report page and the admin
 dashboard, respectively. It re-runs `generateStudentReport`/
 `generateSchoolReport` synchronously so the page shows the outcome
 immediately.
@@ -242,7 +242,7 @@ assessments" at `/admin/settings`, which writes `schools.data_retention_days`
 (`supabase/migrations/0008_data_retention.sql`). A daily Vercel Cron Job
 (`vercel.json`, 3am UTC) hits `/api/cron/purge-expired-data`, which deletes
 completed `assessment_sessions` older than that many days for schools that
-opted in — the foreign keys cascade to `responses`, `results`, and
+opted in; the foreign keys cascade to `responses`, `results`, and
 `student_reports`, and the route also removes the corresponding PDF from
 Storage first so nothing is orphaned in the `reports` bucket. Each purge run
 logs one `audit_log` row per school (`action: 'data.purge_expired'`).
@@ -256,9 +256,9 @@ anything else. See `.env.example`.
 
 A bell icon in the top bar (any signed-in teacher/administrator/specialist
 page) links to `/notifications` and shows an unread count. Rows are written
-by `src/lib/reports.ts` when report generation succeeds — a student's
+by `src/lib/reports.ts` when report generation succeeds (a student's
 teacher on `student_report_ready`, every administrator at the school on
-`school_report_ready` — via the service-role client, same as `audit_log`;
+`school_report_ready`) via the service-role client, same as `audit_log`;
 there's no client-facing insert policy (`0009_notifications.sql`), only
 `select`/`update` scoped to `recipient_id = auth.uid()` so a user can read
 and mark as read their own notifications only.
@@ -268,13 +268,13 @@ and mark as read their own notifications only.
 Unit tests (Vitest) cover the pure logic: response scoring
 (`evaluateResponse`), skill-area aggregation (`aggregateSkillScores`), the
 overall-label rule (`computeOverallLabel`), and session-code
-generation/normalization. They don't touch a database — RLS policies and
+generation/normalization. They don't touch a database; RLS policies and
 the full assessment→scoring→report pipeline are still only verified by
 hand (see "Try the student flow" above); a real end-to-end test would need
 a seeded Supabase instance in CI, which isn't set up yet.
 
 `.github/workflows/ci.yml` runs type-check, lint, tests, and a build (with
-placeholder Supabase env vars — no real project is touched) on every push
+placeholder Supabase env vars, no real project is touched) on every push
 and PR to `main`. It doesn't include a staging deploy gate as a separate
 step because Vercel's own GitHub integration already provides one: every
 PR gets its own preview deployment distinct from production, *as long as
@@ -282,7 +282,7 @@ changes go through a PR rather than a direct push to `main`*.
 
 ### Accessibility
 
-A manual pass (not a full automated audit — no axe-core/Lighthouse run,
+A manual pass (not a full automated audit, no axe-core/Lighthouse run,
 since there's no browser available to drive one in this environment) found
 and fixed concrete WCAG AA contrast failures: `--color-muted` (~3.2:1),
 `--color-muted-light` (~2.6:1), and `--color-gold-text` (~4.44:1) all fell
@@ -294,13 +294,13 @@ Also added `aria-label`s to a few controls that had no accessible name
 (the mic recording button, several bare `<select>`s in the admin screens).
 
 **Known, deliberately unfixed**: white text on the primary sage-green
-button background (`--color-sage`) measures ~3.6:1 — enough for large/bold
+button background (`--color-sage`) measures ~3.6:1, enough for large/bold
 text but short of 4.5:1 for the smaller buttons. Fixing it means either
 darkening the brand's primary color or resizing button text, both of which
 change the approved visual design rather than just correcting an
 oversight, so it's left as a flagged decision rather than something I
 changed unilaterally. A full audit (every color pairing, keyboard
-navigation order, screen-reader testing) is still open — see the CI note
+navigation order, screen-reader testing) is still open; see the CI note
 above about no browser/AT tooling being available here.
 
 ## Deploying
@@ -308,8 +308,8 @@ above about no browser/AT tooling being available here.
 1. Push this repo to GitHub.
 2. Import it into Vercel; set the env vars from `.env.example` as Vercel
    project environment variables (development/preview/production, per the
-   TRD's isolated-environments requirement — use separate Supabase projects
-   per environment). `CRON_SECRET` can be any random string — Vercel
+   TRD's isolated-environments requirement; use separate Supabase projects
+   per environment). `CRON_SECRET` can be any random string; Vercel
    detects it and starts sending it to the cron route automatically.
 3. Run the migrations against your production Supabase project before the
    first deploy that needs them.
@@ -336,7 +336,7 @@ src/lib/
   kiosk.ts                Student-session helpers (response evaluation, codes)
 supabase/
   migrations/             Schema + RLS + storage bucket
-  seed.sql                Demo data — LOCAL DEV ONLY, never run against a hosted project
+  seed.sql                Demo data (LOCAL DEV ONLY, never run against a hosted project)
   bootstrap.sql           Creates your real first school + administrator on a hosted project
 design-handoff/           Original Claude Design bundle (BRD/PRD/TRD, chat transcript, prototype)
 ```
@@ -345,6 +345,6 @@ design-handoff/           Original Claude Design bundle (BRD/PRD/TRD, chat trans
 
 Grades other than 1, parent/guardian access, SIS integration, district-level
 rollup reporting, and native mobile apps are explicitly out of scope for this
-release per the PRD — the data model (e.g. `students.grade`,
+release per the PRD; the data model (e.g. `students.grade`,
 `assessments.grade_level`) is shaped to extend to more grades later without a
 redesign.

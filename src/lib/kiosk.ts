@@ -6,7 +6,7 @@ import type { AssessmentItem, Database } from "@/lib/database.types";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
-/** Lowercase, strip punctuation, collapse whitespace — for comparing a
+/** Lowercase, strip punctuation, collapse whitespace, for comparing a
  * spoken-word transcript against an item's expected text without being
  * thrown off by case, a trailing period Chrome sometimes adds, etc. */
 export function normalizeSpokenText(s: string): string {
@@ -21,14 +21,14 @@ export function normalizeSpokenText(s: string): string {
  * Evaluates a single response against its item definition.
  *
  * Fluency (mic) items are scored by comparing the browser's Web Speech API
- * transcript (see StudentAssessmentRunner.tsx — Chrome/Edge only, no
+ * transcript (see StudentAssessmentRunner.tsx, Chrome/Edge only, no
  * backend/API key needed) against `item.expectedText`. Two graceful
  * fallbacks preserve the original "any attempt counts" behavior where real
  * scoring isn't possible: the literal sentinel "attempted" (sent by
  * browsers without SpeechRecognition support), and mic items with no
  * expectedText configured (content authored before this existed, or where
  * the program team didn't set a rubric). The match is a lenient substring
- * check, not exact equality — early readers' transcripts are noisy, and a
+ * check, not exact equality; early readers' transcripts are noisy, and a
  * false "wrong" is a worse failure mode here than a false "right".
  */
 export function evaluateResponse(item: AssessmentItem, answer: unknown): boolean {
@@ -68,14 +68,14 @@ export type CreateSessionResult =
  * Creates a fresh not-yet-started session (and its kiosk code) for a
  * student, against the school's current cycle and the active assessment
  * for their grade. Shared by the "add a student" flows (so a code exists
- * the moment a student is added — most students are on a different device
+ * the moment a student is added, since most students are on a different device
  * than the staff member adding them) and by startOrResumeAssessment (which
  * additionally checks for a non-completed session to resume first, so a
  * student can be re-run through a fresh assessment once their prior one
  * in this cycle is complete rather than being stuck on "View Report").
  *
  * Returns `ok: false` rather than throwing when there's no active cycle or
- * no active assessment for the grade yet — those are normal, fixable setup
+ * no active assessment for the grade yet; those are normal, fixable setup
  * gaps (visit /admin/cycles or /admin/content), not really errors, and the
  * student should still get added to the roster either way.
  */
@@ -107,7 +107,7 @@ export async function createSessionForStudent(
     // Deliberately not chaining .select() here (which asks PostgREST for the
     // row back via RETURNING): under this project's Postgres, an INSERT ...
     // RETURNING can fail RLS even though the exact same row is immediately
-    // selectable via a separate, ordinary SELECT through the same policy —
+    // selectable via a separate, ordinary SELECT through the same policy;
     // verified directly in the SQL editor. Generating the id ourselves means
     // we never need the row back, sidestepping that entirely.
     const { error } = await supabase.from("assessment_sessions").insert({
@@ -121,7 +121,7 @@ export async function createSessionForStudent(
     if (!error) return { ok: true, id, sessionCode };
     if (!error.message.includes("session_code")) throw error;
   }
-  throw new Error("Could not allocate a session code — try again");
+  throw new Error("Could not allocate a session code. Try again.");
 }
 
 export async function loadSessionForKiosk(admin: AdminClient, sessionId: string) {

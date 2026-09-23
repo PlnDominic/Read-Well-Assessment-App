@@ -17,8 +17,8 @@ export interface SkillScore {
  * session against the grade-level rubric, writes Result rows per skill
  * area, and flags areas below FLAGGED_SCORE_THRESHOLD.
  *
- * The rubric here is intentionally simple — percent of items correct per
- * skill area — because the sample assessment has one item per skill area.
+ * The rubric here is intentionally simple, percent of items correct per
+ * skill area, because the sample assessment has one item per skill area.
  * A grade-level content update with multiple items per skill area works
  * unchanged: this aggregates across however many items share a
  * skillAreaKey.

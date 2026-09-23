@@ -13,9 +13,9 @@ export interface AddStudentState {
 
 const NO_SESSION_NOTES: Record<"no_cycle" | "no_assessment", (grade: number) => string> = {
   no_cycle: () =>
-    "No active assessment cycle yet — an administrator needs to start one at /admin/cycles. Come back and click \"Start Assessment\" once that's done.",
+    "No active assessment cycle yet. An administrator needs to start one at /admin/cycles. Come back and click \"Start Assessment\" once that's done.",
   no_assessment: (grade) =>
-    `No active assessment configured for grade ${grade} yet — an administrator needs to set one up at /admin/content. Come back and click "Start Assessment" once that's done.`,
+    `No active assessment configured for grade ${grade} yet. An administrator needs to set one up at /admin/content. Come back and click "Start Assessment" once that's done.`,
 };
 
 /**

@@ -18,7 +18,7 @@ export interface InviteStaffState {
 }
 
 /**
- * Creating a Supabase Auth user requires the service-role client — there is
+ * Creating a Supabase Auth user requires the service-role client; there is
  * no client-facing way to do it, by design (profiles has no insert policy;
  * see supabase/migrations/0002_rls.sql). requireAdmin() is the gate: it
  * confirms the caller is really an administrator, via their own RLS-scoped
@@ -90,7 +90,7 @@ export async function updateStaffRole(formData: FormData) {
 }
 
 /** Flips profiles.is_active (the app's own read model) and bans/unbans the
- * underlying Supabase Auth user (real enforcement at the auth layer) —
+ * underlying Supabase Auth user (real enforcement at the auth layer);
  * see supabase/migrations/0005_profiles_is_active.sql. */
 export async function deactivateStaff(formData: FormData) {
   const { profile } = await requireAdmin();

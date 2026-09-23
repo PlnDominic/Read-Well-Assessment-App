@@ -15,7 +15,7 @@ function formatAnswer(item: AssessmentItem, answer: unknown): string {
     if (typeof answer === "string" && answer && answer !== "attempted") return `"${answer}"`;
     return "Read aloud (attempted)";
   }
-  return typeof answer === "string" ? answer : "—";
+  return typeof answer === "string" ? answer : "N/A";
 }
 
 export default async function StudentReportPage({
@@ -110,7 +110,7 @@ export default async function StudentReportPage({
   const isOnTrack = overallLabel === "On Track";
   const assessedDate = session.completed_at
     ? new Date(session.completed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-    : "—";
+    : "N/A";
 
   return (
     <AppShell>
@@ -153,7 +153,7 @@ export default async function StudentReportPage({
                     type="submit"
                     className="bg-[var(--color-terracotta-tint)] border-[1.5px] border-[var(--color-terracotta)] text-[var(--color-terracotta-dark)] font-bold text-sm px-4 py-2.25 rounded-full cursor-pointer"
                   >
-                    PDF failed — Retry
+                    Retry PDF
                   </button>
                 </form>
               ) : (

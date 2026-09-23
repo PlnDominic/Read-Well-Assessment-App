@@ -14,7 +14,7 @@ export interface Recommendation {
  * Recommendation Engine (TRD §4.3): given flagged skill areas + a grade
  * level, looks up RecommendationRule rows. Rules are data (see
  * supabase/seed.sql), so the program team can update them without a
- * deploy — this function just reads whatever is in the table.
+ * deploy; this function just reads whatever is in the table.
  */
 export async function getRecommendations(
   admin: AdminClient,

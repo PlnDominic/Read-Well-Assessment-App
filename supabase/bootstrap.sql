@@ -1,11 +1,11 @@
 -- Production bootstrap: creates your REAL first school and administrator.
 -- Run this once against a hosted Supabase project, after the migrations in
--- supabase/migrations/ — do NOT run supabase/seed.sql there (that file
+-- supabase/migrations/. Do NOT run supabase/seed.sql there (that file
 -- creates fake demo accounts with a password published in the public
 -- repo; see its header comment).
 --
 -- Every account after this first one (teachers, specialists, more admins)
--- should be created from inside the running app itself, at /admin/staff —
+-- should be created from inside the running app itself, at /admin/staff;
 -- that flow already creates the Supabase Auth user and the profiles row
 -- together, correctly, via the service-role client. This script exists
 -- only because *someone* has to create the very first administrator
@@ -41,5 +41,5 @@ commit;
 
 -- After this, log into the app with that email/password, then use
 -- /admin/staff to invite real teachers and reading specialists, and
--- /admin/students (or a teacher's own roster page) to add real students —
+-- /admin/students (or a teacher's own roster page) to add real students,
 -- no further SQL needed for any of that.

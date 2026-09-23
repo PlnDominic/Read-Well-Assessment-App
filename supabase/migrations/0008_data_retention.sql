@@ -1,6 +1,6 @@
 -- Per-school data retention. The TRD flags the actual retention policy as
 -- unconfirmed, so this defaults to NULL (disabled) rather than guessing a
--- number — an administrator opts in from /admin/settings if/when their
+-- number; an administrator opts in from /admin/settings if/when their
 -- school has a real policy to enforce.
 --
 -- No client-facing update policy is added on purpose, matching the existing

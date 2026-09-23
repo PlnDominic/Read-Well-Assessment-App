@@ -113,7 +113,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
       res = await fetch(`/api/kiosk/sessions/${sessionId}`, { cache: "no-store" });
     } catch {
       // A thrown fetch (as opposed to a resolved !res.ok) means we're
-      // offline, not that the session doesn't exist — fall back to
+      // offline, not that the session doesn't exist. Fall back to
       // whatever was last cached so the student isn't stuck on a spinner,
       // and let the online-retry effect below keep trying quietly.
       const cached = readCachedState(sessionId);
@@ -141,7 +141,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
 
   useEffect(() => {
     // Reading browser-only state (navigator.onLine, localStorage) on mount
-    // — not derivable during render/SSR — and kicking off the initial
+    // (not derivable during render/SSR) and kicking off the initial
     // fetch (load() only sets state after its internal awaits resolve).
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsOnline(navigator.onLine);
@@ -228,7 +228,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
     if (alreadyDone || !state) return;
     const itemId = state.items[qIndex].id;
     const Recognition = window.SpeechRecognition ?? window.webkitSpeechRecognition;
-    // Chrome/Edge only — Firefox and Safari don't implement SpeechRecognition.
+    // Chrome/Edge only; Firefox and Safari don't implement SpeechRecognition.
     // Fall back to the old "tap to mark attempted" flow there so the
     // assessment still works, just without real transcript scoring.
     if (!Recognition) {
@@ -251,7 +251,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
       saveAnswer(itemId, transcript);
     };
     recognition.onerror = () => {
-      // Mic denied, no speech detected, etc. — still record an attempt so
+      // Mic denied, no speech detected, etc.: still record an attempt so
       // the student isn't stuck unable to proceed.
       saveAnswer(itemId, "attempted");
     };
@@ -272,7 +272,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
     const ok = await attemptComplete();
     setCompleting(false);
     if (!ok) {
-      // Could be offline, or a one-off server hiccup — either way, don't
+      // Could be offline, or a one-off server hiccup; either way, don't
       // dead-end. Remember the intent so a reload still shows the "almost
       // done" screen, and the online-retry effect will keep trying.
       writePendingComplete(sessionId, true);
@@ -300,7 +300,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
         <p className="text-[var(--color-body)] text-lg leading-relaxed m-0 mb-6">
           {isOnline
             ? "Finishing up…"
-            : "You're offline. Your answers are saved on this device — we'll finish up as soon as you're back online."}
+            : "You're offline. Your answers are saved on this device, and we'll finish up as soon as you're back online."}
         </p>
         <button
           onClick={async () => {
@@ -346,7 +346,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
 
   const offlineBanner = !isOnline && (
     <div className="w-full max-w-[640px] mb-4 bg-[var(--color-gold-bg)] border border-[var(--color-gold-border)] text-[var(--color-gold-text)] text-sm font-bold rounded-xl px-4 py-2.5 text-center">
-      You&apos;re offline — answers are saved on this device and will sync automatically when you&apos;re back online.
+      You&apos;re offline. Answers are saved on this device and will sync automatically when you&apos;re back online.
     </div>
   );
 

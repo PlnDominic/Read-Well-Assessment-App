@@ -4,18 +4,18 @@ import { createAdminClient } from "@/lib/supabase/admin";
 /**
  * Daily data-retention purge (see /admin/settings and
  * supabase/migrations/0008_data_retention.sql). Only schools that have
- * opted into a `data_retention_days` value are touched — the TRD leaves
+ * opted into a `data_retention_days` value are touched; the TRD leaves
  * the actual policy unconfirmed, so the default (NULL) keeps data
  * indefinitely.
  *
  * Deleting a completed `assessment_sessions` row cascades to `responses`,
  * `results`, and `student_reports` (see 0001_init.sql's foreign keys), but
- * not to the report PDF sitting in Storage — those are removed explicitly
+ * not to the report PDF sitting in Storage; those are removed explicitly
  * before the row delete so nothing is orphaned in the `reports` bucket.
  *
  * Configured as a Vercel Cron Job in vercel.json. Vercel adds
  * `Authorization: Bearer $CRON_SECRET` to its own requests once that env
- * var is set — this route rejects anything else so the endpoint can't be
+ * var is set; this route rejects anything else so the endpoint can't be
  * used to mass-delete data if its URL leaks.
  */
 export async function GET(request: NextRequest) {

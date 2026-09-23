@@ -12,7 +12,7 @@ export function ImportCsvForm() {
     <div className="border-t border-[var(--color-cream-divider)] pt-5 mt-5">
       <div className="font-heading font-bold text-sm text-[var(--color-sage-deep)] mb-1.5">Bulk import (CSV)</div>
       <p className="text-[var(--color-muted)] text-xs mb-3 mt-0">
-        Header row <code>name,grade,teacher_email</code> — one student per line, teacher matched by email.
+        Header row <code>name,grade,teacher_email</code>, one student per line, teacher matched by email.
       </p>
       <form action={formAction} className="flex flex-wrap items-center gap-3">
         <label className="flex flex-col gap-1 text-sm">
