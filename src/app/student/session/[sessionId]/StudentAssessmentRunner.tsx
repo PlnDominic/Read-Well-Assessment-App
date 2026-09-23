@@ -361,7 +361,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
           Hi! I&apos;m Sunny.
         </h1>
         <p className="text-[var(--color-body)] text-lg leading-relaxed m-0 mb-10">
-          Let&apos;s read some words together. There&apos;s no wrong answers &mdash; just try your best!
+          Let&apos;s read some words together. There are no wrong answers. Just try your best!
         </p>
         <button
           onClick={() => setStarted(true)}
