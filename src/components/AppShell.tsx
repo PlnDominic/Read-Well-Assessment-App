@@ -1,5 +1,5 @@
 import { ReadWellMark } from "@/components/icons";
-import { SwitchRoleButton } from "@/components/SwitchRoleButton";
+import { LogoutButton } from "@/components/LogoutButton";
 import { NotificationBell } from "@/components/NotificationBell";
 
 export function AppShell({
@@ -23,7 +23,7 @@ export function AppShell({
           </div>
           <div className="flex items-center gap-2.5">
             <NotificationBell />
-            <SwitchRoleButton />
+            <LogoutButton />
           </div>
         </div>
       )}
