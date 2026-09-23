@@ -176,7 +176,7 @@ Signed in as an administrator, the top nav under `/admin` has:
   change a staff member's role, deactivate/reactivate their account, or
   force a password reset (also shown once). An admin can't deactivate or
   demote themselves from this screen.
-- **Content**: pick a grade (1–8), then edit that grade's assessment items
+- **Content**: pick a grade (1-8), then edit that grade's assessment items
   (choice/mic, options, correct answers), its skill areas (add/rename;
   delete only when unused), and its skill-area → recommendation mapping,
   all without a code deploy. Saving the assessment creates a new version
