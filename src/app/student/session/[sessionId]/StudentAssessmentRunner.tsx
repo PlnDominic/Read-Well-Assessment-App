@@ -108,16 +108,9 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
   }, []);
 
   const load = useCallback(async () => {
+    let res: Response;
     try {
-      const res = await fetch(`/api/kiosk/sessions/${sessionId}`, { cache: "no-store" });
-      if (!res.ok) {
-        setError("We couldn't find that assessment. Ask your teacher for a new code.");
-        return;
-      }
-      const data: KioskState = await res.json();
-      writeCachedState(sessionId, data);
-      setUsingCachedState(false);
-      applyState(data);
+      res = await fetch(`/api/kiosk/sessions/${sessionId}`, { cache: "no-store" });
     } catch {
       // A thrown fetch (as opposed to a resolved !res.ok) means we're
       // offline, not that the session doesn't exist — fall back to
@@ -128,7 +121,22 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
         setUsingCachedState(true);
         applyState(cached);
       }
+      return;
     }
+    if (!res.ok) {
+      setError("We couldn't find that assessment. Ask your teacher for a new code.");
+      return;
+    }
+    let data: KioskState;
+    try {
+      data = await res.json();
+    } catch {
+      setError("Something went wrong loading this assessment. Ask your teacher for help.");
+      return;
+    }
+    writeCachedState(sessionId, data);
+    setUsingCachedState(false);
+    applyState(data);
   }, [sessionId, applyState]);
 
   useEffect(() => {
