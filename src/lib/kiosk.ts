@@ -127,7 +127,7 @@ export async function createSessionForStudent(
 export async function loadSessionForKiosk(admin: AdminClient, sessionId: string) {
   const { data: session, error } = await admin
     .from("assessment_sessions")
-    .select("id, status, current_item_index, assessment_id, student_id")
+    .select("id, status, current_item_index, assessment_id, student_id, session_code")
     .eq("id", sessionId)
     .single();
   if (error || !session) return null;

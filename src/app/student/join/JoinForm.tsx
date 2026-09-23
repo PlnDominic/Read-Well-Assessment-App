@@ -5,8 +5,44 @@ import Link from "next/link";
 import { SunnyMascot } from "@/components/icons";
 import { redeemSessionCode } from "./actions";
 
+const OFFLINE_NEW_CODE =
+  "This device is offline. Ask your teacher to reconnect it to the internet so you can use this code.";
+
+// StudentAssessmentRunner records code -> session id each time an assessment
+// loads on this device, so a code already used here can be reopened without
+// a connection (the service worker serves the saved page).
+function sessionIdForCodeOnThisDevice(code: string): string | null {
+  try {
+    return localStorage.getItem(`rw:code:${code}`);
+  } catch {
+    return null;
+  }
+}
+
+async function redeemOnlineOrFromDevice(prev: { error: string | null }, formData: FormData) {
+  const code = String(formData.get("code") ?? "").trim().toUpperCase();
+  const openSaved = () => {
+    const sessionId = code ? sessionIdForCodeOnThisDevice(code) : null;
+    if (!sessionId) return { error: OFFLINE_NEW_CODE };
+    // A full page load on purpose: router.push would first fetch from the
+    // server, which is exactly what can't happen here. The service worker
+    // answers this navigation with the saved page instead.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.assign(`/student/session/${sessionId}`);
+    return { error: null };
+  };
+
+  if (!navigator.onLine) return openSaved();
+  try {
+    return await redeemSessionCode(prev, formData);
+  } catch (err) {
+    if (err instanceof TypeError || !navigator.onLine) return openSaved();
+    throw err;
+  }
+}
+
 export function JoinForm() {
-  const [state, formAction, isPending] = useActionState(redeemSessionCode, { error: null });
+  const [state, formAction, isPending] = useActionState(redeemOnlineOrFromDevice, { error: null });
 
   return (
     <div className="w-full max-w-[440px] mt-[8vh] text-center">

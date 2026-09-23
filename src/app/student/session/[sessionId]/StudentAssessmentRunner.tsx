@@ -17,6 +17,7 @@ interface KioskItem {
 interface KioskState {
   status: "not_started" | "in_progress" | "completed";
   currentItemIndex: number;
+  sessionCode?: string;
   studentName: string;
   items: KioskItem[];
   answersByItemId: Record<string, unknown>;
@@ -65,6 +66,31 @@ function writeCachedState(sessionId: string, data: KioskState) {
   } catch {
     // best-effort
   }
+}
+
+// Lets /student/join reopen this assessment from its code with no
+// connection (see JoinForm.tsx).
+function rememberCode(code: string | undefined, sessionId: string) {
+  if (!code) return;
+  try {
+    localStorage.setItem(`rw:code:${code}`, sessionId);
+  } catch {
+    // best-effort
+  }
+}
+
+// Answers given offline live in the pending queue until they sync, so the
+// server's copy (or an older cached copy) can be behind this device. Fold
+// them back in so a reload doesn't show answered questions as blank or
+// send the student back to an earlier question.
+function withLocalProgress(sessionId: string, data: KioskState): KioskState {
+  const pending = readPending(sessionId);
+  const cached = readCachedState(sessionId);
+  return {
+    ...data,
+    answersByItemId: { ...data.answersByItemId, ...pending },
+    currentItemIndex: Math.max(data.currentItemIndex, cached?.currentItemIndex ?? 0),
+  };
 }
 
 function pendingCompleteKey(sessionId: string) {
@@ -119,7 +145,9 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
       const cached = readCachedState(sessionId);
       if (cached) {
         setUsingCachedState(true);
-        applyState(cached);
+        applyState(withLocalProgress(sessionId, cached));
+      } else {
+        setError("This device is offline and this assessment hasn't been opened here before. Ask your teacher to reconnect it to the internet.");
       }
       return;
     }
@@ -129,11 +157,12 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
     }
     let data: KioskState;
     try {
-      data = await res.json();
+      data = withLocalProgress(sessionId, await res.json());
     } catch {
       setError("Something went wrong loading this assessment. Ask your teacher for help.");
       return;
     }
+    rememberCode(data.sessionCode, sessionId);
     writeCachedState(sessionId, data);
     setUsingCachedState(false);
     applyState(data);
@@ -188,7 +217,12 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
     }
     writePendingComplete(sessionId, false);
     setPendingComplete(false);
-    setState((prev) => (prev ? { ...prev, status: "completed" } : prev));
+    setState((prev) => {
+      if (!prev) return prev;
+      const next: KioskState = { ...prev, status: "completed" };
+      writeCachedState(sessionId, next);
+      return next;
+    });
     return true;
   }, [sessionId, flushPending]);
 
@@ -215,7 +249,19 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
   function saveAnswer(itemId: string, answer: unknown) {
     pendingRef.current[itemId] = answer;
     writePending(sessionId, pendingRef.current);
-    setState((prev) => (prev ? { ...prev, answersByItemId: { ...prev.answersByItemId, [itemId]: answer } } : prev));
+    setState((prev) => {
+      if (!prev) return prev;
+      const itemIndex = prev.items.findIndex((i) => i.id === itemId);
+      const next: KioskState = {
+        ...prev,
+        answersByItemId: { ...prev.answersByItemId, [itemId]: answer },
+        // Mirrors the server's own rule (PATCH /api/kiosk/sessions/:id).
+        currentItemIndex: Math.max(prev.currentItemIndex, itemIndex + 1),
+      };
+      // Keep the device's copy current so an offline reload resumes here.
+      writeCachedState(sessionId, next);
+      return next;
+    });
     flushPending();
   }
 

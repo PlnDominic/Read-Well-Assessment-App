@@ -18,6 +18,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ ses
   return NextResponse.json({
     status: state.session.status,
     currentItemIndex: state.session.current_item_index,
+    // The code the student already typed to get here; the page remembers it
+    // so the same code can reopen this assessment on this device offline.
+    sessionCode: state.session.session_code,
     studentName: state.studentName,
     // Never send `isCorrect` on options to the client.
     items: state.items.map((item) => ({

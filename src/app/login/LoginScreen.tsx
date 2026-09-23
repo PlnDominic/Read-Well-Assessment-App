@@ -88,8 +88,22 @@ function RoleTile({
   );
 }
 
+const OFFLINE_SIGN_IN = "You're offline. Signing in needs an internet connection; reconnect and try again.";
+
+// Signing in has to be checked by the server, so it can't work offline.
+// Without this, the failed request would surface as an app error instead.
+async function signInOrExplainOffline(prev: { error: string | null }, formData: FormData) {
+  if (!navigator.onLine) return { error: OFFLINE_SIGN_IN };
+  try {
+    return await signInWithPassword(prev, formData);
+  } catch (err) {
+    if (err instanceof TypeError || !navigator.onLine) return { error: OFFLINE_SIGN_IN };
+    throw err;
+  }
+}
+
 function StaffLoginForm({ mode, onBack }: { mode: Exclude<Mode, "select">; onBack: () => void }) {
-  const [state, formAction, isPending] = useActionState(signInWithPassword, { error: null });
+  const [state, formAction, isPending] = useActionState(signInOrExplainOffline, { error: null });
   const copy = ROLE_COPY[mode];
 
   return (

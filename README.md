@@ -160,11 +160,28 @@ things in `localStorage`, keyed by session id, to make that concrete:
   button). The flag survives a page reload, so closing and reopening the
   kiosk tab doesn't lose the fact that the student already tried to finish.
 
-This covers brief drops on a single device, not full offline-first
-operation; the initial page load and sign-in still need a network
-connection; there's no service worker/app-shell caching. That's
-intentional scope: PRD/TRD only ask for tolerance of brief drops during an
-in-progress assessment, not a fully installable offline app.
+**Starting offline, from the login screen.** A service worker
+(`public/sw.js`, registered by `src/components/ServiceWorkerRegistrar.tsx`
+in production builds) saves the login screen, the student code screen, an
+`/offline` page, the build's scripts/styles, and every assessment page once
+it has been opened on the device. With no connection:
+
+- The login screen and "I'm a Student" still open.
+- Entering a code that was **already opened on this device** goes straight
+  into that assessment (the runner records code → session in
+  `localStorage`), resuming at the right question with offline answers
+  intact. A code never used on the device can't work offline, since only
+  the server knows which student it belongs to; the student is told to
+  ask their teacher to reconnect.
+- Staff sign-in shows "You're offline" instead of failing, since
+  credentials must be checked by the server. Staff pages (roster, reports,
+  admin) are never saved on the device, because kiosk devices are shared,
+  so they show the `/offline` page.
+
+Each deploy registers the worker as `/sw.js?v=<commit sha>`
+(`NEXT_PUBLIC_BUILD_ID` in `next.config.ts`), which replaces the previous
+build's saved copy. For a device to work offline it must have opened the
+app online at least once after the latest deploy.
 
 ### Admin tooling
 
