@@ -29,9 +29,23 @@ export const viewport: Viewport = {
   themeColor: "#6b8f71",
 };
 
+// Applies a stored light/dark override (see ThemeToggle) before first paint,
+// so switching themes doesn't flash the other theme on the next load. Runs
+// inline rather than as a hydrated component because it has to execute
+// before the CSS in globals.css takes effect.
+const themeInitScript = `
+  try {
+    var t = localStorage.getItem("theme");
+    if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${quicksand.variable} ${nunitoSans.variable} h-full`}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body className="min-h-full flex flex-col">
         {children}
         <ServiceWorkerRegistrar />

@@ -17,7 +17,7 @@ export function AdminNav() {
   const pathname = usePathname();
 
   return (
-    <div className="w-full max-w-[920px] flex gap-1 mb-6 flex-wrap bg-white rounded-full shadow-[0_4px_16px_rgba(0,0,0,0.05)] p-1.5">
+    <div className="w-full max-w-[920px] flex gap-1 mb-6 flex-wrap bg-[var(--color-surface)] rounded-full shadow-[0_4px_16px_rgba(0,0,0,0.05)] p-1.5">
       {TABS.map((tab) => {
         const active = tab.href === "/admin" ? pathname === "/admin" : pathname.startsWith(tab.href);
         return (

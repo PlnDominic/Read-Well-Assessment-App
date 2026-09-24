@@ -47,7 +47,7 @@ export function InviteForm() {
         <div className="mt-4 bg-[var(--color-sage-tint)] rounded-xl px-4.5 py-3.5 text-sm text-[var(--color-ink-soft)]">
           Account created for <strong>{state.result.email}</strong>. Temporary password (shown once; share it
           securely with them):{" "}
-          <code className="bg-white px-2 py-1 rounded font-bold">{state.result.tempPassword}</code>
+          <code className="bg-[var(--color-surface)] px-2 py-1 rounded font-bold">{state.result.tempPassword}</code>
         </div>
       )}
     </div>

@@ -151,7 +151,7 @@ export default async function AdminDashboardPage() {
           <StatCard label="Avg. Overall Score" value={`${avgOverallScore}%`} valueColor="var(--color-sage)" />
         </div>
 
-        <div className="bg-white rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-5">
+        <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-5">
           <div className="font-heading font-bold text-sm text-[var(--color-sage-deep)] mb-4.5">
             Difficulty Area Distribution (% of students flagged)
           </div>
@@ -185,7 +185,7 @@ export default async function AdminDashboardPage() {
 
 function StatCard({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
   return (
-    <div className="bg-white rounded-[24px] p-5.5 shadow-[0_8px_24px_rgba(0,0,0,0.07)] transition-transform hover:-translate-y-0.5">
+    <div className="bg-[var(--color-surface)] rounded-[24px] p-5.5 shadow-[0_8px_24px_rgba(0,0,0,0.07)] transition-transform hover:-translate-y-0.5">
       <div className="text-[var(--color-muted-light)] text-[13px] font-bold mb-2">{label}</div>
       <div
         className="font-heading font-bold text-[30px]"

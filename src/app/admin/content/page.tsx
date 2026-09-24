@@ -62,7 +62,7 @@ export default async function AdminContentPage({
         sessions keep the content they were assessed against.
       </p>
 
-      <div className="inline-flex gap-1 mb-6 flex-wrap bg-white rounded-full shadow-[0_4px_16px_rgba(0,0,0,0.05)] p-1.5">
+      <div className="inline-flex gap-1 mb-6 flex-wrap bg-[var(--color-surface)] rounded-full shadow-[0_4px_16px_rgba(0,0,0,0.05)] p-1.5">
         {GRADE_OPTIONS.map((g) => (
           <Link
             key={g}
@@ -79,7 +79,7 @@ export default async function AdminContentPage({
         ))}
       </div>
 
-      <div className="bg-white rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-6">
+      <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-6">
         <div className="font-heading font-bold text-sm text-[var(--color-sage-deep)] mb-4.5">Skill areas</div>
         <SkillAreasEditor
           skillAreas={(skillAreas ?? []).map((sa) => ({
@@ -89,7 +89,7 @@ export default async function AdminContentPage({
         />
       </div>
 
-      <div className="bg-white rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-6">
+      <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-6">
         <div className="flex items-center justify-between mb-4.5">
           <div className="font-heading font-bold text-sm text-[var(--color-sage-deep)]">
             Grade {GRADE_LEVEL} assessment items
@@ -105,7 +105,7 @@ export default async function AdminContentPage({
         />
       </div>
 
-      <div className="bg-white rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5">
+      <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5">
         <div className="font-heading font-bold text-sm text-[var(--color-sage-deep)] mb-4.5">
           Program-aligned recommendations
         </div>

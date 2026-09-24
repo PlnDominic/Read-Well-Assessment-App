@@ -39,8 +39,92 @@
   --color-taupe: #8b8365;
   --color-taupe-bg: #edeae0;
 
+  /* Card/panel background. Kept a separate token from --color-bg (the page
+     background) even though both are white in light mode, since dark mode
+     needs them to diverge -- a page background and the cards sitting on
+     top of it can't be the same color there. */
+  --color-surface: #ffffff;
+
   --font-heading: var(--font-quicksand), sans-serif;
   --font-body: var(--font-nunito-sans), sans-serif;
+}
+
+/* Dark mode: follows the OS preference by default, or an explicit choice
+   from ThemeToggle (persisted to localStorage, applied via the
+   data-theme attribute by the inline script in layout.tsx so it's set
+   before first paint). Every value below is a dark-mode replacement for
+   the light one declared in :root above -- see that block for what each
+   token is used for. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-sage: #86b38c;
+    --color-sage-dark: #a9cead;
+    --color-sage-deep: #eaf3ea;
+    --color-sage-mid: #7c9f82;
+    --color-sage-tint: #1c2a1f;
+    --color-sage-tint-border: #3a5240;
+
+    --color-terracotta: #d99a80;
+    --color-terracotta-dark: #f0b79c;
+    --color-terracotta-tint: #2e211c;
+
+    --color-neutral: #232b27;
+    --color-neutral-border: #3a443e;
+    --color-neutral-border-strong: #4a564e;
+    --color-neutral-scrollbar: #4a564e;
+    --color-neutral-divider: #313b34;
+
+    --color-bg: #141a17;
+    --color-surface: #1e2620;
+
+    --color-ink: #eef3ee;
+    --color-ink-soft: #dbe4db;
+    --color-body: #b7c4b8;
+    --color-muted: #93a294;
+    --color-muted-light: #93a294;
+
+    --color-gold-bg: #2e2716;
+    --color-gold-text: #e0c078;
+    --color-gold-border: #4d422a;
+
+    --color-taupe: #c2b98f;
+    --color-taupe-bg: #2b2820;
+  }
+}
+
+:root[data-theme="dark"] {
+  --color-sage: #86b38c;
+  --color-sage-dark: #a9cead;
+  --color-sage-deep: #eaf3ea;
+  --color-sage-mid: #7c9f82;
+  --color-sage-tint: #1c2a1f;
+  --color-sage-tint-border: #3a5240;
+
+  --color-terracotta: #d99a80;
+  --color-terracotta-dark: #f0b79c;
+  --color-terracotta-tint: #2e211c;
+
+  --color-neutral: #232b27;
+  --color-neutral-border: #3a443e;
+  --color-neutral-border-strong: #4a564e;
+  --color-neutral-scrollbar: #4a564e;
+  --color-neutral-divider: #313b34;
+
+  --color-bg: #141a17;
+  --color-surface: #1e2620;
+
+  --color-ink: #eef3ee;
+  --color-ink-soft: #dbe4db;
+  --color-body: #b7c4b8;
+  --color-muted: #93a294;
+  --color-muted-light: #93a294;
+
+  --color-gold-bg: #2e2716;
+  --color-gold-text: #e0c078;
+  --color-gold-border: #4d422a;
+
+  --color-taupe: #c2b98f;
+  --color-taupe-bg: #2b2820;
 }
 
 body {
@@ -48,6 +132,7 @@ body {
   background: var(--color-bg);
   color: var(--color-ink);
   font-family: var(--font-body);
+  color-scheme: light dark;
 }
 
 * {

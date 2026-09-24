@@ -44,7 +44,7 @@ export default async function NotificationsPage() {
           )}
         </div>
 
-        <div className="bg-white rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] overflow-hidden">
+        <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] overflow-hidden">
           {(notifications ?? []).length === 0 && (
             <div className="px-6 py-8 text-[var(--color-muted)] text-center">No notifications yet.</div>
           )}

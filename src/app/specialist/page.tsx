@@ -54,7 +54,7 @@ export default async function SpecialistPage() {
         </h1>
         <p className="text-[var(--color-muted)] text-[15px] m-0 mb-6">{cycle?.name ?? "No active assessment cycle"}</p>
 
-        <div className="bg-white rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] overflow-hidden">
+        <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] overflow-hidden">
           {(students ?? []).length === 0 && (
             <div className="px-6 py-8 text-[var(--color-muted)] text-center">
               No students assigned to you yet. Ask an administrator to assign one from the Students admin page.
@@ -90,7 +90,7 @@ export default async function SpecialistPage() {
                   {status === "completed" && latest && (
                     <Link
                       href={`/teacher/students/${s.id}/report?session=${latest.id}`}
-                      className="font-bold text-sm px-4.5 py-2.25 rounded-full no-underline bg-white border-[1.5px] border-[var(--color-sage-tint-border)] text-[var(--color-sage-dark)]"
+                      className="font-bold text-sm px-4.5 py-2.25 rounded-full no-underline bg-[var(--color-surface)] border-[1.5px] border-[var(--color-sage-tint-border)] text-[var(--color-sage-dark)]"
                     >
                       View Report
                     </Link>

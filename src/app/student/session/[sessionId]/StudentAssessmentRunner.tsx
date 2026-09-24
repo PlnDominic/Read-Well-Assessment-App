@@ -464,7 +464,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
         {syncing && <span className="text-xs text-[var(--color-muted)]">Saving…</span>}
       </div>
 
-      <div className="bg-white rounded-3xl px-7.5 py-9 shadow-[0_6px_20px_rgba(0,0,0,0.06)] text-center">
+      <div className="bg-[var(--color-surface)] rounded-3xl px-7.5 py-9 shadow-[0_6px_20px_rgba(0,0,0,0.06)] text-center">
         <div
           className="inline-block text-white font-extrabold text-xs tracking-wide px-3.5 py-1.5 rounded-full mb-4.5"
           style={{ background: tileColor }}

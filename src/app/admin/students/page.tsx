@@ -44,13 +44,13 @@ export default async function AdminStudentsPage() {
     <div className="w-full max-w-[920px]">
       <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-sage-deep)] m-0 mb-6">Students</h1>
 
-      <div className="bg-white rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-6">
+      <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-6">
         <div className="font-heading font-bold text-sm text-[var(--color-sage-deep)] mb-4">Add a student</div>
         <AddStudentForm teachers={teachers} />
         <ImportCsvForm />
       </div>
 
-      <div className="bg-white rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] overflow-hidden">
+      <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] overflow-hidden">
         {(students ?? []).length === 0 && (
           <div className="px-6 py-8 text-[var(--color-muted)] text-center">No students yet.</div>
         )}

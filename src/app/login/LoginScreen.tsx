@@ -109,7 +109,7 @@ function RoleTile({
   return (
     <button
       onClick={onClick}
-      style={{ backgroundImage: `linear-gradient(135deg, ${tint}, white)` }}
+      style={{ backgroundImage: `linear-gradient(135deg, ${tint}, var(--color-surface))` }}
       className="group flex items-center gap-4 rounded-[28px] pl-5 pr-5 py-5 cursor-pointer text-left shadow-[0_2px_10px_rgba(0,0,0,0.05)] transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-[0_16px_32px_rgba(0,0,0,0.12)]"
     >
       {/* Plain <img>, not next/image: see the comment in SunnyAvatar.tsx. */}
@@ -125,7 +125,7 @@ function RoleTile({
         <div className="font-extrabold text-[var(--color-sage-deep)] text-xl">{title}</div>
         <div className="text-[var(--color-muted)] text-sm mt-0.5">{subtitle}</div>
       </div>
-      <span className="flex-shrink-0 w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-[0_2px_6px_rgba(0,0,0,0.1)] transition-transform group-hover:translate-x-1">
+      <span className="flex-shrink-0 w-8 h-8 rounded-full bg-[var(--color-surface)] flex items-center justify-center shadow-[0_2px_6px_rgba(0,0,0,0.1)] transition-transform group-hover:translate-x-1">
         <svg width="16" height="16" viewBox="0 0 20 20" fill="none" className="text-[var(--color-sage-deep)]">
           <path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
@@ -180,7 +180,7 @@ function StaffLoginForm({ mode, onBack }: { mode: Exclude<Mode, "select">; onBac
       >
         &larr; Back
       </button>
-      <div className="bg-white rounded-[28px] p-9 shadow-[0_10px_32px_rgba(0,0,0,0.08)] text-left">
+      <div className="bg-[var(--color-surface)] rounded-[28px] p-9 shadow-[0_10px_32px_rgba(0,0,0,0.08)] text-left">
         <h1 className="font-heading font-bold text-2xl text-[var(--color-sage-deep)] m-0 mb-1.5">{copy.title}</h1>
         <p className="text-[var(--color-body)] text-sm m-0 mb-7">{copy.subtitle}</p>
 
@@ -193,7 +193,7 @@ function StaffLoginForm({ mode, onBack }: { mode: Exclude<Mode, "select">; onBac
               name="email"
               required
               autoComplete="email"
-              className="bg-[var(--color-neutral)] border-2 border-transparent rounded-2xl px-4 py-3.5 text-base focus:outline-none focus:border-[var(--color-sage)] focus:bg-white transition-colors"
+              className="bg-[var(--color-neutral)] border-2 border-transparent rounded-2xl px-4 py-3.5 text-base focus:outline-none focus:border-[var(--color-sage)] focus:bg-[var(--color-surface)] transition-colors"
             />
           </label>
           <label className="flex flex-col gap-1.5 text-left">
@@ -203,7 +203,7 @@ function StaffLoginForm({ mode, onBack }: { mode: Exclude<Mode, "select">; onBac
               name="password"
               required
               autoComplete="current-password"
-              className="bg-[var(--color-neutral)] border-2 border-transparent rounded-2xl px-4 py-3.5 text-base focus:outline-none focus:border-[var(--color-sage)] focus:bg-white transition-colors"
+              className="bg-[var(--color-neutral)] border-2 border-transparent rounded-2xl px-4 py-3.5 text-base focus:outline-none focus:border-[var(--color-sage)] focus:bg-[var(--color-surface)] transition-colors"
             />
           </label>
 

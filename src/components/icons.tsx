@@ -63,7 +63,11 @@ export function MicIcon({ size = 46 }: { size?: number }) {
   );
 }
 
-export function BellIcon({ size = 20, color = colors.sageDark }: { size?: number; color?: string }) {
+// "var(--color-sage-dark)" (not colors.sageDark) so these track the light/
+// dark theme swap in globals.css -- fine for icons rendered in the browser,
+// but see the comment on `colors` in lib/theme.ts for why PDF rendering
+// can't do the same and has to keep using literal hex.
+export function BellIcon({ size = 20, color = "var(--color-sage-dark)" }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <path
@@ -73,6 +77,33 @@ export function BellIcon({ size = 20, color = colors.sageDark }: { size?: number
         strokeLinejoin="round"
       />
       <path d="M10 20.5a2 2 0 0 0 4 0" stroke={color} strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function SunIcon({ size = 20, color = "var(--color-sage-dark)" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="4.5" stroke={color} strokeWidth="1.8" />
+      <path
+        d="M12 2.5v2.2M12 19.3v2.2M4.2 12H2M22 12h-2.2M5.6 5.6l1.5 1.5M16.9 16.9l1.5 1.5M18.4 5.6l-1.5 1.5M7.1 16.9l-1.5 1.5"
+        stroke={color}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+export function MoonIcon({ size = 20, color = "var(--color-sage-dark)" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path
+        d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5Z"
+        stroke={color}
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }

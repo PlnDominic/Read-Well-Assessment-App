@@ -60,7 +60,7 @@ export function AddStudentForm({ teachers }: { teachers: { id: string; name: str
           {state.result.sessionCode ? (
             <>
               Kiosk code (give this to the student to enter at /student/join):{" "}
-              <code className="bg-white px-2 py-1 rounded font-bold">{state.result.sessionCode}</code>
+              <code className="bg-[var(--color-surface)] px-2 py-1 rounded font-bold">{state.result.sessionCode}</code>
             </>
           ) : (
             state.result.note

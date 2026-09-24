@@ -111,7 +111,7 @@ export function StaffRow({
       {resetState.result && (
         <div className="bg-[var(--color-sage-tint)] rounded-lg px-3.5 py-2.5 text-xs text-[var(--color-ink-soft)]">
           New temporary password (shown once; share it securely):{" "}
-          <code className="bg-white px-1.5 py-0.5 rounded font-bold">{resetState.result.tempPassword}</code>
+          <code className="bg-[var(--color-surface)] px-1.5 py-0.5 rounded font-bold">{resetState.result.tempPassword}</code>
         </div>
       )}
     </div>

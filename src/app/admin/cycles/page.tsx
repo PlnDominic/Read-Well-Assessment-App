@@ -26,7 +26,7 @@ export default async function AdminCyclesPage() {
         Assessment Cycles
       </h1>
 
-      <div className="bg-white rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-6">
+      <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-6">
         <div className="font-heading font-bold text-sm text-[var(--color-sage-deep)] mb-4">
           Start a new cycle
         </div>
@@ -63,7 +63,7 @@ export default async function AdminCyclesPage() {
         </form>
       </div>
 
-      <div className="bg-white rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] overflow-hidden">
+      <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] overflow-hidden">
         {(cycles ?? []).length === 0 && (
           <div className="px-6 py-8 text-[var(--color-muted)] text-center">No cycles yet.</div>
         )}

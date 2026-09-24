@@ -90,12 +90,12 @@ export default async function TeacherRosterPage() {
         </p>
 
         {profile.role === "teacher" && (
-          <div className="bg-white rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-6 py-5 mb-5">
+          <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-6 py-5 mb-5">
             <AddStudentForm />
           </div>
         )}
 
-        <div className="bg-white rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] overflow-hidden">
+        <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] overflow-hidden">
           {(students ?? []).length === 0 && (
             <div className="px-6 py-8 text-[var(--color-muted)] text-center">No students yet.</div>
           )}
