@@ -26,7 +26,7 @@ export async function NotificationBell() {
     <Link
       href="/notifications"
       aria-label={count ? `${count} unread notifications` : "Notifications"}
-      className="relative w-10 h-10 rounded-full bg-white border-[1.5px] border-[var(--color-cream-border-strong)] flex items-center justify-center no-underline"
+      className="relative w-10 h-10 rounded-full bg-[var(--color-cream)] flex items-center justify-center no-underline transition-colors hover:bg-[var(--color-cream-divider)]"
     >
       <BellIcon />
       {!!count && count > 0 && (

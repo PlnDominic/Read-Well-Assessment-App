@@ -337,11 +337,16 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
 
   if (pendingComplete) {
     return (
-      <div className="w-full max-w-[480px] mt-[10vh] text-center">
-        <div className="flex justify-center mb-6.5">
-          <SunnyAvatar size={86} />
+      <div className="w-full max-w-[480px] mt-[8vh] text-center">
+        <div className="relative flex justify-center mb-6.5">
+          <div
+            className="absolute inset-0 m-auto w-[170px] h-[170px] rounded-full blur-3xl opacity-70 pointer-events-none"
+            style={{ background: "var(--color-terracotta-tint)" }}
+            aria-hidden
+          />
+          <SunnyAvatar size={128} />
         </div>
-        <h1 className="font-heading font-bold text-[28px] text-[var(--color-sage-deep)] m-0 mb-2.5">
+        <h1 className="font-heading font-bold text-[32px] tracking-tight text-[var(--color-sage-deep)] m-0 mb-2.5">
           Almost done!
         </h1>
         <p className="text-[var(--color-body)] text-lg leading-relaxed m-0 mb-6">
@@ -357,7 +362,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
             if (!ok) writePendingComplete(sessionId, true);
           }}
           disabled={completing}
-          className="bg-[var(--color-sage)] text-white border-none rounded-full font-heading font-bold text-lg px-10 py-4 cursor-pointer disabled:opacity-60"
+          className="bg-[var(--color-sage)] text-white border-none rounded-full font-heading font-bold text-lg px-10 py-4 cursor-pointer shadow-[0_10px_24px_rgba(74,107,82,0.3)] transition-transform hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0"
         >
           {completing ? "Trying…" : "Try again"}
         </button>
@@ -371,11 +376,18 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
 
   if (state.status === "completed") {
     return (
-      <div className="w-full max-w-[480px] mt-[10vh] text-center">
-        <div className="w-[150px] h-[150px] rounded-full bg-[var(--color-terracotta)] mx-auto mb-7 flex items-center justify-center shadow-[0_14px_30px_rgba(201,123,95,0.3)]">
-          <CheckIcon />
+      <div className="w-full max-w-[480px] mt-[8vh] text-center">
+        <div className="relative flex justify-center mb-7">
+          <div
+            className="absolute inset-0 m-auto w-[190px] h-[190px] rounded-full blur-3xl opacity-70 pointer-events-none"
+            style={{ background: "var(--color-terracotta-tint)" }}
+            aria-hidden
+          />
+          <div className="relative w-[150px] h-[150px] rounded-full bg-[var(--color-terracotta)] flex items-center justify-center shadow-[0_14px_30px_rgba(201,123,95,0.3)]">
+            <CheckIcon />
+          </div>
         </div>
-        <h1 className="font-heading font-bold text-3xl text-[var(--color-sage-deep)] m-0 mb-3">
+        <h1 className="font-heading font-bold text-4xl tracking-tight text-[var(--color-sage-deep)] m-0 mb-3">
           You&apos;re all done!
         </h1>
         <p className="text-[var(--color-body)] text-lg leading-relaxed m-0 mb-10">
@@ -383,7 +395,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
         </p>
         <button
           onClick={() => router.push("/login")}
-          className="bg-[var(--color-sage)] text-white border-none rounded-full font-heading font-bold text-xl px-12 py-4.5 cursor-pointer"
+          className="bg-[var(--color-sage)] text-white border-none rounded-full font-heading font-bold text-xl px-12 py-4.5 cursor-pointer shadow-[0_10px_24px_rgba(74,107,82,0.3)] transition-transform hover:-translate-y-0.5"
         >
           Finish
         </button>
@@ -399,12 +411,17 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
 
   if (!started) {
     return (
-      <div className="w-full max-w-[480px] mt-[8vh] text-center">
+      <div className="w-full max-w-[480px] mt-[6vh] text-center">
         {offlineBanner}
-        <div className="flex justify-center mb-6.5">
-          <SunnyAvatar size={86} />
+        <div className="relative flex justify-center mb-6.5">
+          <div
+            className="absolute inset-0 m-auto w-[190px] h-[190px] rounded-full blur-3xl opacity-70 pointer-events-none"
+            style={{ background: "var(--color-sage-tint)" }}
+            aria-hidden
+          />
+          <SunnyAvatar size={140} />
         </div>
-        <h1 className="font-heading font-bold text-[30px] text-[var(--color-sage-deep)] m-0 mb-2.5">
+        <h1 className="font-heading font-bold text-[34px] tracking-tight text-[var(--color-sage-deep)] m-0 mb-2.5">
           Hi! I&apos;m Sunny.
         </h1>
         <p className="text-[var(--color-body)] text-lg leading-relaxed m-0 mb-10">
@@ -412,7 +429,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
         </p>
         <button
           onClick={() => setStarted(true)}
-          className="bg-[var(--color-terracotta)] text-white border-none rounded-full font-heading font-bold text-xl px-14 py-5 cursor-pointer shadow-[0_10px_20px_rgba(201,123,95,0.35)]"
+          className="bg-[var(--color-terracotta)] text-white border-none rounded-full font-heading font-bold text-xl px-14 py-5 cursor-pointer shadow-[0_10px_24px_rgba(201,123,95,0.35)] transition-transform hover:-translate-y-0.5"
         >
           Let&apos;s Start!
         </button>

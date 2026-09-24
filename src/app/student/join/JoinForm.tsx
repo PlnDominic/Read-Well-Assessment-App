@@ -45,11 +45,16 @@ export function JoinForm() {
   const [state, formAction, isPending] = useActionState(redeemOnlineOrFromDevice, { error: null });
 
   return (
-    <div className="w-full max-w-[440px] mt-[8vh] text-center">
-      <div className="flex justify-center mb-6">
-        <SunnyAvatar size={68} />
+    <div className="w-full max-w-[440px] mt-[5vh] text-center">
+      <div className="relative flex justify-center mb-6">
+        <div
+          className="absolute inset-0 m-auto w-[190px] h-[190px] rounded-full blur-3xl opacity-70 pointer-events-none"
+          style={{ background: "var(--color-sage-tint)" }}
+          aria-hidden
+        />
+        <SunnyAvatar size={140} />
       </div>
-      <h1 className="font-heading font-bold text-[28px] text-[var(--color-sage-deep)] m-0 mb-2.5">
+      <h1 className="font-heading font-bold text-[32px] tracking-tight text-[var(--color-sage-deep)] m-0 mb-2.5">
         What&apos;s your code?
       </h1>
       <p className="text-[var(--color-body)] text-lg leading-relaxed m-0 mb-8">
@@ -64,7 +69,7 @@ export function JoinForm() {
           autoComplete="off"
           autoCapitalize="characters"
           placeholder="ABC123"
-          className="w-full text-center tracking-[0.3em] uppercase font-heading font-bold text-3xl bg-white border-2 border-[var(--color-cream-border)] rounded-2xl py-5 focus:outline-none focus:border-[var(--color-sage)]"
+          className="w-full text-center tracking-[0.3em] uppercase font-heading font-bold text-3xl bg-[var(--color-cream)] border-2 border-transparent rounded-2xl py-5 focus:outline-none focus:border-[var(--color-sage)] focus:bg-white transition-colors"
         />
 
         {state.error && <p className="text-[var(--color-terracotta-dark)] text-base m-0">{state.error}</p>}
@@ -72,7 +77,7 @@ export function JoinForm() {
         <button
           type="submit"
           disabled={isPending}
-          className="bg-[var(--color-terracotta)] text-white border-none rounded-full font-heading font-bold text-xl px-14 py-5 cursor-pointer shadow-[0_10px_20px_rgba(201,123,95,0.35)] disabled:opacity-60"
+          className="bg-[var(--color-terracotta)] text-white border-none rounded-full font-heading font-bold text-xl px-14 py-5 cursor-pointer shadow-[0_10px_24px_rgba(201,123,95,0.35)] transition-transform hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0"
         >
           {isPending ? "Checking…" : "Let's Go!"}
         </button>

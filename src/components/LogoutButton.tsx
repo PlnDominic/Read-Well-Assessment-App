@@ -25,7 +25,7 @@ export function LogoutButton() {
           router.refresh();
         })
       }
-      className="bg-white border-[1.5px] border-[var(--color-cream-border-strong)] text-[var(--color-sage-dark)] font-bold text-sm px-4 py-2.25 rounded-full cursor-pointer disabled:opacity-60"
+      className="bg-[var(--color-cream)] border-none text-[var(--color-sage-dark)] font-bold text-sm px-4 py-2.25 rounded-full cursor-pointer transition-colors hover:bg-[var(--color-cream-divider)] disabled:opacity-60"
     >
       {isPending ? "Logging out…" : "Log Out"}
     </button>
