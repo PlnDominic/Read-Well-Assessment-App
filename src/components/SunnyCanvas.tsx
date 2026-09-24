@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Component, Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 import { Canvas, useFrame, type ThreeEvent } from "@react-three/fiber";
-import { PresentationControls, ContactShadows } from "@react-three/drei";
+import { PresentationControls, ContactShadows, useGLTF, useAnimations } from "@react-three/drei";
 import type { Group } from "three";
-import { colors } from "@/lib/theme";
 
 /**
  * Only ever loaded via next/dynamic(..., { ssr: false }) from Sunny3D.tsx —
@@ -26,37 +25,48 @@ function damp(current: number, target: number, lambda: number, dt: number): numb
   return current + (target - current) * (1 - Math.exp(-lambda * dt));
 }
 
-/** Sunny's shape built from primitive geometry (spheres, a cone, a half
- * torus for the mouth) rather than an imported model file — see the header
- * comment in Sunny3D.tsx for why. Proportions are eyeballed against the
- * flat SVG version in icons.tsx, not derived from its coordinates.
- *
- * Wrapped in PresentationControls so it can be dragged around (it springs
- * back to the front-facing brand pose on release); nested inside is a
- * separate group carrying the idle sway so the two motions add together
- * instead of one overwriting the other. A third, innermost group handles
- * the "poke" squish, eased every frame toward pressed/released targets. */
+// Self-hosted (not fetched from a third-party CDN at runtime) so it stays
+// offline-safe: see the sw.js fetch handler, which cache-first's anything
+// under /models/ the same way it does /_next/static/ chunks.
+const FOX_MODEL_URL = "/models/fox.glb";
+
+/** Sunny is the Khronos glTF-Sample-Assets "Fox": a public-domain base mesh
+ * by PixelMannen, rigged and animated by tomkranis (CC-BY 4.0), converted to
+ * glTF by AsoboStudio and scurest (CC-BY 4.0) — see the credit in README.md.
+ * Of its three animation clips (Survey, Walk, Run), only Survey holds still;
+ * Walk and Run carry root motion that translates the whole rig many units
+ * across the scene, which would make Sunny drift out of a small fixed
+ * badge, so Survey is the only one played here. */
 function SunnyModel({ mood }: { mood: "smile" | "big-smile" }) {
-  const sway = useRef<Group>(null);
+  const group = useRef<Group>(null);
   const squish = useRef<Group>(null);
   const pressed = useRef(false);
-  const big = mood === "big-smile";
+  const { scene, animations } = useGLTF(FOX_MODEL_URL);
+  const { actions } = useAnimations(animations, group);
 
-  useFrame((state, delta) => {
-    const s = sway.current;
-    if (s) {
-      const t = state.clock.getElapsedTime();
-      s.rotation.y = Math.sin(t * 0.6) * 0.35;
-      s.position.y = Math.sin(t * 1.6) * 0.04;
-    }
+  useEffect(() => {
+    const action = actions.Survey;
+    if (!action) return;
+    action.reset().fadeIn(0.4).play();
+    // A livelier pace for the excited/encouraging screens, without a second
+    // animation clip (Walk/Run would drift, see above). THREE.AnimationAction
+    // is an imperative three.js handle, not React state — mutating it is how
+    // it's meant to be used.
+    // eslint-disable-next-line react-hooks/immutability
+    action.timeScale = mood === "big-smile" ? 1.6 : 1;
+    return () => {
+      action.fadeOut(0.4);
+    };
+  }, [actions, mood]);
+
+  useFrame((_, delta) => {
     const g = squish.current;
-    if (g) {
-      const targetY = pressed.current ? 0.8 : 1;
-      const targetXZ = pressed.current ? 1.1 : 1;
-      g.scale.y = damp(g.scale.y, targetY, 18, delta);
-      g.scale.x = damp(g.scale.x, targetXZ, 18, delta);
-      g.scale.z = damp(g.scale.z, targetXZ, 18, delta);
-    }
+    if (!g) return;
+    const targetY = pressed.current ? 0.85 : 1;
+    const targetXZ = pressed.current ? 1.08 : 1;
+    g.scale.y = damp(g.scale.y, targetY, 18, delta);
+    g.scale.x = damp(g.scale.x, targetXZ, 18, delta);
+    g.scale.z = damp(g.scale.z, targetXZ, 18, delta);
   });
 
   const onDown = (e: ThreeEvent<PointerEvent>) => {
@@ -68,68 +78,30 @@ function SunnyModel({ mood }: { mood: "smile" | "big-smile" }) {
   };
 
   return (
-    <PresentationControls
-      cursor
-      snap
-      speed={1.2}
-      zoom={1}
-      polar={[-Math.PI / 4, Math.PI / 4]}
-      azimuth={[-Math.PI, Math.PI]}
-    >
-      <group ref={sway}>
-        <group ref={squish} onPointerDown={onDown} onPointerUp={release} onPointerOut={release}>
-          <mesh position={[-0.78, -0.14, -0.08]} scale={[0.4, 0.62, 0.48]}>
-            <sphereGeometry args={[1, 32, 32]} />
-            <meshPhysicalMaterial color={colors.sageMid} roughness={0.45} clearcoat={0.5} clearcoatRoughness={0.3} />
-          </mesh>
-          <mesh position={[0.78, -0.14, -0.08]} scale={[0.4, 0.62, 0.48]}>
-            <sphereGeometry args={[1, 32, 32]} />
-            <meshPhysicalMaterial color={colors.sageMid} roughness={0.45} clearcoat={0.5} clearcoatRoughness={0.3} />
-          </mesh>
-
-          <mesh scale={[1, 1, 0.78]}>
-            <sphereGeometry args={[1, 48, 48]} />
-            <meshPhysicalMaterial
-              color={colors.cream}
-              roughness={0.55}
-              clearcoat={0.6}
-              clearcoatRoughness={0.25}
-              emissive={colors.cream}
-              emissiveIntensity={0.12}
-            />
-          </mesh>
-
-          <mesh position={[-0.36, 0.12, 0.62]}>
-            <sphereGeometry args={[0.24, 24, 24]} />
-            <meshPhysicalMaterial color={colors.sageDeep} roughness={0.2} clearcoat={0.8} clearcoatRoughness={0.15} />
-          </mesh>
-          <mesh position={[0.36, 0.12, 0.62]}>
-            <sphereGeometry args={[0.24, 24, 24]} />
-            <meshPhysicalMaterial color={colors.sageDeep} roughness={0.2} clearcoat={0.8} clearcoatRoughness={0.15} />
-          </mesh>
-          <mesh position={[-0.29, 0.19, 0.82]}>
-            <sphereGeometry args={[0.06, 12, 12]} />
-            <meshStandardMaterial color="#ffffff" roughness={0.2} />
-          </mesh>
-          <mesh position={[0.43, 0.19, 0.82]}>
-            <sphereGeometry args={[0.06, 12, 12]} />
-            <meshStandardMaterial color="#ffffff" roughness={0.2} />
-          </mesh>
-
-          <mesh position={[0, -0.12, 0.78]} rotation={[Math.PI, 0, 0]}>
-            <coneGeometry args={[0.16, 0.22, 4]} />
-            <meshPhysicalMaterial color={colors.terracotta} roughness={0.35} clearcoat={0.6} clearcoatRoughness={0.2} />
-          </mesh>
-
-          {/* Mouth: bottom half of a torus, so it reads as a "u" smile curve. */}
-          <mesh position={[0, big ? -0.42 : -0.36, 0.66]} rotation={[0, 0, Math.PI]}>
-            <torusGeometry args={[big ? 0.26 : 0.2, 0.045, 12, 24, Math.PI]} />
-            <meshPhysicalMaterial color={colors.sageDeep} roughness={0.4} clearcoat={0.5} clearcoatRoughness={0.25} />
-          </mesh>
+    <PresentationControls cursor snap speed={1.2} zoom={1} polar={[-Math.PI / 10, Math.PI / 8]} azimuth={[-Math.PI, Math.PI]}>
+      <group ref={group} onPointerDown={onDown} onPointerUp={release} onPointerOut={release}>
+        <group ref={squish}>
+          <primitive object={scene} scale={0.02} position={[0, -0.79, 0]} rotation={[0, -1.2, 0]} />
         </group>
       </group>
     </PresentationControls>
   );
+}
+
+useGLTF.preload(FOX_MODEL_URL);
+
+// Catches a failed model fetch (e.g. offline on a device that never loaded
+// this page online before, so nothing's in the service worker's cache yet)
+// and falls back to the flat SVG rather than surfacing the app's generic
+// error screen for what's just a mascot.
+class SunnyModelBoundary extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  render() {
+    return this.state.failed ? this.props.fallback : this.props.children;
+  }
 }
 
 export default function SunnyCanvas({
@@ -155,20 +127,23 @@ export default function SunnyCanvas({
   if (!webglOk) return <>{fallback}</>;
 
   return (
-    <div style={{ width: size, height: size }}>
-      <Canvas
-        dpr={[1, 2]}
-        gl={{ antialias: true, alpha: true }}
-        camera={{ position: [0, 0, 3.4], fov: 32 }}
-        style={{ width: "100%", height: "100%" }}
-      >
-        <ambientLight intensity={0.85} />
-        <directionalLight position={[2, 3, 4]} intensity={0.9} />
-        <directionalLight position={[-2, -1, -2]} intensity={0.4} />
-        <directionalLight position={[0, 1.5, -2.5]} intensity={0.3} color="#ffffff" />
-        <SunnyModel mood={mood} />
-        <ContactShadows position={[0, -0.62, 0]} opacity={0.35} scale={3} blur={2.2} far={1.2} />
-      </Canvas>
-    </div>
+    <SunnyModelBoundary fallback={fallback}>
+      <div style={{ width: size, height: size }}>
+        <Canvas
+          dpr={[1, 2]}
+          gl={{ antialias: true, alpha: true }}
+          camera={{ position: [0, 0, 3.4], fov: 32 }}
+          style={{ width: "100%", height: "100%" }}
+        >
+          <ambientLight intensity={1} />
+          <directionalLight position={[2, 3, 4]} intensity={1} />
+          <directionalLight position={[-2, -1, -2]} intensity={0.4} />
+          <Suspense fallback={null}>
+            <SunnyModel mood={mood} />
+            <ContactShadows position={[0, -0.79, 0]} opacity={0.35} scale={3} blur={2.2} far={1.2} />
+          </Suspense>
+        </Canvas>
+      </div>
+    </SunnyModelBoundary>
   );
 }

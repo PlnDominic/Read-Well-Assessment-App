@@ -21,6 +21,11 @@ const CACHE = `rw-${VERSION}`;
 const STAFF_CACHE = `rw-staff-${VERSION}`;
 const STAFF_HOME_KEY = "/__staff-home";
 const PRECACHE_PAGES = ["/login", "/student/join", "/offline"];
+// Sunny's 3D mascot: fetched by the page at runtime (not referenced in the
+// HTML the way _next/static chunks are), so cacheAssetsFrom() never sees it.
+// Precaching it here means it's available offline after just one visit,
+// same as everything else.
+const PRECACHE_ASSETS = ["/models/fox.glb"];
 const STAFF_HOMES = ["/teacher", "/admin", "/specialist"];
 
 function isPublicPage(pathname) {
@@ -80,9 +85,18 @@ async function savePage(pathWithSearch) {
 // Avoid refetching a page the client just asked for (effects can fire twice).
 const recentlySaved = new Map();
 
+async function precacheAsset(path) {
+  const cache = await caches.open(CACHE);
+  if (await cache.match(path)) return;
+  await cache.add(path).catch(() => undefined);
+}
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    Promise.all(PRECACHE_PAGES.map((p) => savePage(p).catch(() => undefined))).then(() => self.skipWaiting())
+    Promise.all([
+      ...PRECACHE_PAGES.map((p) => savePage(p).catch(() => undefined)),
+      ...PRECACHE_ASSETS.map(precacheAsset),
+    ]).then(() => self.skipWaiting())
   );
 });
 
@@ -122,7 +136,9 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
 
   // Build assets are content-hashed, so a cached copy is always correct.
-  if (url.pathname.startsWith("/_next/static/")) {
+  // /models/ (Sunny's 3D mascot file) is static and versioned by filename
+  // too, so it gets the same cache-first treatment.
+  if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/models/")) {
     event.respondWith(
       caches.open(CACHE).then(async (cache) => {
         const hit = await cache.match(request);
