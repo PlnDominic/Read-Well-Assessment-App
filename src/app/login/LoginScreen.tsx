@@ -3,7 +3,8 @@
 import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { SunnyMascot, StudentRoleIcon, TeacherRoleIcon, AdminRoleIcon } from "@/components/icons";
+import { StudentRoleIcon, TeacherRoleIcon, AdminRoleIcon } from "@/components/icons";
+import { Sunny3D } from "@/components/Sunny3D";
 import { clearStaffOfflineData, savedStaffHome } from "@/lib/offline";
 import { signInWithPassword } from "./actions";
 
@@ -33,7 +34,7 @@ export function LoginScreen() {
   return (
     <div className="w-full max-w-[460px] mt-[6vh] text-center">
       <div className="w-24 h-24 rounded-full bg-[var(--color-sage)] mx-auto mb-4.5 flex items-center justify-center shadow-[0_10px_24px_rgba(74,107,82,0.25)]">
-        <SunnyMascot size={56} mood="smile" />
+        <Sunny3D size={56} mood="smile" />
       </div>
       <h1 className="font-heading font-bold text-3xl text-[var(--color-sage-deep)] m-0 mb-1.5">Read Well</h1>
       <p className="text-[var(--color-body)] text-base m-0 mb-9">Grade 1 Reading Assessment</p>

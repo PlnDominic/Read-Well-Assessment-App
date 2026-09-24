@@ -76,6 +76,23 @@ A few things the PRD/TRD left open that needed a concrete decision to ship:
   (Next.js 15+) rather than a separate queue/worker, which is the pragmatic
   reading of the TRD's "must not block the assessment-completion response"
   requirement without standing up separate infrastructure for an MVP.
+- **Sunny (the mascot) renders as an actual 3D character**, not a static
+  image. `src/components/SunnyCanvas.tsx` builds the shape from primitive
+  three.js geometry (spheres, a cone, a half-torus for the mouth) in the
+  brand's exact colors, with a small idle sway via `useFrame`. There's no
+  AI-generated or hand-modeled mesh file to keep in sync with the design.
+  `src/components/Sunny3D.tsx` is the component actually imported by the
+  four screens that show Sunny; it lazy-loads the three.js chunk via
+  `next/dynamic(..., { ssr: false })` (importing `@react-three/fiber`
+  during server rendering isn't safe) and falls back to the original flat
+  SVG (`SunnyMascot` in `icons.tsx`) on devices without WebGL, and while the
+  chunk is loading. `/offline/page.tsx` deliberately keeps the flat SVG
+  rather than switching to `Sunny3D`, since that page is the last-resort
+  fallback shown when there's no connection at all and shouldn't depend on
+  a chunk that might not have been cached yet. This is a real cost, not a
+  free upgrade: the three.js + React Three Fiber chunk adds roughly 235KB
+  gzipped, fetched once per device and then served from the service
+  worker's cache (including offline) afterward.
 
 ## Getting started
 
