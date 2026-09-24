@@ -119,10 +119,10 @@ export default async function StudentReportPage({
           &larr; Back to class
         </Link>
 
-        <div className="bg-white rounded-[20px] shadow-[0_6px_20px_rgba(0,0,0,0.06)] px-8 py-7.5 mb-5">
+        <div className="bg-white rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-5">
           <div className="flex justify-between items-start flex-wrap gap-4 mb-5.5">
             <div>
-              <h1 className="font-heading font-bold text-[26px] text-[var(--color-sage-deep)] m-0 mb-1">
+              <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-sage-deep)] m-0 mb-1">
                 {student.name}
               </h1>
               <p className="text-[var(--color-muted)] text-sm m-0">
@@ -142,7 +142,7 @@ export default async function StudentReportPage({
               {report?.status === "ready" ? (
                 <a
                   href={`/api/reports/student/${sessionId}`}
-                  className="bg-[var(--color-cream)] border-[1.5px] border-[var(--color-cream-border)] text-[var(--color-sage-dark)] font-bold text-sm px-4 py-2.25 rounded-full no-underline"
+                  className="bg-[var(--color-cream)] border-none text-[var(--color-sage-dark)] font-bold text-sm px-4 py-2.25 rounded-full no-underline transition-colors hover:bg-[var(--color-cream-divider)]"
                 >
                   Export PDF
                 </a>
@@ -151,13 +151,13 @@ export default async function StudentReportPage({
                   <input type="hidden" name="sessionId" value={sessionId} />
                   <button
                     type="submit"
-                    className="bg-[var(--color-terracotta-tint)] border-[1.5px] border-[var(--color-terracotta)] text-[var(--color-terracotta-dark)] font-bold text-sm px-4 py-2.25 rounded-full cursor-pointer"
+                    className="bg-[var(--color-terracotta-tint)] border-none text-[var(--color-terracotta-dark)] font-bold text-sm px-4 py-2.25 rounded-full cursor-pointer"
                   >
                     Retry PDF
                   </button>
                 </form>
               ) : (
-                <span className="bg-[var(--color-cream)] border-[1.5px] border-[var(--color-cream-border)] text-[var(--color-muted)] font-bold text-sm px-4 py-2.25 rounded-full">
+                <span className="bg-[var(--color-cream)] border-none text-[var(--color-muted)] font-bold text-sm px-4 py-2.25 rounded-full">
                   PDF generating…
                 </span>
               )}
@@ -196,7 +196,7 @@ export default async function StudentReportPage({
           </div>
         </div>
 
-        <div className="bg-white rounded-[20px] shadow-[0_6px_20px_rgba(0,0,0,0.06)] px-8 py-7.5 mb-5">
+        <div className="bg-white rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-5">
           <div className="font-heading font-bold text-sm text-[var(--color-sage-deep)] mb-4">
             Question-by-Question
           </div>
@@ -230,7 +230,7 @@ export default async function StudentReportPage({
           </div>
         </div>
 
-        <div className="bg-white rounded-[20px] shadow-[0_6px_20px_rgba(0,0,0,0.06)] px-8 py-7.5">
+        <div className="bg-white rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5">
           <div className="font-heading font-bold text-sm text-[var(--color-sage-deep)] mb-4">
             Program-Aligned Recommendations
           </div>

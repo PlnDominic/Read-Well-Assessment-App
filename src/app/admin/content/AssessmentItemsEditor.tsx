@@ -104,7 +104,7 @@ export function AssessmentItemsEditor({
     <div>
       <div className="flex flex-col gap-5">
         {items.map((item, i) => (
-          <div key={item.id} className="border-2 border-[var(--color-cream-border)] rounded-2xl p-5">
+          <div key={item.id} className="bg-[var(--color-cream)] rounded-[20px] p-5">
             <div className="flex flex-wrap items-center gap-3 mb-3.5">
               <select
                 aria-label="Skill area"
@@ -219,14 +219,14 @@ export function AssessmentItemsEditor({
       <div className="flex items-center gap-3 mt-5">
         <button
           onClick={addItem}
-          className="bg-white border-[1.5px] border-[var(--color-cream-border-strong)] text-[var(--color-sage-dark)] font-bold text-sm px-4.5 py-2.25 rounded-full cursor-pointer"
+          className="bg-[var(--color-cream)] border-none text-[var(--color-sage-dark)] transition-colors hover:bg-[var(--color-cream-divider)] font-bold text-sm px-4.5 py-2.25 rounded-full cursor-pointer"
         >
           + Add item
         </button>
         <button
           onClick={save}
           disabled={isPending}
-          className="bg-[var(--color-sage)] text-white border-none rounded-full font-bold text-sm px-5 py-2.5 cursor-pointer disabled:opacity-60"
+          className="bg-[var(--color-sage)] text-white border-none rounded-full font-bold text-sm shadow-[0_6px_16px_rgba(74,107,82,0.25)] transition-transform hover:-translate-y-0.5 px-5 py-2.5 cursor-pointer disabled:opacity-60"
         >
           {isPending ? "Saving…" : "Save as new version"}
         </button>

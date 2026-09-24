@@ -63,7 +63,7 @@ export function StaffRow({
               </select>
               <button
                 type="submit"
-                className="bg-white border-[1.5px] border-[var(--color-cream-border-strong)] text-[var(--color-sage-dark)] font-bold text-xs px-3 py-1.5 rounded-full cursor-pointer"
+                className="bg-[var(--color-cream)] border-none text-[var(--color-sage-dark)] transition-colors hover:bg-[var(--color-cream-divider)] font-bold text-xs px-3 py-1.5 rounded-full cursor-pointer"
               >
                 Save
               </button>
@@ -76,7 +76,7 @@ export function StaffRow({
             <button
               type="submit"
               disabled={isResetting}
-              className="bg-white border-[1.5px] border-[var(--color-cream-border-strong)] text-[var(--color-sage-dark)] font-bold text-xs px-3 py-1.5 rounded-full cursor-pointer disabled:opacity-60"
+              className="bg-[var(--color-cream)] border-none text-[var(--color-sage-dark)] transition-colors hover:bg-[var(--color-cream-divider)] font-bold text-xs px-3 py-1.5 rounded-full cursor-pointer disabled:opacity-60"
             >
               {isResetting ? "Resetting…" : "Reset password"}
             </button>

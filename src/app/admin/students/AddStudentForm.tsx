@@ -41,7 +41,7 @@ export function AddStudentForm({ teachers }: { teachers: { id: string; name: str
         <button
           type="submit"
           disabled={teachers.length === 0 || isPending}
-          className="bg-[var(--color-sage)] text-white border-none rounded-full font-bold text-sm px-5 py-2.75 cursor-pointer disabled:opacity-50"
+          className="bg-[var(--color-sage)] text-white border-none rounded-full font-bold text-sm shadow-[0_6px_16px_rgba(74,107,82,0.25)] transition-transform hover:-translate-y-0.5 px-5 py-2.75 cursor-pointer disabled:opacity-50"
         >
           {isPending ? "Adding…" : "Add student"}
         </button>

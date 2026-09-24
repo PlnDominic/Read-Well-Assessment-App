@@ -45,12 +45,12 @@ export default async function AdminAuditPage() {
 
   return (
     <div className="w-full max-w-[920px]">
-      <h1 className="font-heading font-bold text-[26px] text-[var(--color-sage-deep)] m-0 mb-1">Audit Log</h1>
+      <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-sage-deep)] m-0 mb-1">Audit Log</h1>
       <p className="text-[var(--color-muted)] text-sm m-0 mb-6">
         Who viewed or exported a report, most recent first (last 200 events).
       </p>
 
-      <div className="bg-white rounded-[20px] shadow-[0_6px_20px_rgba(0,0,0,0.06)] overflow-hidden">
+      <div className="bg-white rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] overflow-hidden">
         {(logs ?? []).length === 0 && (
           <div className="px-6 py-8 text-[var(--color-muted)] text-center">No activity recorded yet.</div>
         )}

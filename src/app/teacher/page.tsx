@@ -81,7 +81,7 @@ export default async function TeacherRosterPage() {
   return (
     <AppShell>
       <div className="w-full max-w-[840px]">
-        <h1 className="font-heading font-bold text-[26px] text-[var(--color-sage-deep)] m-0 mb-1">
+        <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-sage-deep)] m-0 mb-1">
           {profile.role === "reading_specialist" ? "Assigned Students" : `${profile.name}'s Class`}
         </h1>
         <p className="text-[var(--color-muted)] text-[15px] m-0 mb-6">
@@ -89,12 +89,12 @@ export default async function TeacherRosterPage() {
         </p>
 
         {profile.role === "teacher" && (
-          <div className="bg-white rounded-[20px] shadow-[0_6px_20px_rgba(0,0,0,0.06)] px-6 py-5 mb-5">
+          <div className="bg-white rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-6 py-5 mb-5">
             <AddStudentForm />
           </div>
         )}
 
-        <div className="bg-white rounded-[20px] shadow-[0_6px_20px_rgba(0,0,0,0.06)] overflow-hidden">
+        <div className="bg-white rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] overflow-hidden">
           {(students ?? []).length === 0 && (
             <div className="px-6 py-8 text-[var(--color-muted)] text-center">No students yet.</div>
           )}
@@ -152,7 +152,7 @@ export default async function TeacherRosterPage() {
                       <form action={startOrResumeAssessment.bind(null, s.id)}>
                         <button
                           type="submit"
-                          className="font-bold text-sm px-4.5 py-2.25 rounded-full cursor-pointer bg-white border-[1.5px] border-[var(--color-cream-border-strong)] text-[var(--color-sage-dark)]"
+                          className="font-bold text-sm px-4.5 py-2.25 rounded-full cursor-pointer bg-[var(--color-cream)] border-none text-[var(--color-sage-dark)] transition-colors hover:bg-[var(--color-cream-divider)]"
                         >
                           Start New Assessment
                         </button>

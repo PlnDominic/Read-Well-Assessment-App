@@ -22,7 +22,7 @@ export function ImportCsvForm() {
         <button
           type="submit"
           disabled={isPending}
-          className="bg-white border-[1.5px] border-[var(--color-cream-border-strong)] text-[var(--color-sage-dark)] font-bold text-xs px-4 py-2 rounded-full cursor-pointer disabled:opacity-60"
+          className="bg-[var(--color-cream)] border-none text-[var(--color-sage-dark)] transition-colors hover:bg-[var(--color-cream-divider)] font-bold text-xs px-4 py-2 rounded-full cursor-pointer disabled:opacity-60"
         >
           {isPending ? "Importing…" : "Import"}
         </button>

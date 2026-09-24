@@ -104,7 +104,7 @@ export default async function AdminDashboardPage() {
     <div className="w-full max-w-[920px]">
       <div className="flex justify-between items-start flex-wrap gap-3.5 mb-6">
           <div>
-            <h1 className="font-heading font-bold text-[26px] text-[var(--color-sage-deep)] m-0 mb-1">
+            <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-sage-deep)] m-0 mb-1">
               {school?.name ?? "Your School"}
             </h1>
             <p className="text-[var(--color-muted)] text-[15px] m-0">
@@ -114,7 +114,7 @@ export default async function AdminDashboardPage() {
           {reportStatus === "ready" && cycle ? (
             <a
               href={`/api/reports/school/${cycle.id}`}
-              className="bg-[var(--color-cream)] border-[1.5px] border-[var(--color-cream-border)] text-[var(--color-sage-dark)] font-bold text-sm px-4.5 py-2.5 rounded-full no-underline"
+              className="bg-[var(--color-cream)] border-none text-[var(--color-sage-dark)] font-bold text-sm px-4.5 py-2.5 rounded-full no-underline transition-colors hover:bg-[var(--color-cream-divider)]"
             >
               Export PDF
             </a>
@@ -123,13 +123,13 @@ export default async function AdminDashboardPage() {
               <input type="hidden" name="cycleId" value={cycle.id} />
               <button
                 type="submit"
-                className="bg-[var(--color-terracotta-tint)] border-[1.5px] border-[var(--color-terracotta)] text-[var(--color-terracotta-dark)] font-bold text-sm px-4.5 py-2.5 rounded-full cursor-pointer"
+                className="bg-[var(--color-terracotta-tint)] border-none text-[var(--color-terracotta-dark)] font-bold text-sm px-4.5 py-2.5 rounded-full cursor-pointer"
               >
                 Retry PDF
               </button>
             </form>
           ) : (
-            <span className="bg-[var(--color-cream)] border-[1.5px] border-[var(--color-cream-border)] text-[var(--color-muted)] font-bold text-sm px-4.5 py-2.5 rounded-full">
+            <span className="bg-[var(--color-cream)] border-none text-[var(--color-muted)] font-bold text-sm px-4.5 py-2.5 rounded-full">
               PDF pending
             </span>
           )}
@@ -141,7 +141,7 @@ export default async function AdminDashboardPage() {
           <StatCard label="Avg. Overall Score" value={`${avgOverallScore}%`} valueColor="var(--color-sage)" />
         </div>
 
-        <div className="bg-white rounded-[20px] shadow-[0_6px_20px_rgba(0,0,0,0.06)] px-8 py-7.5 mb-5">
+        <div className="bg-white rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-5">
           <div className="font-heading font-bold text-sm text-[var(--color-sage-deep)] mb-4.5">
             Difficulty Area Distribution (% of students flagged)
           </div>
@@ -166,7 +166,7 @@ export default async function AdminDashboardPage() {
           </div>
         </div>
 
-      <div className="bg-[var(--color-sage-tint)] rounded-2xl px-6.5 py-5.5 text-[var(--color-ink-soft)] text-sm leading-relaxed">
+      <div className="bg-[var(--color-sage-tint)] rounded-[24px] px-6.5 py-5.5 text-[var(--color-ink-soft)] text-sm leading-relaxed">
         <strong className="text-[var(--color-sage-deep)]">Planning note:</strong> {planningNote}
       </div>
     </div>
@@ -175,7 +175,7 @@ export default async function AdminDashboardPage() {
 
 function StatCard({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
   return (
-    <div className="bg-white rounded-2xl p-5.5 shadow-[0_6px_20px_rgba(0,0,0,0.06)]">
+    <div className="bg-white rounded-[24px] p-5.5 shadow-[0_8px_24px_rgba(0,0,0,0.07)] transition-transform hover:-translate-y-0.5">
       <div className="text-[var(--color-muted-light)] text-[13px] font-bold mb-2">{label}</div>
       <div
         className="font-heading font-bold text-[30px]"

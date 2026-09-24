@@ -56,22 +56,22 @@ export default async function AdminContentPage({
 
   return (
     <div className="w-full max-w-[920px]">
-      <h1 className="font-heading font-bold text-[26px] text-[var(--color-sage-deep)] m-0 mb-1">Content</h1>
+      <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-sage-deep)] m-0 mb-1">Content</h1>
       <p className="text-[var(--color-muted)] text-sm m-0 mb-5">
         Edits here don&apos;t require a code deploy. Saving the assessment creates a new version so past
         sessions keep the content they were assessed against.
       </p>
 
-      <div className="flex gap-2 mb-6 flex-wrap">
+      <div className="inline-flex gap-1 mb-6 flex-wrap bg-white rounded-full shadow-[0_4px_16px_rgba(0,0,0,0.05)] p-1.5">
         {GRADE_OPTIONS.map((g) => (
           <Link
             key={g}
             href={`/admin/content?grade=${g}`}
-            className="px-3.5 py-1.5 rounded-full text-xs font-bold no-underline"
+            className="px-3.5 py-1.5 rounded-full text-xs font-bold no-underline transition-colors"
             style={{
-              background: g === GRADE_LEVEL ? "var(--color-sage)" : "white",
-              color: g === GRADE_LEVEL ? "white" : "var(--color-sage-dark)",
-              border: `1.5px solid ${g === GRADE_LEVEL ? "var(--color-sage)" : "var(--color-cream-border)"}`,
+              background: g === GRADE_LEVEL ? "var(--color-sage)" : "transparent",
+              color: g === GRADE_LEVEL ? "white" : "var(--color-muted)",
+              boxShadow: g === GRADE_LEVEL ? "0 4px 10px rgba(74,107,82,0.3)" : "none",
             }}
           >
             Grade {g}
@@ -79,7 +79,7 @@ export default async function AdminContentPage({
         ))}
       </div>
 
-      <div className="bg-white rounded-[20px] shadow-[0_6px_20px_rgba(0,0,0,0.06)] px-8 py-7.5 mb-6">
+      <div className="bg-white rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-6">
         <div className="font-heading font-bold text-sm text-[var(--color-sage-deep)] mb-4.5">Skill areas</div>
         <SkillAreasEditor
           skillAreas={(skillAreas ?? []).map((sa) => ({
@@ -89,7 +89,7 @@ export default async function AdminContentPage({
         />
       </div>
 
-      <div className="bg-white rounded-[20px] shadow-[0_6px_20px_rgba(0,0,0,0.06)] px-8 py-7.5 mb-6">
+      <div className="bg-white rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-6">
         <div className="flex items-center justify-between mb-4.5">
           <div className="font-heading font-bold text-sm text-[var(--color-sage-deep)]">
             Grade {GRADE_LEVEL} assessment items
@@ -105,7 +105,7 @@ export default async function AdminContentPage({
         />
       </div>
 
-      <div className="bg-white rounded-[20px] shadow-[0_6px_20px_rgba(0,0,0,0.06)] px-8 py-7.5">
+      <div className="bg-white rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5">
         <div className="font-heading font-bold text-sm text-[var(--color-sage-deep)] mb-4.5">
           Program-aligned recommendations
         </div>
@@ -174,7 +174,7 @@ export default async function AdminContentPage({
           />
           <button
             type="submit"
-            className="self-start bg-[var(--color-sage)] text-white border-none rounded-full font-bold text-sm px-4.5 py-2.25 cursor-pointer"
+            className="self-start bg-[var(--color-sage)] text-white border-none rounded-full font-bold text-sm shadow-[0_6px_16px_rgba(74,107,82,0.25)] transition-transform hover:-translate-y-0.5 px-4.5 py-2.25 cursor-pointer"
           >
             Add rule
           </button>

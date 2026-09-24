@@ -20,9 +20,9 @@ export default async function AdminSettingsPage() {
 
   return (
     <div className="w-full max-w-[920px]">
-      <h1 className="font-heading font-bold text-[26px] text-[var(--color-sage-deep)] m-0 mb-6">Settings</h1>
+      <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-sage-deep)] m-0 mb-6">Settings</h1>
 
-      <div className="bg-white rounded-[20px] shadow-[0_6px_20px_rgba(0,0,0,0.06)] px-8 py-7.5">
+      <div className="bg-white rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5">
         <div className="font-heading font-bold text-sm text-[var(--color-sage-deep)] mb-4">Data retention</div>
         <p className="text-[var(--color-muted)] text-sm mb-4 mt-0">
           Automatically deletes completed assessment sessions (and their responses, results, and reports) older
@@ -45,7 +45,7 @@ export default async function AdminSettingsPage() {
           </label>
           <button
             type="submit"
-            className="bg-[var(--color-sage)] text-white border-none rounded-full font-bold text-sm px-5 py-2.75 cursor-pointer"
+            className="bg-[var(--color-sage)] text-white border-none rounded-full font-bold text-sm shadow-[0_6px_16px_rgba(74,107,82,0.25)] transition-transform hover:-translate-y-0.5 px-5 py-2.75 cursor-pointer"
           >
             Save
           </button>

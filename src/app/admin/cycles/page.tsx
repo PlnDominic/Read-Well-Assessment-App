@@ -22,11 +22,11 @@ export default async function AdminCyclesPage() {
 
   return (
     <div className="w-full max-w-[920px]">
-      <h1 className="font-heading font-bold text-[26px] text-[var(--color-sage-deep)] m-0 mb-6">
+      <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-sage-deep)] m-0 mb-6">
         Assessment Cycles
       </h1>
 
-      <div className="bg-white rounded-[20px] shadow-[0_6px_20px_rgba(0,0,0,0.06)] px-8 py-7.5 mb-6">
+      <div className="bg-white rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-6">
         <div className="font-heading font-bold text-sm text-[var(--color-sage-deep)] mb-4">
           Start a new cycle
         </div>
@@ -56,14 +56,14 @@ export default async function AdminCyclesPage() {
           </label>
           <button
             type="submit"
-            className="bg-[var(--color-sage)] text-white border-none rounded-full font-bold text-sm px-5 py-2.75 cursor-pointer"
+            className="bg-[var(--color-sage)] text-white border-none rounded-full font-bold text-sm shadow-[0_6px_16px_rgba(74,107,82,0.25)] transition-transform hover:-translate-y-0.5 px-5 py-2.75 cursor-pointer"
           >
             Start cycle
           </button>
         </form>
       </div>
 
-      <div className="bg-white rounded-[20px] shadow-[0_6px_20px_rgba(0,0,0,0.06)] overflow-hidden">
+      <div className="bg-white rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] overflow-hidden">
         {(cycles ?? []).length === 0 && (
           <div className="px-6 py-8 text-[var(--color-muted)] text-center">No cycles yet.</div>
         )}
