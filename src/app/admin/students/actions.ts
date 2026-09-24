@@ -93,6 +93,12 @@ export interface ImportCsvState {
   summary: { inserted: number; rowErrors: string[] } | null;
 }
 
+// A roster CSV is a handful of short lines per student; these are generous
+// upper bounds meant only to stop a runaway upload from reading an
+// unbounded file into memory or inserting an unbounded number of rows.
+const MAX_CSV_BYTES = 2 * 1024 * 1024;
+const MAX_CSV_ROWS = 2000;
+
 /**
  * Expects a CSV with a header row: name,grade,teacher_email
  * (a simple comma split, fields containing commas aren't supported).
@@ -107,6 +113,9 @@ export async function importStudentsCsv(
   if (!(file instanceof File) || file.size === 0) {
     return { error: "Choose a CSV file first.", summary: null };
   }
+  if (file.size > MAX_CSV_BYTES) {
+    return { error: `That file is too large (max ${MAX_CSV_BYTES / (1024 * 1024)}MB).`, summary: null };
+  }
 
   const text = await file.text();
   const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
@@ -114,6 +123,9 @@ export async function importStudentsCsv(
 
   const first = lines[0].toLowerCase();
   const dataLines = first.startsWith("name,") ? lines.slice(1) : lines;
+  if (dataLines.length > MAX_CSV_ROWS) {
+    return { error: `That's ${dataLines.length} rows; please split into batches of ${MAX_CSV_ROWS} or fewer.`, summary: null };
+  }
 
   const { data: teachers } = await supabase
     .from("profiles")

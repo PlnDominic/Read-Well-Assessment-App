@@ -1,5 +1,6 @@
 "use server";
 
+import { randomInt } from "crypto";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/authz";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -8,7 +9,7 @@ import type { UserRole } from "@/lib/database.types";
 function generateTempPassword(): string {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
   let pw = "";
-  for (let i = 0; i < 12; i++) pw += alphabet[Math.floor(Math.random() * alphabet.length)];
+  for (let i = 0; i < 12; i++) pw += alphabet[randomInt(alphabet.length)];
   return pw;
 }
 
