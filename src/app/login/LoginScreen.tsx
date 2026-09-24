@@ -193,7 +193,7 @@ function StaffLoginForm({ mode, onBack }: { mode: Exclude<Mode, "select">; onBac
               name="email"
               required
               autoComplete="email"
-              className="bg-[var(--color-cream)] border-2 border-transparent rounded-2xl px-4 py-3.5 text-base focus:outline-none focus:border-[var(--color-sage)] focus:bg-white transition-colors"
+              className="bg-[var(--color-neutral)] border-2 border-transparent rounded-2xl px-4 py-3.5 text-base focus:outline-none focus:border-[var(--color-sage)] focus:bg-white transition-colors"
             />
           </label>
           <label className="flex flex-col gap-1.5 text-left">
@@ -203,7 +203,7 @@ function StaffLoginForm({ mode, onBack }: { mode: Exclude<Mode, "select">; onBac
               name="password"
               required
               autoComplete="current-password"
-              className="bg-[var(--color-cream)] border-2 border-transparent rounded-2xl px-4 py-3.5 text-base focus:outline-none focus:border-[var(--color-sage)] focus:bg-white transition-colors"
+              className="bg-[var(--color-neutral)] border-2 border-transparent rounded-2xl px-4 py-3.5 text-base focus:outline-none focus:border-[var(--color-sage)] focus:bg-white transition-colors"
             />
           </label>
 

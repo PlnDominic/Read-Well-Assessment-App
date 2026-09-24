@@ -13,7 +13,7 @@ export function InviteForm() {
       <form action={formAction} className="flex flex-wrap items-end gap-3.5">
         <label className="flex flex-col gap-1.5 text-sm flex-1 min-w-[160px]">
           <span className="font-bold text-[var(--color-muted)] text-xs uppercase">Name</span>
-          <input name="name" required className="border-2 border-[var(--color-cream-border)] rounded-xl px-3.5 py-2.5" />
+          <input name="name" required className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3.5 py-2.5" />
         </label>
         <label className="flex flex-col gap-1.5 text-sm flex-1 min-w-[200px]">
           <span className="font-bold text-[var(--color-muted)] text-xs uppercase">Email</span>
@@ -21,12 +21,12 @@ export function InviteForm() {
             name="email"
             type="email"
             required
-            className="border-2 border-[var(--color-cream-border)] rounded-xl px-3.5 py-2.5"
+            className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3.5 py-2.5"
           />
         </label>
         <label className="flex flex-col gap-1.5 text-sm min-w-[170px]">
           <span className="font-bold text-[var(--color-muted)] text-xs uppercase">Role</span>
-          <select name="role" required defaultValue="teacher" className="border-2 border-[var(--color-cream-border)] rounded-xl px-3.5 py-2.5">
+          <select name="role" required defaultValue="teacher" className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3.5 py-2.5">
             <option value="teacher">Teacher</option>
             <option value="reading_specialist">Reading Specialist</option>
             <option value="administrator">Administrator</option>

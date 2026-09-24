@@ -60,7 +60,7 @@ export default async function AdminStudentsPage() {
           return (
             <div
               key={s.id}
-              className="px-6 py-4.5 border-b border-[var(--color-cream-divider)] last:border-b-0 flex flex-col gap-3"
+              className="px-6 py-4.5 border-b border-[var(--color-neutral-divider)] last:border-b-0 flex flex-col gap-3"
             >
               <form action={updateStudent} className="flex flex-wrap items-end gap-2.5">
                 <input type="hidden" name="id" value={s.id} />
@@ -69,13 +69,13 @@ export default async function AdminStudentsPage() {
                   aria-label="Student name"
                   defaultValue={s.name}
                   required
-                  className="font-extrabold text-[var(--color-sage-deep)] text-base border-2 border-transparent hover:border-[var(--color-cream-border)] focus:border-[var(--color-sage)] rounded-lg px-2 py-1 flex-1 min-w-[140px]"
+                  className="font-extrabold text-[var(--color-sage-deep)] text-base border-2 border-transparent hover:border-[var(--color-neutral-border)] focus:border-[var(--color-sage)] rounded-lg px-2 py-1 flex-1 min-w-[140px]"
                 />
                 <select
                   name="grade"
                   aria-label="Grade"
                   defaultValue={s.grade}
-                  className="border-2 border-[var(--color-cream-border)] rounded-lg px-2 py-1 text-sm w-20"
+                  className="border-2 border-[var(--color-neutral-border)] rounded-lg px-2 py-1 text-sm w-20"
                 >
                   {Array.from({ length: 12 }, (_, i) => i + 1).map((g) => (
                     <option key={g} value={g}>
@@ -87,7 +87,7 @@ export default async function AdminStudentsPage() {
                   name="teacherId"
                   aria-label="Teacher"
                   defaultValue={s.teacher_id}
-                  className="border-2 border-[var(--color-cream-border)] rounded-lg px-2 py-1 text-sm"
+                  className="border-2 border-[var(--color-neutral-border)] rounded-lg px-2 py-1 text-sm"
                 >
                   {teachers.map((t) => (
                     <option key={t.id} value={t.id}>
@@ -97,7 +97,7 @@ export default async function AdminStudentsPage() {
                 </select>
                 <button
                   type="submit"
-                  className="bg-[var(--color-cream)] border-none text-[var(--color-sage-dark)] transition-colors hover:bg-[var(--color-cream-divider)] font-bold text-xs px-3 py-1.5 rounded-full cursor-pointer"
+                  className="bg-[var(--color-neutral)] border-none text-[var(--color-sage-dark)] transition-colors hover:bg-[var(--color-neutral-divider)] font-bold text-xs px-3 py-1.5 rounded-full cursor-pointer"
                 >
                   Save
                 </button>
@@ -134,7 +134,7 @@ export default async function AdminStudentsPage() {
                     <select
                       name="specialistId"
                       aria-label="Assign specialist"
-                      className="border-2 border-[var(--color-cream-border)] rounded-full px-3 py-1.5 text-xs"
+                      className="border-2 border-[var(--color-neutral-border)] rounded-full px-3 py-1.5 text-xs"
                       defaultValue=""
                     >
                       <option value="" disabled>
@@ -148,7 +148,7 @@ export default async function AdminStudentsPage() {
                     </select>
                     <button
                       type="submit"
-                      className="bg-[var(--color-cream)] border-none text-[var(--color-sage-dark)] transition-colors hover:bg-[var(--color-cream-divider)] font-bold text-xs px-3 py-1.5 rounded-full cursor-pointer"
+                      className="bg-[var(--color-neutral)] border-none text-[var(--color-sage-dark)] transition-colors hover:bg-[var(--color-neutral-divider)] font-bold text-xs px-3 py-1.5 rounded-full cursor-pointer"
                     >
                       Assign
                     </button>

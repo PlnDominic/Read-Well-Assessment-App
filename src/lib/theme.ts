@@ -14,10 +14,10 @@ export const colors = {
   terracottaDark: "#9C5238",
   terracottaTint: "#FBF3EE",
 
-  cream: "#F6F1E4",
-  creamBorder: "#E3DAC0",
-  creamBorderStrong: "#D9CFAF",
-  creamDivider: "#EFEAD9",
+  neutral: "#F0F0F0",
+  neutralBorder: "#DCDCDC",
+  neutralBorderStrong: "#C9C9C9",
+  neutralDivider: "#E6E6E6",
 
   ink: "#2E3B2F",
   inkSoft: "#3A463B",

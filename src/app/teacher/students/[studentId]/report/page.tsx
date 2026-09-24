@@ -147,7 +147,7 @@ export default async function StudentReportPage({
               {report?.status === "ready" ? (
                 <a
                   href={`/api/reports/student/${sessionId}`}
-                  className="bg-[var(--color-cream)] border-none text-[var(--color-sage-dark)] font-bold text-sm px-4 py-2.25 rounded-full no-underline transition-colors hover:bg-[var(--color-cream-divider)]"
+                  className="bg-[var(--color-neutral)] border-none text-[var(--color-sage-dark)] font-bold text-sm px-4 py-2.25 rounded-full no-underline transition-colors hover:bg-[var(--color-neutral-divider)]"
                 >
                   Export PDF
                 </a>
@@ -162,7 +162,7 @@ export default async function StudentReportPage({
                   </button>
                 </form>
               ) : (
-                <span className="bg-[var(--color-cream)] border-none text-[var(--color-muted)] font-bold text-sm px-4 py-2.25 rounded-full">
+                <span className="bg-[var(--color-neutral)] border-none text-[var(--color-muted)] font-bold text-sm px-4 py-2.25 rounded-full">
                   PDF generating…
                 </span>
               )}
@@ -186,7 +186,7 @@ export default async function StudentReportPage({
                       {sk.score}%
                     </span>
                   </div>
-                  <div className="h-3 bg-[var(--color-cream-divider)] rounded-full overflow-hidden">
+                  <div className="h-3 bg-[var(--color-neutral-divider)] rounded-full overflow-hidden">
                     <div
                       className="h-full rounded-full"
                       style={{
@@ -212,7 +212,7 @@ export default async function StudentReportPage({
               return (
                 <div
                   key={item.id}
-                  className="flex items-start gap-3.5 bg-[var(--color-cream)] rounded-xl px-4.5 py-3.5"
+                  className="flex items-start gap-3.5 bg-[var(--color-neutral)] rounded-xl px-4.5 py-3.5"
                 >
                   <span
                     className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold text-white mt-0.5"

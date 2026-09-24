@@ -41,7 +41,7 @@ export default async function AdminCyclesPage() {
               name="name"
               placeholder="e.g. Winter Reading Assessment Cycle"
               required
-              className="border-2 border-[var(--color-cream-border)] rounded-xl px-3.5 py-2.5"
+              className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3.5 py-2.5"
             />
           </label>
           <label className="flex flex-col gap-1.5 text-sm">
@@ -51,7 +51,7 @@ export default async function AdminCyclesPage() {
               type="date"
               defaultValue={today}
               required
-              className="border-2 border-[var(--color-cream-border)] rounded-xl px-3.5 py-2.5"
+              className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3.5 py-2.5"
             />
           </label>
           <button
@@ -70,7 +70,7 @@ export default async function AdminCyclesPage() {
         {(cycles ?? []).map((c) => (
           <div
             key={c.id}
-            className="px-6 py-4 border-b border-[var(--color-cream-divider)] last:border-b-0 flex items-center justify-between gap-3"
+            className="px-6 py-4 border-b border-[var(--color-neutral-divider)] last:border-b-0 flex items-center justify-between gap-3"
           >
             <div>
               <div className="font-extrabold text-[var(--color-sage-deep)] text-base">{c.name}</div>

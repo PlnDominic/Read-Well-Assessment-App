@@ -114,7 +114,7 @@ export default async function AdminDashboardPage() {
           {reportStatus === "ready" && cycle ? (
             <a
               href={`/api/reports/school/${cycle.id}`}
-              className="bg-[var(--color-cream)] border-none text-[var(--color-sage-dark)] font-bold text-sm px-4.5 py-2.5 rounded-full no-underline transition-colors hover:bg-[var(--color-cream-divider)]"
+              className="bg-[var(--color-neutral)] border-none text-[var(--color-sage-dark)] font-bold text-sm px-4.5 py-2.5 rounded-full no-underline transition-colors hover:bg-[var(--color-neutral-divider)]"
             >
               Export PDF
             </a>
@@ -129,7 +129,7 @@ export default async function AdminDashboardPage() {
               </button>
             </form>
           ) : (
-            <span className="bg-[var(--color-cream)] border-none text-[var(--color-muted)] font-bold text-sm px-4.5 py-2.5 rounded-full">
+            <span className="bg-[var(--color-neutral)] border-none text-[var(--color-muted)] font-bold text-sm px-4.5 py-2.5 rounded-full">
               PDF pending
             </span>
           )}
@@ -155,7 +155,7 @@ export default async function AdminDashboardPage() {
                   <span className="font-bold text-[var(--color-ink-soft)]">{sk.name}</span>
                   <span className="font-bold text-[var(--color-gold-text)]">{sk.pct}% flagged</span>
                 </div>
-                <div className="h-3.5 bg-[var(--color-cream-divider)] rounded-full overflow-hidden">
+                <div className="h-3.5 bg-[var(--color-neutral-divider)] rounded-full overflow-hidden">
                   <div
                     className="h-full bg-[var(--color-terracotta)] rounded-full"
                     style={{ width: `${sk.pct}%` }}

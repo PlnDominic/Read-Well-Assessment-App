@@ -57,7 +57,7 @@ export default async function AdminAuditPage() {
         {(logs ?? []).map((log) => (
           <div
             key={log.id}
-            className="px-6 py-3.5 border-b border-[var(--color-cream-divider)] last:border-b-0 flex items-center justify-between gap-3 flex-wrap"
+            className="px-6 py-3.5 border-b border-[var(--color-neutral-divider)] last:border-b-0 flex items-center justify-between gap-3 flex-wrap"
           >
             <div className="text-sm text-[var(--color-ink-soft)]">
               <span className="font-extrabold text-[var(--color-sage-deep)]">

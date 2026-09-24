@@ -36,7 +36,7 @@ export default async function NotificationsPage() {
             <form action={markAllNotificationsRead}>
               <button
                 type="submit"
-                className="bg-[var(--color-cream)] border-none text-[var(--color-sage-dark)] transition-colors hover:bg-[var(--color-cream-divider)] font-bold text-sm px-4 py-2 rounded-full cursor-pointer"
+                className="bg-[var(--color-neutral)] border-none text-[var(--color-sage-dark)] transition-colors hover:bg-[var(--color-neutral-divider)] font-bold text-sm px-4 py-2 rounded-full cursor-pointer"
               >
                 Mark all as read
               </button>
@@ -51,7 +51,7 @@ export default async function NotificationsPage() {
           {(notifications ?? []).map((n) => (
             <div
               key={n.id}
-              className="px-6 py-4 border-b border-[var(--color-cream-divider)] last:border-b-0 flex items-center justify-between gap-3 flex-wrap"
+              className="px-6 py-4 border-b border-[var(--color-neutral-divider)] last:border-b-0 flex items-center justify-between gap-3 flex-wrap"
               style={{ background: n.read ? "transparent" : "var(--color-sage-tint)" }}
             >
               <div className="text-sm">

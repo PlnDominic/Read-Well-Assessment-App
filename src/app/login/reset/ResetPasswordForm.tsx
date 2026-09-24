@@ -85,7 +85,7 @@ export function ResetPasswordForm() {
           minLength={8}
           placeholder="New password"
           autoComplete="new-password"
-          className="border-2 border-[var(--color-cream-border)] rounded-xl px-4 py-3 text-base focus:outline-none focus:border-[var(--color-sage)]"
+          className="border-2 border-[var(--color-neutral-border)] rounded-xl px-4 py-3 text-base focus:outline-none focus:border-[var(--color-sage)]"
         />
         <input
           type="password"
@@ -94,7 +94,7 @@ export function ResetPasswordForm() {
           minLength={8}
           placeholder="Confirm new password"
           autoComplete="new-password"
-          className="border-2 border-[var(--color-cream-border)] rounded-xl px-4 py-3 text-base focus:outline-none focus:border-[var(--color-sage)]"
+          className="border-2 border-[var(--color-neutral-border)] rounded-xl px-4 py-3 text-base focus:outline-none focus:border-[var(--color-sage)]"
         />
         {formError && <p className="text-[var(--color-terracotta-dark)] text-sm m-0">{formError}</p>}
         <button

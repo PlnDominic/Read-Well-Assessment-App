@@ -35,7 +35,7 @@ export function ForgotForm() {
           name="email"
           required
           placeholder="you@school.edu"
-          className="border-2 border-[var(--color-cream-border)] rounded-xl px-4 py-3 text-base focus:outline-none focus:border-[var(--color-sage)]"
+          className="border-2 border-[var(--color-neutral-border)] rounded-xl px-4 py-3 text-base focus:outline-none focus:border-[var(--color-sage)]"
         />
         <button
           type="submit"

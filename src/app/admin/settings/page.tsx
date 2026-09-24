@@ -40,7 +40,7 @@ export default async function AdminSettingsPage() {
               step={1}
               defaultValue={school?.data_retention_days ?? ""}
               placeholder="Indefinite"
-              className="border-2 border-[var(--color-cream-border)] rounded-xl px-3.5 py-2.5 w-[220px]"
+              className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3.5 py-2.5 w-[220px]"
             />
           </label>
           <button

@@ -117,7 +117,7 @@ export default async function AdminContentPage({
           {rules.map((rule) => (
             <div
               key={rule.id}
-              className="flex items-start justify-between gap-3 bg-[var(--color-cream)] rounded-xl px-4.5 py-3.5"
+              className="flex items-start justify-between gap-3 bg-[var(--color-neutral)] rounded-xl px-4.5 py-3.5"
             >
               <div>
                 <div className="font-extrabold text-[var(--color-sage-deep)] text-sm mb-1">
@@ -141,13 +141,13 @@ export default async function AdminContentPage({
           ))}
         </div>
 
-        <form action={addRecommendationRule} className="flex flex-col gap-3 border-t border-[var(--color-cream-divider)] pt-5">
+        <form action={addRecommendationRule} className="flex flex-col gap-3 border-t border-[var(--color-neutral-divider)] pt-5">
           <input type="hidden" name="gradeLevel" value={GRADE_LEVEL} />
           <div className="flex flex-wrap gap-3">
             <select
               name="skillAreaId"
               required
-              className="border-2 border-[var(--color-cream-border)] rounded-xl px-3.5 py-2.5 text-sm"
+              className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3.5 py-2.5 text-sm"
               defaultValue=""
             >
               <option value="" disabled>
@@ -162,7 +162,7 @@ export default async function AdminContentPage({
             <input
               name="programReference"
               placeholder="Program reference (optional)"
-              className="border-2 border-[var(--color-cream-border)] rounded-xl px-3.5 py-2.5 text-sm flex-1 min-w-[200px]"
+              className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3.5 py-2.5 text-sm flex-1 min-w-[200px]"
             />
           </div>
           <textarea
@@ -170,7 +170,7 @@ export default async function AdminContentPage({
             required
             placeholder="Recommendation text"
             rows={2}
-            className="border-2 border-[var(--color-cream-border)] rounded-xl px-3.5 py-2.5 text-sm"
+            className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3.5 py-2.5 text-sm"
           />
           <button
             type="submit"

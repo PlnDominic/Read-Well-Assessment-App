@@ -18,7 +18,7 @@ const styles = StyleSheet.create({
   skillRow: { marginBottom: 12 },
   skillLabelRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
   skillName: { fontWeight: 700, color: colors.inkSoft },
-  barTrack: { height: 8, backgroundColor: colors.creamBorder, borderRadius: 999 },
+  barTrack: { height: 8, backgroundColor: colors.neutralBorder, borderRadius: 999 },
   barFill: { height: 8, borderRadius: 999 },
   recCard: {
     backgroundColor: colors.terracottaTint,

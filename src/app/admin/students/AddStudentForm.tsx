@@ -13,7 +13,7 @@ export function AddStudentForm({ teachers }: { teachers: { id: string; name: str
       <form action={formAction} className="flex flex-wrap items-end gap-3.5">
         <label className="flex flex-col gap-1.5 text-sm flex-1 min-w-[180px]">
           <span className="font-bold text-[var(--color-muted)] text-xs uppercase">Name</span>
-          <input name="name" required className="border-2 border-[var(--color-cream-border)] rounded-xl px-3.5 py-2.5" />
+          <input name="name" required className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3.5 py-2.5" />
         </label>
         <label className="flex flex-col gap-1.5 text-sm w-24">
           <span className="font-bold text-[var(--color-muted)] text-xs uppercase">Grade</span>
@@ -24,12 +24,12 @@ export function AddStudentForm({ teachers }: { teachers: { id: string; name: str
             min={1}
             max={12}
             required
-            className="border-2 border-[var(--color-cream-border)] rounded-xl px-3.5 py-2.5"
+            className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3.5 py-2.5"
           />
         </label>
         <label className="flex flex-col gap-1.5 text-sm flex-1 min-w-[180px]">
           <span className="font-bold text-[var(--color-muted)] text-xs uppercase">Teacher</span>
-          <select name="teacherId" required className="border-2 border-[var(--color-cream-border)] rounded-xl px-3.5 py-2.5">
+          <select name="teacherId" required className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3.5 py-2.5">
             {teachers.length === 0 && <option value="">No teachers yet</option>}
             {teachers.map((t) => (
               <option key={t.id} value={t.id}>

@@ -452,7 +452,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
     <div className="w-full max-w-[640px] mt-[2vh]">
       {offlineBanner}
       <div className="flex items-center gap-3.5 mb-7">
-        <div className="flex-1 h-3.5 bg-[var(--color-cream-border)] rounded-full overflow-hidden">
+        <div className="flex-1 h-3.5 bg-[var(--color-neutral-border)] rounded-full overflow-hidden">
           <div
             className="h-full bg-[var(--color-sage)] rounded-full transition-[width]"
             style={{ width: `${progressPercent}%` }}
@@ -473,7 +473,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
         </div>
 
         {item.passage && (
-          <div className="bg-[var(--color-cream)] rounded-2xl px-5 py-4 mb-4.5 text-lg text-[var(--color-ink-soft)] leading-relaxed">
+          <div className="bg-[var(--color-neutral)] rounded-2xl px-5 py-4 mb-4.5 text-lg text-[var(--color-ink-soft)] leading-relaxed">
             {item.passage}
           </div>
         )}
@@ -512,7 +512,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
                   onClick={() => selectOption(text)}
                   className="text-center font-heading font-bold text-lg py-5 rounded-2xl cursor-pointer border-[2.5px] transition-colors"
                   style={{
-                    borderColor: isSelected ? "var(--color-sage)" : "var(--color-cream-border)",
+                    borderColor: isSelected ? "var(--color-sage)" : "var(--color-neutral-border)",
                     background: isSelected ? "var(--color-sage-tint)" : "white",
                     color: "var(--color-sage-deep)",
                   }}

@@ -69,7 +69,7 @@ export function JoinForm() {
           autoComplete="off"
           autoCapitalize="characters"
           placeholder="ABC123"
-          className="w-full text-center tracking-[0.3em] uppercase font-heading font-bold text-3xl bg-[var(--color-cream)] border-2 border-transparent rounded-2xl py-5 focus:outline-none focus:border-[var(--color-sage)] focus:bg-white transition-colors"
+          className="w-full text-center tracking-[0.3em] uppercase font-heading font-bold text-3xl bg-[var(--color-neutral)] border-2 border-transparent rounded-2xl py-5 focus:outline-none focus:border-[var(--color-sage)] focus:bg-white transition-colors"
         />
 
         {state.error && <p className="text-[var(--color-terracotta-dark)] text-base m-0">{state.error}</p>}

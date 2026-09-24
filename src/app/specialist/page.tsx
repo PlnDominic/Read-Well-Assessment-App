@@ -69,7 +69,7 @@ export default async function SpecialistPage() {
             return (
               <div
                 key={s.id}
-                className="flex items-center justify-between gap-3.5 px-6 py-4.5 border-b border-[var(--color-cream-divider)] flex-wrap last:border-b-0"
+                className="flex items-center justify-between gap-3.5 px-6 py-4.5 border-b border-[var(--color-neutral-divider)] flex-wrap last:border-b-0"
               >
                 <div className="flex items-center gap-3.5">
                   <div className="w-10.5 h-10.5 rounded-full bg-[var(--color-sage-tint)] flex items-center justify-center font-heading font-bold text-[var(--color-sage-dark)]">

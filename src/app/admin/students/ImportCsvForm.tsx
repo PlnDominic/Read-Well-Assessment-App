@@ -9,7 +9,7 @@ export function ImportCsvForm() {
   const [state, formAction, isPending] = useActionState(importStudentsCsv, initialState);
 
   return (
-    <div className="border-t border-[var(--color-cream-divider)] pt-5 mt-5">
+    <div className="border-t border-[var(--color-neutral-divider)] pt-5 mt-5">
       <div className="font-heading font-bold text-sm text-[var(--color-sage-deep)] mb-1.5">Bulk import (CSV)</div>
       <p className="text-[var(--color-muted)] text-xs mb-3 mt-0">
         Header row <code>name,grade,teacher_email</code>, one student per line, teacher matched by email.
@@ -22,7 +22,7 @@ export function ImportCsvForm() {
         <button
           type="submit"
           disabled={isPending}
-          className="bg-[var(--color-cream)] border-none text-[var(--color-sage-dark)] transition-colors hover:bg-[var(--color-cream-divider)] font-bold text-xs px-4 py-2 rounded-full cursor-pointer disabled:opacity-60"
+          className="bg-[var(--color-neutral)] border-none text-[var(--color-sage-dark)] transition-colors hover:bg-[var(--color-neutral-divider)] font-bold text-xs px-4 py-2 rounded-full cursor-pointer disabled:opacity-60"
         >
           {isPending ? "Importing…" : "Import"}
         </button>

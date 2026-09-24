@@ -28,7 +28,7 @@ export function StaffRow({
   const [resetState, resetAction, isResetting] = useActionState(resetStaffPassword, initialResetState);
 
   return (
-    <div className="px-6 py-4 border-b border-[var(--color-cream-divider)] last:border-b-0 flex flex-col gap-2.5">
+    <div className="px-6 py-4 border-b border-[var(--color-neutral-divider)] last:border-b-0 flex flex-col gap-2.5">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <div className="font-extrabold text-[var(--color-sage-deep)] text-base">
@@ -55,7 +55,7 @@ export function StaffRow({
                 name="role"
                 aria-label={`Role for ${staffMember.name}`}
                 defaultValue={staffMember.role}
-                className="border-2 border-[var(--color-cream-border)] rounded-full px-3 py-1.5 text-xs"
+                className="border-2 border-[var(--color-neutral-border)] rounded-full px-3 py-1.5 text-xs"
               >
                 <option value="teacher">Teacher</option>
                 <option value="reading_specialist">Reading Specialist</option>
@@ -63,7 +63,7 @@ export function StaffRow({
               </select>
               <button
                 type="submit"
-                className="bg-[var(--color-cream)] border-none text-[var(--color-sage-dark)] transition-colors hover:bg-[var(--color-cream-divider)] font-bold text-xs px-3 py-1.5 rounded-full cursor-pointer"
+                className="bg-[var(--color-neutral)] border-none text-[var(--color-sage-dark)] transition-colors hover:bg-[var(--color-neutral-divider)] font-bold text-xs px-3 py-1.5 rounded-full cursor-pointer"
               >
                 Save
               </button>
@@ -76,7 +76,7 @@ export function StaffRow({
             <button
               type="submit"
               disabled={isResetting}
-              className="bg-[var(--color-cream)] border-none text-[var(--color-sage-dark)] transition-colors hover:bg-[var(--color-cream-divider)] font-bold text-xs px-3 py-1.5 rounded-full cursor-pointer disabled:opacity-60"
+              className="bg-[var(--color-neutral)] border-none text-[var(--color-sage-dark)] transition-colors hover:bg-[var(--color-neutral-divider)] font-bold text-xs px-3 py-1.5 rounded-full cursor-pointer disabled:opacity-60"
             >
               {isResetting ? "Resetting…" : "Reset password"}
             </button>

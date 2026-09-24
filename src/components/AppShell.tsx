@@ -36,7 +36,7 @@ export function AppShell({
                 alt=""
                 width={40}
                 height={40}
-                className="w-10 h-10 rounded-full object-cover ring-2 ring-[var(--color-cream)]"
+                className="w-10 h-10 rounded-full object-cover ring-2 ring-[var(--color-neutral)]"
               />
             )}
             <NotificationBell />

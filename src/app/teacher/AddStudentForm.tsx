@@ -17,13 +17,13 @@ export function AddStudentForm() {
             name="name"
             placeholder="Student name"
             required
-            className="border-2 border-[var(--color-cream-border)] rounded-xl px-3.5 py-2.5"
+            className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3.5 py-2.5"
           />
         </label>
         <select
           name="grade"
           defaultValue={1}
-          className="border-2 border-[var(--color-cream-border)] rounded-xl px-3.5 py-2.5 text-sm"
+          className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3.5 py-2.5 text-sm"
         >
           {Array.from({ length: 12 }, (_, i) => i + 1).map((g) => (
             <option key={g} value={g}>

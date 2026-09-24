@@ -111,7 +111,7 @@ export default async function TeacherRosterPage() {
             return (
               <div
                 key={s.id}
-                className="flex items-center justify-between gap-3.5 px-6 py-4.5 border-b border-[var(--color-cream-divider)] flex-wrap last:border-b-0"
+                className="flex items-center justify-between gap-3.5 px-6 py-4.5 border-b border-[var(--color-neutral-divider)] flex-wrap last:border-b-0"
               >
                 <div className="flex items-center gap-3.5">
                   <div className="w-10.5 h-10.5 rounded-full bg-[var(--color-sage-tint)] flex items-center justify-center font-heading font-bold text-[var(--color-sage-dark)]">
@@ -134,7 +134,7 @@ export default async function TeacherRosterPage() {
                       className="text-xs font-bold text-[var(--color-muted)]"
                       title="Enter this at /student/join on the student's device"
                     >
-                      Code: <code className="bg-[var(--color-cream)] px-2 py-1 rounded font-bold">{latest.sessionCode}</code>
+                      Code: <code className="bg-[var(--color-neutral)] px-2 py-1 rounded font-bold">{latest.sessionCode}</code>
                     </span>
                   )}
                   {status === "completed" && latest ? (
@@ -153,7 +153,7 @@ export default async function TeacherRosterPage() {
                       <form action={startOrResumeAssessment.bind(null, s.id)}>
                         <button
                           type="submit"
-                          className="font-bold text-sm px-4.5 py-2.25 rounded-full cursor-pointer bg-[var(--color-cream)] border-none text-[var(--color-sage-dark)] transition-colors hover:bg-[var(--color-cream-divider)]"
+                          className="font-bold text-sm px-4.5 py-2.25 rounded-full cursor-pointer bg-[var(--color-neutral)] border-none text-[var(--color-sage-dark)] transition-colors hover:bg-[var(--color-neutral-divider)]"
                         >
                           Start New Assessment
                         </button>

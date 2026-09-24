@@ -104,13 +104,13 @@ export function AssessmentItemsEditor({
     <div>
       <div className="flex flex-col gap-5">
         {items.map((item, i) => (
-          <div key={item.id} className="bg-[var(--color-cream)] rounded-[20px] p-5">
+          <div key={item.id} className="bg-[var(--color-neutral)] rounded-[20px] p-5">
             <div className="flex flex-wrap items-center gap-3 mb-3.5">
               <select
                 aria-label="Skill area"
                 value={item.skillAreaKey}
                 onChange={(e) => updateItem(i, { skillAreaKey: e.target.value })}
-                className="border-2 border-[var(--color-cream-border)] rounded-xl px-3 py-2 text-sm"
+                className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3 py-2 text-sm"
               >
                 {skillAreas.map((sa) => (
                   <option key={sa.key} value={sa.key}>
@@ -128,7 +128,7 @@ export function AssessmentItemsEditor({
                     options: type === "choice" ? item.options ?? [{ text: "", isCorrect: true }] : undefined,
                   });
                 }}
-                className="border-2 border-[var(--color-cream-border)] rounded-xl px-3 py-2 text-sm"
+                className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3 py-2 text-sm"
               >
                 <option value="choice">Multiple choice</option>
                 <option value="mic">Read aloud (mic)</option>
@@ -147,7 +147,7 @@ export function AssessmentItemsEditor({
                 value={item.passage ?? ""}
                 onChange={(e) => updateItem(i, { passage: e.target.value || undefined })}
                 rows={2}
-                className="border-2 border-[var(--color-cream-border)] rounded-xl px-3.5 py-2.5"
+                className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3.5 py-2.5"
               />
             </label>
 
@@ -156,7 +156,7 @@ export function AssessmentItemsEditor({
               <input
                 value={item.prompt}
                 onChange={(e) => updateItem(i, { prompt: e.target.value })}
-                className="border-2 border-[var(--color-cream-border)] rounded-xl px-3.5 py-2.5"
+                className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3.5 py-2.5"
               />
             </label>
 
@@ -169,7 +169,7 @@ export function AssessmentItemsEditor({
                   value={item.expectedText ?? ""}
                   onChange={(e) => updateItem(i, { expectedText: e.target.value || undefined })}
                   placeholder="e.g. jump"
-                  className="border-2 border-[var(--color-cream-border)] rounded-xl px-3.5 py-2.5"
+                  className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3.5 py-2.5"
                 />
                 <span className="text-[var(--color-muted)] text-xs">
                   Scored against the student&apos;s spoken transcript (Chrome/Edge Web Speech API). Leave blank to
@@ -194,7 +194,7 @@ export function AssessmentItemsEditor({
                     <input
                       value={opt.text}
                       onChange={(e) => updateOption(i, oi, { text: e.target.value })}
-                      className="flex-1 border-2 border-[var(--color-cream-border)] rounded-xl px-3 py-2 text-sm"
+                      className="flex-1 border-2 border-[var(--color-neutral-border)] rounded-xl px-3 py-2 text-sm"
                     />
                     <button
                       onClick={() => removeOption(i, oi)}
@@ -219,7 +219,7 @@ export function AssessmentItemsEditor({
       <div className="flex items-center gap-3 mt-5">
         <button
           onClick={addItem}
-          className="bg-[var(--color-cream)] border-none text-[var(--color-sage-dark)] transition-colors hover:bg-[var(--color-cream-divider)] font-bold text-sm px-4.5 py-2.25 rounded-full cursor-pointer"
+          className="bg-[var(--color-neutral)] border-none text-[var(--color-sage-dark)] transition-colors hover:bg-[var(--color-neutral-divider)] font-bold text-sm px-4.5 py-2.25 rounded-full cursor-pointer"
         >
           + Add item
         </button>

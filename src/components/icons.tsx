@@ -3,7 +3,7 @@ import { colors } from "@/lib/theme";
 export function ReadWellMark({ size = 20 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 20 20">
-      <circle cx="10" cy="10" r="9" fill={colors.cream} />
+      <circle cx="10" cy="10" r="9" fill={colors.neutral} />
       <circle cx="7" cy="9" r="1.6" fill={colors.sageDark} />
       <circle cx="13" cy="9" r="1.6" fill={colors.sageDark} />
       <path
@@ -27,11 +27,11 @@ export function SunnyMascot({ size = 56, mood = "smile" }: { size?: number; mood
     <svg width={size} height={size} viewBox="0 0 56 56">
       <ellipse cx="18" cy="30" rx="7" ry="10" fill={colors.sageMid} />
       <ellipse cx="38" cy="30" rx="7" ry="10" fill={colors.sageMid} />
-      <circle cx="28" cy="26" r="17" fill={colors.cream} />
+      <circle cx="28" cy="26" r="17" fill={colors.neutral} />
       <circle cx="21" cy="24" r="4.2" fill={colors.sageDeep} />
       <circle cx="35" cy="24" r="4.2" fill={colors.sageDeep} />
-      <circle cx="22" cy="23" r="1.3" fill={colors.cream} />
-      <circle cx="36" cy="23" r="1.3" fill={colors.cream} />
+      <circle cx="22" cy="23" r="1.3" fill={colors.neutral} />
+      <circle cx="36" cy="23" r="1.3" fill={colors.neutral} />
       <path d={mouth} stroke={colors.sageDeep} strokeWidth="2" fill="none" strokeLinecap="round" />
       <polygon points="25,29 31,29 28,33" fill={colors.terracotta} />
     </svg>
