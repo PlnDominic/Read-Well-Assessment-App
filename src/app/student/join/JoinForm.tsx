@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { Sunny3D } from "@/components/Sunny3D";
+import { SunnyAvatar } from "@/components/SunnyAvatar";
 import { redeemSessionCode } from "./actions";
 
 const OFFLINE_NEW_CODE =
@@ -47,7 +47,7 @@ export function JoinForm() {
   return (
     <div className="w-full max-w-[440px] mt-[8vh] text-center">
       <div className="flex justify-center mb-6">
-        <Sunny3D size={68} mood="smile" />
+        <SunnyAvatar size={68} />
       </div>
       <h1 className="font-heading font-bold text-[28px] text-[var(--color-sage-deep)] m-0 mb-2.5">
         What&apos;s your code?

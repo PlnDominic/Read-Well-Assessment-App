@@ -76,43 +76,18 @@ A few things the PRD/TRD left open that needed a concrete decision to ship:
   (Next.js 15+) rather than a separate queue/worker, which is the pragmatic
   reading of the TRD's "must not block the assessment-completion response"
   requirement without standing up separate infrastructure for an MVP.
-- **Sunny (the mascot) is an actual, interactive 3D character**, not a static
-  image: a real animated model (`public/models/fox.glb`), not primitive
-  three.js geometry. It's the Khronos glTF-Sample-Assets "Fox" — a
-  public-domain base mesh by PixelMannen, rigged and animated by tomkranis
-  (CC-BY 4.0), converted to glTF by AsoboStudio and scurest (CC-BY 4.0).
-  `src/components/SunnyCanvas.tsx` loads it with drei's `useGLTF` and plays
-  its "Survey" animation clip on a loop (its only clip without root motion —
-  Walk/Run translate the whole rig many units across the scene, which would
-  make Sunny drift out of a small fixed badge); the "big-smile" mood used on
-  encouraging screens just plays it back faster, since there's no separate
-  "big smile" clip to switch to. It's draggable: wrapping the model in drei's
-  `PresentationControls` lets you spin it with a pointer or finger, with a
-  spring back to the resting pose on release; pressing and holding gives it a
-  squish reaction, eased every frame toward the pressed/released scale. A
-  `ContactShadows` pass underneath grounds it. `src/components/Sunny3D.tsx`
-  is the component actually imported by the four screens that show Sunny; it
-  lazy-loads the three.js chunk via `next/dynamic(..., { ssr: false })`
-  (importing `@react-three/fiber` during server rendering isn't safe) and
-  falls back to the original flat SVG (`SunnyMascot` in `icons.tsx`) on
-  devices without WebGL, while the chunk is loading, and if the model itself
-  fails to load (a `SunnyModelBoundary` error boundary in `SunnyCanvas.tsx`
-  catches that case — e.g. a device that goes offline before ever loading
-  this page online) — so the whole app never depends on the model to have
-  loaded correctly. `/offline/page.tsx` deliberately keeps the flat SVG
-  rather than switching to `Sunny3D`, since that page is the last-resort
-  fallback shown when there's no connection at all and shouldn't depend on a
-  chunk that might not have been cached yet. This is a real cost, not a free
-  upgrade: the three.js + React Three Fiber + drei chunk (drei supplies
-  `PresentationControls` and `ContactShadows`, both procedural and
-  asset-free, so they stay offline-safe) adds roughly 254KB gzipped, and the
-  fox.glb model itself is a further ~163KB (~80KB gzipped) fetched as a
-  static asset, not part of the JS bundle. Both are fetched once per device
-  and then served from the service worker's cache (including offline)
-  afterward — `sw.js` precaches `/models/fox.glb` on install for exactly
-  that reason, the same way it precaches the public pages, since (unlike
-  `_next/static` chunks) nothing in the page's own HTML references it for
-  the worker to discover on its own.
+- **Sunny (the mascot) is a plain static image** (`public/sunny.png`), shown
+  by `src/components/SunnyAvatar.tsx` as an ordinary `<img>` — deliberately
+  not `next/image`, since its on-demand `/_next/image` endpoint needs the
+  server even for a local file, which would undo the point of caching it for
+  offline use. `sw.js` precaches `/sunny.png` on install for exactly that
+  reason (same as the public pages), since — unlike `_next/static` chunks —
+  nothing in the page's own HTML references it for the worker to discover on
+  its own. `/offline/page.tsx` keeps the separate flat SVG mascot
+  (`SunnyMascot` in `icons.tsx`) instead of switching to `SunnyAvatar`, since
+  that page is the last-resort fallback shown when there's no connection at
+  all and shouldn't depend on an image fetch that might not have been cached
+  yet.
 
 ## Getting started
 

@@ -21,11 +21,11 @@ const CACHE = `rw-${VERSION}`;
 const STAFF_CACHE = `rw-staff-${VERSION}`;
 const STAFF_HOME_KEY = "/__staff-home";
 const PRECACHE_PAGES = ["/login", "/student/join", "/offline"];
-// Sunny's 3D mascot: fetched by the page at runtime (not referenced in the
-// HTML the way _next/static chunks are), so cacheAssetsFrom() never sees it.
-// Precaching it here means it's available offline after just one visit,
-// same as everything else.
-const PRECACHE_ASSETS = ["/models/fox.glb"];
+// Sunny's avatar: an <img src> the browser fetches on its own, not something
+// cacheAssetsFrom() finds by scanning for _next/static references. Precaching
+// it here means it's available offline after just one visit, same as
+// everything else.
+const PRECACHE_ASSETS = ["/sunny.png"];
 const STAFF_HOMES = ["/teacher", "/admin", "/specialist"];
 
 function isPublicPage(pathname) {
@@ -136,9 +136,9 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
 
   // Build assets are content-hashed, so a cached copy is always correct.
-  // /models/ (Sunny's 3D mascot file) is static and versioned by filename
-  // too, so it gets the same cache-first treatment.
-  if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/models/")) {
+  // Sunny's avatar doesn't change without a new deploy either (a new image
+  // would get a new filename), so it gets the same cache-first treatment.
+  if (url.pathname.startsWith("/_next/static/") || url.pathname === "/sunny.png") {
     event.respondWith(
       caches.open(CACHE).then(async (cache) => {
         const hit = await cache.match(request);

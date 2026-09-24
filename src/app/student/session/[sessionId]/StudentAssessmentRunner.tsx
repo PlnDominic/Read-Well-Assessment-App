@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MicIcon, CheckIcon } from "@/components/icons";
-import { Sunny3D } from "@/components/Sunny3D";
+import { SunnyAvatar } from "@/components/SunnyAvatar";
 import { SKILL_AREA_TILE_COLOR, type SkillAreaKey } from "@/lib/theme";
 
 interface KioskItem {
@@ -339,7 +339,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
     return (
       <div className="w-full max-w-[480px] mt-[10vh] text-center">
         <div className="flex justify-center mb-6.5">
-          <Sunny3D size={86} mood="big-smile" />
+          <SunnyAvatar size={86} />
         </div>
         <h1 className="font-heading font-bold text-[28px] text-[var(--color-sage-deep)] m-0 mb-2.5">
           Almost done!
@@ -402,7 +402,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
       <div className="w-full max-w-[480px] mt-[8vh] text-center">
         {offlineBanner}
         <div className="flex justify-center mb-6.5">
-          <Sunny3D size={86} mood="big-smile" />
+          <SunnyAvatar size={86} />
         </div>
         <h1 className="font-heading font-bold text-[30px] text-[var(--color-sage-deep)] m-0 mb-2.5">
           Hi! I&apos;m Sunny.
