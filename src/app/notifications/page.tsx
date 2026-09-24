@@ -28,12 +28,12 @@ export default async function NotificationsPage() {
     <AppShell>
       <div className="w-full max-w-[760px]">
         <div className="flex justify-between items-center flex-wrap gap-3 mb-6">
-          <h1 className="font-heading font-bold text-[26px] text-[var(--color-sage-deep)] m-0">Notifications</h1>
+          <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-sage-deep)] m-0">Notifications</h1>
           {unreadCount > 0 && (
             <form action={markAllNotificationsRead}>
               <button
                 type="submit"
-                className="bg-white border-[1.5px] border-[var(--color-cream-border-strong)] text-[var(--color-sage-dark)] font-bold text-sm px-4 py-2 rounded-full cursor-pointer"
+                className="bg-[var(--color-cream)] border-none text-[var(--color-sage-dark)] transition-colors hover:bg-[var(--color-cream-divider)] font-bold text-sm px-4 py-2 rounded-full cursor-pointer"
               >
                 Mark all as read
               </button>
@@ -41,7 +41,7 @@ export default async function NotificationsPage() {
           )}
         </div>
 
-        <div className="bg-white rounded-[20px] shadow-[0_6px_20px_rgba(0,0,0,0.06)] overflow-hidden">
+        <div className="bg-white rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] overflow-hidden">
           {(notifications ?? []).length === 0 && (
             <div className="px-6 py-8 text-[var(--color-muted)] text-center">No notifications yet.</div>
           )}
