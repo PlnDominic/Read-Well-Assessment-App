@@ -92,9 +92,9 @@ function RoleTile({
       <img
         src={avatarSrc}
         alt=""
-        width={48}
-        height={48}
-        className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+        width={80}
+        height={80}
+        className="w-20 h-20 rounded-full object-cover flex-shrink-0"
       />
       <div>
         <div className="font-extrabold text-[var(--color-sage-deep)] text-[17px]">{title}</div>
