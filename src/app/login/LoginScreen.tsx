@@ -31,12 +31,14 @@ export function LoginScreen() {
   }
 
   return (
-    <div className="w-full max-w-[460px] mt-[6vh] text-center">
-      <div className="flex justify-center mb-4.5">
-        <SunnyAvatar size={56} />
+    <div className="w-full max-w-[480px] mt-[5vh] text-center">
+      <div className="flex justify-center mb-5">
+        <SunnyAvatar size={88} />
       </div>
-      <h1 className="font-heading font-bold text-3xl text-[var(--color-sage-deep)] m-0 mb-1.5">Read Well</h1>
-      <p className="text-[var(--color-body)] text-base m-0 mb-9">Grade 1 Reading Assessment</p>
+      <h1 className="font-heading font-bold text-4xl tracking-tight text-[var(--color-sage-deep)] m-0 mb-2">
+        Read Well
+      </h1>
+      <p className="text-[var(--color-body)] text-base m-0 mb-10">Grade 1 Reading Assessment</p>
 
       {offlineHome && (
         <a
@@ -47,21 +49,24 @@ export function LoginScreen() {
         </a>
       )}
 
-      <div className="flex flex-col gap-3.5">
+      <div className="flex flex-col gap-4">
         <RoleTile
           avatarSrc="/avatars/student.png"
+          bg="var(--color-sage-tint)"
           title="I'm a Student"
           subtitle="Take my reading assessment"
           onClick={() => router.push("/student/join")}
         />
         <RoleTile
           avatarSrc="/avatars/teacher.png"
+          bg="var(--color-terracotta-tint)"
           title="I'm a Teacher"
           subtitle="Start assessments & view reports"
           onClick={() => setMode("teacher")}
         />
         <RoleTile
           avatarSrc="/avatars/admin.png"
+          bg="var(--color-taupe-bg)"
           title="I'm an Administrator"
           subtitle="View the school-wide report"
           onClick={() => setMode("administrator")}
@@ -73,11 +78,13 @@ export function LoginScreen() {
 
 function RoleTile({
   avatarSrc,
+  bg,
   title,
   subtitle,
   onClick,
 }: {
   avatarSrc: string;
+  bg: string;
   title: string;
   subtitle: string;
   onClick: () => void;
@@ -85,21 +92,31 @@ function RoleTile({
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-3.5 bg-white border-2 border-[var(--color-cream-border)] rounded-[18px] px-5.5 py-4.5 cursor-pointer text-left hover:border-[var(--color-sage-tint-border)] transition-colors"
+      style={{ background: bg }}
+      className="group flex items-center gap-4 rounded-[24px] pl-5 pr-5 py-5 cursor-pointer text-left shadow-[0_2px_8px_rgba(0,0,0,0.05)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(0,0,0,0.1)]"
     >
       {/* Plain <img>, not next/image: see the comment in SunnyAvatar.tsx. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={avatarSrc}
         alt=""
-        width={80}
-        height={80}
-        className="w-20 h-20 rounded-full object-cover flex-shrink-0"
+        width={112}
+        height={112}
+        className="w-28 h-28 rounded-full object-cover flex-shrink-0 shadow-[0_6px_16px_rgba(0,0,0,0.15)] ring-4 ring-white"
       />
-      <div>
-        <div className="font-extrabold text-[var(--color-sage-deep)] text-[17px]">{title}</div>
-        <div className="text-[var(--color-muted)] text-[13px]">{subtitle}</div>
+      <div className="flex-1 min-w-0">
+        <div className="font-extrabold text-[var(--color-sage-deep)] text-[19px]">{title}</div>
+        <div className="text-[var(--color-muted)] text-sm mt-0.5">{subtitle}</div>
       </div>
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 20 20"
+        fill="none"
+        className="flex-shrink-0 text-[var(--color-sage-deep)] opacity-40 transition-transform group-hover:translate-x-0.5 group-hover:opacity-70"
+      >
+        <path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
     </button>
   );
 }
