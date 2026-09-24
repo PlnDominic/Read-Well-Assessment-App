@@ -111,28 +111,38 @@ export default async function AdminDashboardPage() {
               School-Wide Report · {cycle?.name ?? "No active cycle"}
             </p>
           </div>
-          {reportStatus === "ready" && cycle ? (
-            <a
-              href={`/api/reports/school/${cycle.id}`}
-              className="bg-[var(--color-neutral)] border-none text-[var(--color-sage-dark)] font-bold text-sm px-4.5 py-2.5 rounded-full no-underline transition-colors hover:bg-[var(--color-neutral-divider)]"
-            >
-              Export PDF
-            </a>
-          ) : reportStatus === "failed" && cycle ? (
-            <form action={retrySchoolReport}>
-              <input type="hidden" name="cycleId" value={cycle.id} />
-              <button
-                type="submit"
-                className="bg-[var(--color-terracotta-tint)] border-none text-[var(--color-terracotta-dark)] font-bold text-sm px-4.5 py-2.5 rounded-full cursor-pointer"
+          <div className="flex items-center gap-2.5">
+            {cycle && studentsAssessed > 0 && (
+              <a
+                href={`/api/reports/school/${cycle.id}/csv`}
+                className="bg-[var(--color-neutral)] border-none text-[var(--color-sage-dark)] font-bold text-sm px-4.5 py-2.5 rounded-full no-underline transition-colors hover:bg-[var(--color-neutral-divider)]"
               >
-                Retry PDF
-              </button>
-            </form>
-          ) : (
-            <span className="bg-[var(--color-neutral)] border-none text-[var(--color-muted)] font-bold text-sm px-4.5 py-2.5 rounded-full">
-              PDF pending
-            </span>
-          )}
+                Export CSV
+              </a>
+            )}
+            {reportStatus === "ready" && cycle ? (
+              <a
+                href={`/api/reports/school/${cycle.id}`}
+                className="bg-[var(--color-neutral)] border-none text-[var(--color-sage-dark)] font-bold text-sm px-4.5 py-2.5 rounded-full no-underline transition-colors hover:bg-[var(--color-neutral-divider)]"
+              >
+                Export PDF
+              </a>
+            ) : reportStatus === "failed" && cycle ? (
+              <form action={retrySchoolReport}>
+                <input type="hidden" name="cycleId" value={cycle.id} />
+                <button
+                  type="submit"
+                  className="bg-[var(--color-terracotta-tint)] border-none text-[var(--color-terracotta-dark)] font-bold text-sm px-4.5 py-2.5 rounded-full cursor-pointer"
+                >
+                  Retry PDF
+                </button>
+              </form>
+            ) : (
+              <span className="bg-[var(--color-neutral)] border-none text-[var(--color-muted)] font-bold text-sm px-4.5 py-2.5 rounded-full">
+                PDF pending
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="grid gap-4 mb-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>

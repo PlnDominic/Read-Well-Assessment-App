@@ -6,10 +6,17 @@ import { ROLE_AVATAR } from "@/lib/avatars";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { computeOverallLabel } from "@/lib/scoring";
+import { FLAGGED_SCORE_THRESHOLD } from "@/lib/theme";
 import { retryStudentReport } from "./actions";
 import type { AssessmentItem } from "@/lib/database.types";
 
 type ResultRow = { score: number; flagged_as_difficulty: boolean; skill_areas: { id: string; name: string } };
+type HistorySessionRow = {
+  id: string;
+  completed_at: string | null;
+  assessment_cycles: { name: string } | null;
+  results: { score: number; flagged_as_difficulty: boolean }[];
+};
 
 function formatAnswer(item: AssessmentItem, answer: unknown): string {
   if (item.type === "mic") {
@@ -100,6 +107,25 @@ export default async function StudentReportPage({
     .select("status, pdf_path")
     .eq("session_id", sessionId)
     .maybeSingle();
+
+  const { data: historyRaw } = await supabase
+    .from("assessment_sessions")
+    .select("id, completed_at, assessment_cycles(name), results(score, flagged_as_difficulty)")
+    .eq("student_id", studentId)
+    .eq("status", "completed")
+    .order("completed_at", { ascending: true });
+  const history = ((historyRaw ?? []) as unknown as HistorySessionRow[]).map((s) => {
+    const scores = s.results.map((r) => r.score);
+    return {
+      sessionId: s.id,
+      cycleName: s.assessment_cycles?.name ?? "Unknown cycle",
+      completedAt: s.completed_at
+        ? new Date(s.completed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+        : "N/A",
+      avgScore: scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0,
+      label: computeOverallLabel(s.results.filter((r) => r.flagged_as_difficulty).length),
+    };
+  });
 
   after(async () => {
     const admin = createAdminClient();
@@ -200,6 +226,49 @@ export default async function StudentReportPage({
             })}
           </div>
         </div>
+
+        {history.length > 1 && (
+          <div className="bg-white rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-5">
+            <div className="font-heading font-bold text-sm text-[var(--color-sage-deep)] mb-3.5">
+              Progress Over Time
+            </div>
+            <div className="flex flex-col gap-3.5">
+              {history.map((h) => {
+                const flagged = h.avgScore < FLAGGED_SCORE_THRESHOLD;
+                const isCurrent = h.sessionId === sessionId;
+                return (
+                  <div key={h.sessionId}>
+                    <div className="flex justify-between text-sm mb-1.5">
+                      <span className="font-bold text-[var(--color-ink-soft)]">
+                        {h.cycleName} · {h.completedAt}
+                        {isCurrent && (
+                          <span className="ml-2 text-[11px] font-extrabold text-[var(--color-sage-dark)] bg-[var(--color-sage-tint)] px-2 py-0.5 rounded-full align-middle">
+                            Viewing
+                          </span>
+                        )}
+                      </span>
+                      <span
+                        className="font-bold"
+                        style={{ color: flagged ? "var(--color-terracotta-dark)" : "var(--color-sage-dark)" }}
+                      >
+                        {h.avgScore}% · {h.label}
+                      </span>
+                    </div>
+                    <div className="h-3 bg-[var(--color-neutral-divider)] rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${h.avgScore}%`,
+                          background: flagged ? "var(--color-terracotta)" : "var(--color-sage)",
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="bg-white rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-5">
           <div className="font-heading font-bold text-sm text-[var(--color-sage-deep)] mb-4">

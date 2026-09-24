@@ -6,6 +6,7 @@ import { getRecommendations } from "@/lib/recommendations";
 import { computeOverallLabel } from "@/lib/scoring";
 import { StudentReportPdf } from "@/lib/pdf/StudentReportPdf";
 import { SchoolReportPdf } from "@/lib/pdf/SchoolReportPdf";
+import { appUrl, escapeHtml, sendEmail } from "@/lib/email";
 
 const REPORTS_BUCKET = "reports";
 
@@ -87,12 +88,24 @@ export async function generateStudentReport(sessionId: string): Promise<void> {
     );
   if (upsertError) throw upsertError;
 
+  const reportLink = `/teacher/students/${session.student_id}/report?session=${sessionId}`;
   await admin.from("notifications").insert({
     recipient_id: student.teacher_id,
     type: "student_report_ready",
     message: `${student.name}'s report is ready.`,
-    link: `/teacher/students/${session.student_id}/report?session=${sessionId}`,
+    link: reportLink,
   });
+
+  const { data: teacher } = await admin.from("profiles").select("name, email").eq("id", student.teacher_id).single();
+  if (teacher?.email) {
+    await sendEmail({
+      to: teacher.email,
+      subject: `${student.name}'s reading report is ready`,
+      html: `<p>Hi ${escapeHtml(teacher.name)},</p><p><a href="${appUrl(reportLink)}">${escapeHtml(
+        student.name
+      )}'s report</a> is ready to view.</p>`,
+    });
+  }
 }
 
 /**
@@ -205,7 +218,7 @@ export async function generateSchoolReport(schoolId: string, cycleId: string): P
 
   const { data: admins } = await admin
     .from("profiles")
-    .select("id")
+    .select("id, name, email")
     .eq("school_id", schoolId)
     .eq("role", "administrator");
   if (admins && admins.length > 0) {
@@ -216,6 +229,19 @@ export async function generateSchoolReport(schoolId: string, cycleId: string): P
         message: `The ${cycle.name} school-wide report is ready.`,
         link: "/admin",
       }))
+    );
+    await Promise.all(
+      admins
+        .filter((a) => a.email)
+        .map((a) =>
+          sendEmail({
+            to: a.email,
+            subject: `${cycle.name} school-wide report is ready`,
+            html: `<p>Hi ${escapeHtml(a.name)},</p><p>The <a href="${appUrl("/admin")}">${escapeHtml(
+              cycle.name
+            )} school-wide report</a> is ready to view.</p>`,
+          })
+        )
     );
   }
 }
