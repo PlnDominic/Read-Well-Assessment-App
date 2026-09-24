@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 const STATUS_STYLE: Record<string, { label: string; bg: string; color: string }> = {
   completed: { label: "Completed", bg: "var(--color-sage-tint)", color: "var(--color-sage-dark)" },
   in_progress: { label: "In Progress", bg: "var(--color-gold-bg)", color: "var(--color-gold-text)" },
-  not_started: { label: "Not Started", bg: "#F1EEE4", color: "#8A8A78" },
+  not_started: { label: "Not Started", bg: "var(--color-neutral)", color: "var(--color-muted)" },
 };
 
 export default async function SpecialistPage() {
