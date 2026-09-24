@@ -17,7 +17,7 @@ export default function AppError({ reset }: { error: Error & { digest?: string }
   const offline = useSyncExternalStore(subscribe, () => !navigator.onLine, () => false);
 
   return (
-    <div className="min-h-screen bg-[var(--color-cream)] flex flex-col items-center px-4 pt-[14vh] text-center">
+    <div className="min-h-screen bg-[var(--color-bg)] flex flex-col items-center px-4 pt-[14vh] text-center">
       <h1 className="font-heading font-bold text-[26px] text-[var(--color-sage-deep)] m-0 mb-2.5">
         {offline ? "You're offline" : "Something went wrong"}
       </h1>

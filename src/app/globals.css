@@ -18,6 +18,8 @@
   --color-cream-scrollbar: #c9bfa0;
   --color-cream-divider: #efead9;
 
+  --color-bg: #ffffff;
+
   --color-ink: #2e3b2f;
   --color-ink-soft: #3a463b;
   --color-body: #5c6b5d;
@@ -43,7 +45,7 @@
 
 body {
   margin: 0;
-  background: var(--color-cream);
+  background: var(--color-bg);
   color: var(--color-ink);
   font-family: var(--font-body);
 }

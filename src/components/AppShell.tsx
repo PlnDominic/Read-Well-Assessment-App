@@ -11,7 +11,7 @@ export function AppShell({
   showTopBar?: boolean;
 }) {
   return (
-    <div className="min-h-screen bg-[var(--color-cream)] flex flex-col items-center px-4 pt-6 pb-15">
+    <div className="min-h-screen bg-[var(--color-bg)] flex flex-col items-center px-4 pt-6 pb-15">
       {showTopBar && (
         <div className="w-full max-w-[1100px] flex justify-between items-center mb-5 flex-wrap gap-2.5">
           <div className="flex items-center gap-2.5">
