@@ -21,11 +21,20 @@ const CACHE = `rw-${VERSION}`;
 const STAFF_CACHE = `rw-staff-${VERSION}`;
 const STAFF_HOME_KEY = "/__staff-home";
 const PRECACHE_PAGES = ["/login", "/student/join", "/offline"];
-// Sunny's avatar and the login screen's role avatars: plain <img src>s the
-// browser fetches on its own, not something cacheAssetsFrom() finds by
-// scanning for _next/static references. Precaching them here means they're
-// available offline after just one visit, same as everything else.
-const PRECACHE_ASSETS = ["/sunny.png", "/avatars/student.png", "/avatars/teacher.png", "/avatars/admin.png"];
+// Sunny's avatar, the login screen's role avatars, and the PWA manifest's
+// icons: plain <img src>s (or, for the manifest itself, the OS's own install
+// prompt) the browser fetches on its own, not something cacheAssetsFrom()
+// finds by scanning for _next/static references. Precaching them here means
+// they're available offline after just one visit, same as everything else.
+const PRECACHE_ASSETS = [
+  "/sunny.png",
+  "/avatars/student.png",
+  "/avatars/teacher.png",
+  "/avatars/admin.png",
+  "/manifest.webmanifest",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png",
+];
 const STAFF_HOMES = ["/teacher", "/admin", "/specialist"];
 
 function isPublicPage(pathname) {

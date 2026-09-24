@@ -200,6 +200,17 @@ there's no connection.
 - **Not available offline:** anything that changes data, report PDF
   export, and pages never opened on the device (these show `/offline`).
 
+**Installable as an app.** `src/app/manifest.ts` (Next.js's manifest route
+convention, served at `/manifest.webmanifest`) and `src/app/apple-icon.png`
+make "Add to Home Screen"/kiosk installation available on both Android and
+iOS, which matters given the offline support above is otherwise wasted if a
+school can't actually put this on a shared tablet as its own app icon
+rather than a browser tab. `proxy.ts`'s matcher exempts
+`manifest.webmanifest` the same way it does image extensions, since the
+OS's install prompt fetches it without the cookies a signed-out redirect
+would otherwise send it into; `sw.js` precaches it and both icon sizes for
+the same one-visit-then-offline reason as `sunny.png`.
+
 Each deploy registers the worker as `/sw.js?v=<commit sha>`
 (`NEXT_PUBLIC_BUILD_ID` in `next.config.ts`), which replaces the previous
 build's saved copies. For a device to work offline it must have opened the

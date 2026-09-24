@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Quicksand, Nunito_Sans } from "next/font/google";
 import "./globals.css";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
@@ -18,6 +18,15 @@ const nunitoSans = Nunito_Sans({
 export const metadata: Metadata = {
   title: "Read Well",
   description: "Grade 1 Reading Assessment",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Read Well",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#6b8f71",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
