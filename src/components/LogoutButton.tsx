@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { clearStaffOfflineData } from "@/lib/offline";
 
 export function LogoutButton() {
   const router = useRouter();
@@ -13,8 +14,13 @@ export function LogoutButton() {
       disabled={isPending}
       onClick={() =>
         startTransition(async () => {
+          // Remove saved staff pages first: they hold student data, and this
+          // may be a shared device.
+          await clearStaffOfflineData();
           const supabase = createClient();
-          await supabase.auth.signOut();
+          // A normal sign-out calls the server and, if that fails, leaves the
+          // session in place. Offline, end it on this device only.
+          await supabase.auth.signOut({ scope: navigator.onLine ? "global" : "local" });
           router.push("/login");
           router.refresh();
         })

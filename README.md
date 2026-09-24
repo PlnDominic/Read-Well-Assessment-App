@@ -160,27 +160,37 @@ things in `localStorage`, keyed by session id, to make that concrete:
   button). The flag survives a page reload, so closing and reopening the
   kiosk tab doesn't lose the fact that the student already tried to finish.
 
-**Starting offline, from the login screen.** A service worker
-(`public/sw.js`, registered by `src/components/ServiceWorkerRegistrar.tsx`
-in production builds) saves the login screen, the student code screen, an
-`/offline` page, the build's scripts/styles, and every assessment page once
-it has been opened on the device. With no connection:
+**Using the app offline.** A service worker (`public/sw.js`, registered
+by `src/components/ServiceWorkerRegistrar.tsx` in production builds) keeps
+a copy of every page opened on the device, plus the build's scripts and
+styles. Next.js navigations fetch data rather than whole pages, so the
+registrar also asks the worker to save each page as it's shown. Online,
+pages always load live (network first); the saved copy is only used when
+there's no connection.
 
-- The login screen and "I'm a Student" still open.
-- Entering a code that was **already opened on this device** goes straight
-  into that assessment (the runner records code → session in
-  `localStorage`), resuming at the right question with offline answers
-  intact. A code never used on the device can't work offline, since only
-  the server knows which student it belongs to; the student is told to
-  ask their teacher to reconnect.
-- Staff sign-in shows "You're offline" instead of failing, since
-  credentials must be checked by the server. Staff pages (roster, reports,
-  admin) are never saved on the device, because kiosk devices are shared,
-  so they show the `/offline` page.
+- **Students:** the login screen, "I'm a Student", and any assessment
+  already opened on the device work offline. Entering a code that was
+  opened here goes straight back into that assessment (the runner records
+  code → session in `localStorage`), resuming at the right question with
+  offline answers intact. A code never used on the device can't work
+  offline, since only the server knows which student it belongs to.
+- **Staff:** the roster, reports, and admin pages open offline showing the
+  data from when they were last loaded, with a banner saying so. Buttons
+  that change data are greyed out (`body[data-offline]` in
+  `globals.css`), and `src/app/error.tsx` explains a change that couldn't
+  be saved. Offline, `/` goes to the staff member's saved dashboard, and
+  the login screen links back to it. Signing in still needs a connection.
+- **Privacy on shared devices:** staff pages are kept in a separate cache
+  (`rw-staff-*`) that's wiped on logout and on every sign-in
+  (`src/lib/offline.ts`), so the next person can't open the previous staff
+  member's pages. Logout works offline too (ends the session locally).
+  Public pages are saved without cookies so they never hold staff data.
+- **Not available offline:** anything that changes data, report PDF
+  export, and pages never opened on the device (these show `/offline`).
 
 Each deploy registers the worker as `/sw.js?v=<commit sha>`
 (`NEXT_PUBLIC_BUILD_ID` in `next.config.ts`), which replaces the previous
-build's saved copy. For a device to work offline it must have opened the
+build's saved copies. For a device to work offline it must have opened the
 app online at least once after the latest deploy.
 
 ### Admin tooling

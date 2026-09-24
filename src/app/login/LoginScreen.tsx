@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { SunnyMascot, StudentRoleIcon, TeacherRoleIcon, AdminRoleIcon } from "@/components/icons";
+import { clearStaffOfflineData, savedStaffHome } from "@/lib/offline";
 import { signInWithPassword } from "./actions";
 
 type Mode = "select" | "teacher" | "administrator";
@@ -15,7 +16,15 @@ const ROLE_COPY: Record<Exclude<Mode, "select">, { title: string; subtitle: stri
 
 export function LoginScreen() {
   const [mode, setMode] = useState<Mode>("select");
+  const [offlineHome, setOfflineHome] = useState<string | null>(null);
   const router = useRouter();
+
+  // Offline, this screen is the saved signed-out copy even for someone who
+  // is still signed in, so offer the way back to their saved dashboard.
+  useEffect(() => {
+    if (navigator.onLine) return;
+    savedStaffHome().then(setOfflineHome);
+  }, []);
 
   if (mode !== "select") {
     return <StaffLoginForm mode={mode} onBack={() => setMode("select")} />;
@@ -28,6 +37,15 @@ export function LoginScreen() {
       </div>
       <h1 className="font-heading font-bold text-3xl text-[var(--color-sage-deep)] m-0 mb-1.5">Read Well</h1>
       <p className="text-[var(--color-body)] text-base m-0 mb-9">Grade 1 Reading Assessment</p>
+
+      {offlineHome && (
+        <a
+          href={offlineHome}
+          className="block mb-6 bg-[var(--color-gold-bg)] border border-[var(--color-gold-border)] text-[var(--color-gold-text)] text-sm font-bold rounded-xl px-4 py-3 no-underline"
+        >
+          You&apos;re offline. Continue to your saved dashboard &rarr;
+        </a>
+      )}
 
       <div className="flex flex-col gap-3.5">
         <RoleTile
@@ -94,6 +112,9 @@ const OFFLINE_SIGN_IN = "You're offline. Signing in needs an internet connection
 // Without this, the failed request would surface as an app error instead.
 async function signInOrExplainOffline(prev: { error: string | null }, formData: FormData) {
   if (!navigator.onLine) return { error: OFFLINE_SIGN_IN };
+  // Whoever signs in next shouldn't be able to open the previous staff
+  // member's saved pages offline.
+  await clearStaffOfflineData();
   try {
     return await signInWithPassword(prev, formData);
   } catch (err) {

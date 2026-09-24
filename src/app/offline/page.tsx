@@ -17,8 +17,9 @@ export default function OfflinePage() {
           You&apos;re offline
         </h1>
         <p className="text-[var(--color-body)] text-base leading-relaxed m-0 mb-8">
-          This page needs an internet connection. Students who already started their assessment on this device
-          can keep going with their code.
+          This page hasn&apos;t been opened on this device yet, so there&apos;s no saved copy to show. Pages you
+          open while online are saved for offline use. Students who already started their assessment on this
+          device can keep going with their code.
         </p>
         <div className="flex flex-col items-center gap-3">
           <Link

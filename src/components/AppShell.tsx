@@ -1,6 +1,7 @@
 import { ReadWellMark } from "@/components/icons";
 import { LogoutButton } from "@/components/LogoutButton";
 import { NotificationBell } from "@/components/NotificationBell";
+import { StaffOfflineBanner } from "@/components/StaffOfflineBanner";
 
 export function AppShell({
   children,
@@ -27,6 +28,7 @@ export function AppShell({
           </div>
         </div>
       )}
+      {showTopBar && <StaffOfflineBanner />}
       {children}
     </div>
   );

@@ -72,3 +72,12 @@ a:hover {
 .font-heading {
   font-family: var(--font-heading);
 }
+
+/* Staff pages while offline (see StaffOfflineBanner): anything that submits
+ * a change needs the server, so make it visibly unavailable rather than
+ * letting it fail. */
+body[data-offline] form button:not([type="button"]) {
+  opacity: 0.45;
+  pointer-events: none;
+  cursor: not-allowed;
+}
