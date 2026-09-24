@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
+import { ROLE_AVATAR } from "@/lib/avatars";
 import { createClient } from "@/lib/supabase/server";
 
 const STATUS_STYLE: Record<string, { label: string; bg: string; color: string }> = {
@@ -46,7 +47,7 @@ export default async function SpecialistPage() {
   }
 
   return (
-    <AppShell>
+    <AppShell avatarSrc={ROLE_AVATAR[profile.role]}>
       <div className="w-full max-w-[840px]">
         <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-sage-deep)] m-0 mb-1">
           Assigned Students

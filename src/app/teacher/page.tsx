@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
+import { ROLE_AVATAR } from "@/lib/avatars";
 import { createClient } from "@/lib/supabase/server";
 import { cancelSession, startOrResumeAssessment } from "./actions";
 import { AddStudentForm } from "./AddStudentForm";
@@ -79,7 +80,7 @@ export default async function TeacherRosterPage() {
   }
 
   return (
-    <AppShell>
+    <AppShell avatarSrc={ROLE_AVATAR[profile.role]}>
       <div className="w-full max-w-[840px]">
         <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-sage-deep)] m-0 mb-1">
           {profile.role === "reading_specialist" ? "Assigned Students" : `${profile.name}'s Class`}

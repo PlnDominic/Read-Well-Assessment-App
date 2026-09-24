@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { after } from "next/server";
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
+import { ROLE_AVATAR } from "@/lib/avatars";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { computeOverallLabel } from "@/lib/scoring";
@@ -32,6 +33,10 @@ export default async function StudentReportPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  const { data: profile } = user
+    ? await supabase.from("profiles").select("role").eq("id", user.id).single()
+    : { data: null };
 
   const { data: student, error: studentError } = await supabase
     .from("students")
@@ -113,7 +118,7 @@ export default async function StudentReportPage({
     : "N/A";
 
   return (
-    <AppShell>
+    <AppShell avatarSrc={profile ? ROLE_AVATAR[profile.role] : undefined}>
       <div className="w-full max-w-[760px]">
         <Link href="/teacher" className="text-[var(--color-sage)] font-bold text-sm no-underline inline-block mb-4">
           &larr; Back to class

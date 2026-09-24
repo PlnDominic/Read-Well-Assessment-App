@@ -6,9 +6,14 @@ import { StaffOfflineBanner } from "@/components/StaffOfflineBanner";
 export function AppShell({
   children,
   showTopBar = true,
+  avatarSrc,
 }: {
   children: React.ReactNode;
   showTopBar?: boolean;
+  /** The signed-in staff member's role avatar (see public/avatars/), shown
+   * in the top bar. Each page passes this itself since AppShell doesn't
+   * know who's signed in or what role-gating already happened upstream. */
+  avatarSrc?: string;
 }) {
   return (
     <div className="min-h-screen bg-[var(--color-bg)] flex flex-col items-center px-4 pt-6 pb-15">
@@ -23,6 +28,17 @@ export function AppShell({
             </span>
           </div>
           <div className="flex items-center gap-2.5">
+            {avatarSrc && (
+              // Plain <img>, not next/image: see the comment in SunnyAvatar.tsx.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={avatarSrc}
+                alt=""
+                width={40}
+                height={40}
+                className="w-10 h-10 rounded-full object-cover ring-2 ring-[var(--color-cream)]"
+              />
+            )}
             <NotificationBell />
             <LogoutButton />
           </div>

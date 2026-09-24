@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
+import { ROLE_AVATAR } from "@/lib/avatars";
 import { createClient } from "@/lib/supabase/server";
 import { markAllNotificationsRead, markNotificationRead } from "./actions";
 
@@ -16,6 +17,8 @@ export default async function NotificationsPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+
   const { data: notifications } = await supabase
     .from("notifications")
     .select("id, type, message, link, read, created_at")
@@ -25,7 +28,7 @@ export default async function NotificationsPage() {
   const unreadCount = (notifications ?? []).filter((n) => !n.read).length;
 
   return (
-    <AppShell>
+    <AppShell avatarSrc={profile ? ROLE_AVATAR[profile.role] : undefined}>
       <div className="w-full max-w-[760px]">
         <div className="flex justify-between items-center flex-wrap gap-3 mb-6">
           <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-sage-deep)] m-0">Notifications</h1>
