@@ -3,7 +3,6 @@
 import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { StudentRoleIcon, TeacherRoleIcon, AdminRoleIcon } from "@/components/icons";
 import { SunnyAvatar } from "@/components/SunnyAvatar";
 import { clearStaffOfflineData, savedStaffHome } from "@/lib/offline";
 import { signInWithPassword } from "./actions";
@@ -50,22 +49,19 @@ export function LoginScreen() {
 
       <div className="flex flex-col gap-3.5">
         <RoleTile
-          icon={<StudentRoleIcon />}
-          iconBg="var(--color-sage-tint)"
+          avatarSrc="/avatars/student.png"
           title="I'm a Student"
           subtitle="Take my reading assessment"
           onClick={() => router.push("/student/join")}
         />
         <RoleTile
-          icon={<TeacherRoleIcon />}
-          iconBg="var(--color-terracotta-tint)"
+          avatarSrc="/avatars/teacher.png"
           title="I'm a Teacher"
           subtitle="Start assessments & view reports"
           onClick={() => setMode("teacher")}
         />
         <RoleTile
-          icon={<AdminRoleIcon />}
-          iconBg="var(--color-taupe-bg)"
+          avatarSrc="/avatars/admin.png"
           title="I'm an Administrator"
           subtitle="View the school-wide report"
           onClick={() => setMode("administrator")}
@@ -76,14 +72,12 @@ export function LoginScreen() {
 }
 
 function RoleTile({
-  icon,
-  iconBg,
+  avatarSrc,
   title,
   subtitle,
   onClick,
 }: {
-  icon: React.ReactNode;
-  iconBg: string;
+  avatarSrc: string;
   title: string;
   subtitle: string;
   onClick: () => void;
@@ -93,12 +87,15 @@ function RoleTile({
       onClick={onClick}
       className="flex items-center gap-3.5 bg-white border-2 border-[var(--color-cream-border)] rounded-[18px] px-5.5 py-4.5 cursor-pointer text-left hover:border-[var(--color-sage-tint-border)] transition-colors"
     >
-      <div
-        className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-        style={{ background: iconBg }}
-      >
-        {icon}
-      </div>
+      {/* Plain <img>, not next/image: see the comment in SunnyAvatar.tsx. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={avatarSrc}
+        alt=""
+        width={48}
+        height={48}
+        className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+      />
       <div>
         <div className="font-extrabold text-[var(--color-sage-deep)] text-[17px]">{title}</div>
         <div className="text-[var(--color-muted)] text-[13px]">{subtitle}</div>

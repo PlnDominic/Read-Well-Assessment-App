@@ -38,34 +38,6 @@ export function SunnyMascot({ size = 56, mood = "smile" }: { size?: number; mood
   );
 }
 
-export function StudentRoleIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24">
-      <circle cx="12" cy="8" r="4" fill={colors.sage} />
-      <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" fill={colors.sage} />
-    </svg>
-  );
-}
-
-export function TeacherRoleIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24">
-      <rect x="4" y="5" width="16" height="12" rx="2" fill={colors.terracotta} />
-      <rect x="8" y="19" width="8" height="2" rx="1" fill={colors.terracotta} />
-    </svg>
-  );
-}
-
-export function AdminRoleIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24">
-      <rect x="3" y="12" width="4" height="9" fill={colors.taupe} />
-      <rect x="10" y="7" width="4" height="14" fill={colors.taupe} />
-      <rect x="17" y="3" width="4" height="18" fill={colors.taupe} />
-    </svg>
-  );
-}
-
 export function CheckIcon({ size = 90, color = colors.white }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24">
