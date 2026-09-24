@@ -46,7 +46,7 @@ export function JoinForm() {
 
   return (
     <div className="w-full max-w-[440px] mt-[8vh] text-center">
-      <div className="w-[110px] h-[110px] rounded-full bg-[var(--color-sage)] mx-auto mb-6 flex items-center justify-center shadow-[0_14px_30px_rgba(74,107,82,0.28)]">
+      <div className="flex justify-center mb-6">
         <Sunny3D size={68} mood="smile" />
       </div>
       <h1 className="font-heading font-bold text-[28px] text-[var(--color-sage-deep)] m-0 mb-2.5">

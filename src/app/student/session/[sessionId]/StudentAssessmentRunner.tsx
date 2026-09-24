@@ -338,7 +338,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
   if (pendingComplete) {
     return (
       <div className="w-full max-w-[480px] mt-[10vh] text-center">
-        <div className="w-[140px] h-[140px] rounded-full bg-[var(--color-terracotta)] mx-auto mb-6.5 flex items-center justify-center shadow-[0_14px_30px_rgba(201,123,95,0.3)]">
+        <div className="flex justify-center mb-6.5">
           <Sunny3D size={86} mood="big-smile" />
         </div>
         <h1 className="font-heading font-bold text-[28px] text-[var(--color-sage-deep)] m-0 mb-2.5">
@@ -401,7 +401,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
     return (
       <div className="w-full max-w-[480px] mt-[8vh] text-center">
         {offlineBanner}
-        <div className="w-[140px] h-[140px] rounded-full bg-[var(--color-sage)] mx-auto mb-6.5 flex items-center justify-center shadow-[0_14px_30px_rgba(74,107,82,0.28)]">
+        <div className="flex justify-center mb-6.5">
           <Sunny3D size={86} mood="big-smile" />
         </div>
         <h1 className="font-heading font-bold text-[30px] text-[var(--color-sage-deep)] m-0 mb-2.5">
