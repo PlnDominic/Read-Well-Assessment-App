@@ -33,85 +33,96 @@ const styles = StyleSheet.create({
   footer: { position: "absolute", bottom: 30, left: 40, right: 40, fontSize: 9, color: colors.mutedLight },
 });
 
-export interface StudentReportPdfProps {
+export interface StudentReportPageProps {
   studentName: string;
   grade: number;
   assessedDate: string;
   overallLabel: string;
-  skills: { name: string; score: number }[];
+  skills: { name: string; score: number; flagged: boolean }[];
   recommendations: { skillName: string; text: string; programReference?: string | null }[];
 }
 
-export function StudentReportPdf({
+/**
+ * One student's report as a single <Page>, factored out of
+ * StudentReportPdf so BulkStudentReportsPdf can render many of these into
+ * one Document (a whole class or cycle as one PDF) without duplicating
+ * this layout.
+ */
+export function StudentReportPage({
   studentName,
   grade,
   assessedDate,
   overallLabel,
   skills,
   recommendations,
-}: StudentReportPdfProps) {
+}: StudentReportPageProps) {
   const isOnTrack = overallLabel === "On Track";
   return (
-    <Document title={`${studentName}: Reading Assessment Report`}>
-      <Page size="A4" style={styles.page}>
-        <View style={styles.headerRow}>
-          <View>
-            <Text style={styles.name}>{studentName}</Text>
-            <Text style={styles.meta}>Grade {grade} · Assessed {assessedDate}</Text>
-          </View>
-          {/* On Track is solid black/white, not orange -- see the matching
-              comment in the web report page: orange is the only accent
-              color in this palette, so it can't distinguish by hue alone. */}
-          <Text
-            style={[
-              styles.badge,
-              {
-                backgroundColor: isOnTrack ? colors.ink : colors.orangeTint,
-                color: isOnTrack ? colors.white : colors.orangeDark,
-              },
-            ]}
-          >
-            {overallLabel}
-          </Text>
+    <Page size="A4" style={styles.page}>
+      <View style={styles.headerRow}>
+        <View>
+          <Text style={styles.name}>{studentName}</Text>
+          <Text style={styles.meta}>Grade {grade} · Assessed {assessedDate}</Text>
         </View>
+        {/* On Track is solid black/white, not orange -- see the matching
+            comment in the web report page: orange is the only accent
+            color in this palette, so it can't distinguish by hue alone. */}
+        <Text
+          style={[
+            styles.badge,
+            {
+              backgroundColor: isOnTrack ? colors.ink : colors.orangeTint,
+              color: isOnTrack ? colors.white : colors.orangeDark,
+            },
+          ]}
+        >
+          {overallLabel}
+        </Text>
+      </View>
 
-        <Text style={styles.sectionTitle}>Skill Area Breakdown</Text>
-        {skills.map((sk) => {
-          const flagged = sk.score < 65;
-          return (
-            <View style={styles.skillRow} key={sk.name}>
-              <View style={styles.skillLabelRow}>
-                <Text style={styles.skillName}>{sk.name}</Text>
-                <Text style={{ fontWeight: 700, color: flagged ? colors.orangeDark : colors.ink }}>
-                  {sk.score}%
-                </Text>
-              </View>
-              <View style={styles.barTrack}>
-                <View
-                  style={[
-                    styles.barFill,
-                    { width: `${sk.score}%`, backgroundColor: flagged ? colors.orange : colors.ink },
-                  ]}
-                />
-              </View>
-            </View>
-          );
-        })}
+      <Text style={styles.sectionTitle}>Skill Area Breakdown</Text>
+      {skills.map((sk) => (
+        <View style={styles.skillRow} key={sk.name}>
+          <View style={styles.skillLabelRow}>
+            <Text style={styles.skillName}>{sk.name}</Text>
+            <Text style={{ fontWeight: 700, color: sk.flagged ? colors.orangeDark : colors.ink }}>
+              {sk.score}%
+            </Text>
+          </View>
+          <View style={styles.barTrack}>
+            <View
+              style={[
+                styles.barFill,
+                { width: `${sk.score}%`, backgroundColor: sk.flagged ? colors.orange : colors.ink },
+              ]}
+            />
+          </View>
+        </View>
+      ))}
 
-        <Text style={styles.sectionTitle}>Program-Aligned Recommendations</Text>
-        {recommendations.length === 0 ? (
-          <Text style={styles.recText}>No flagged areas this cycle. Continue with grade-level independent reading.</Text>
-        ) : (
-          recommendations.map((rec, i) => (
-            <View style={styles.recCard} key={`${rec.skillName}-${i}`}>
-              <Text style={styles.recSkill}>{rec.skillName}</Text>
-              <Text style={styles.recText}>{rec.text}</Text>
-            </View>
-          ))
-        )}
+      <Text style={styles.sectionTitle}>Program-Aligned Recommendations</Text>
+      {recommendations.length === 0 ? (
+        <Text style={styles.recText}>No flagged areas this cycle. Continue with grade-level independent reading.</Text>
+      ) : (
+        recommendations.map((rec, i) => (
+          <View style={styles.recCard} key={`${rec.skillName}-${i}`}>
+            <Text style={styles.recSkill}>{rec.skillName}</Text>
+            <Text style={styles.recText}>{rec.text}</Text>
+          </View>
+        ))
+      )}
 
-        <Text style={styles.footer}>Read Well Assessment App · Generated {new Date().toLocaleDateString()}</Text>
-      </Page>
+      <Text style={styles.footer}>Read Well Assessment App · Generated {new Date().toLocaleDateString()}</Text>
+    </Page>
+  );
+}
+
+export type StudentReportPdfProps = StudentReportPageProps;
+
+export function StudentReportPdf(props: StudentReportPdfProps) {
+  return (
+    <Document title={`${props.studentName}: Reading Assessment Report`}>
+      <StudentReportPage {...props} />
     </Document>
   );
 }

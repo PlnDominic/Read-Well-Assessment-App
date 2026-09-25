@@ -3,12 +3,58 @@ import { renderToBuffer, type DocumentProps } from "@react-pdf/renderer";
 import { createElement, type ReactElement } from "react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getRecommendations } from "@/lib/recommendations";
-import { computeOverallLabel } from "@/lib/scoring";
-import { StudentReportPdf } from "@/lib/pdf/StudentReportPdf";
+import { computeOverallLabel, computeWeightedAverage } from "@/lib/scoring";
+import { StudentReportPdf, type StudentReportPageProps } from "@/lib/pdf/StudentReportPdf";
 import { SchoolReportPdf } from "@/lib/pdf/SchoolReportPdf";
 import { appUrl, escapeHtml, sendEmail } from "@/lib/email";
 
+type AdminClient = ReturnType<typeof createAdminClient>;
+
 const REPORTS_BUCKET = "reports";
+
+/**
+ * Fetches and shapes one completed session's data into the props
+ * StudentReportPage needs: shared by generateStudentReport (renders +
+ * stores one PDF) and the bulk class/cycle export routes (render many of
+ * these into one Document via BulkStudentReportsPdf, without storing
+ * anything -- see /api/reports/class and /api/reports/school/[cycleId]/bulk).
+ */
+export async function buildStudentReportPageData(
+  admin: AdminClient,
+  params: { sessionId: string; studentName: string; displayGrade: number; contentGradeLevel: number; completedAt: string | null }
+): Promise<StudentReportPageProps> {
+  const { data: results, error: resultsError } = await admin
+    .from("results")
+    .select("score, flagged_as_difficulty, skill_areas(id, name)")
+    .eq("session_id", params.sessionId);
+  if (resultsError) throw resultsError;
+
+  type ResultRow = { score: number; flagged_as_difficulty: boolean; skill_areas: { id: string; name: string } };
+  const rows = (results ?? []) as unknown as ResultRow[];
+
+  const skills = rows.map((r) => ({ name: r.skill_areas.name, score: r.score, flagged: r.flagged_as_difficulty }));
+  const flaggedSkillAreaIds = rows.filter((r) => r.flagged_as_difficulty).map((r) => r.skill_areas.id);
+
+  const recs = await getRecommendations(admin, flaggedSkillAreaIds, params.contentGradeLevel);
+  const overallLabel = computeOverallLabel(flaggedSkillAreaIds.length);
+
+  return {
+    studentName: params.studentName,
+    grade: params.displayGrade,
+    assessedDate: new Date(params.completedAt ?? Date.now()).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }),
+    overallLabel,
+    skills,
+    recommendations: recs.map((r) => ({
+      skillName: r.skillAreaName,
+      text: r.text,
+      programReference: r.programReference,
+    })),
+  };
+}
 
 /**
  * Report Generation Service (TRD §4.4/§5): renders and stores the
@@ -32,40 +78,18 @@ export async function generateStudentReport(sessionId: string): Promise<void> {
     .single();
   if (studentError || !student) throw new Error(`Student for session ${sessionId} not found`);
 
-  const { data: results, error: resultsError } = await admin
-    .from("results")
-    .select("score, flagged_as_difficulty, skill_areas(id, name)")
-    .eq("session_id", sessionId);
-  if (resultsError) throw resultsError;
-
-  type ResultRow = { score: number; flagged_as_difficulty: boolean; skill_areas: { id: string; name: string } };
-  const rows = (results ?? []) as unknown as ResultRow[];
-
-  const skills = rows.map((r) => ({ name: r.skill_areas.name, score: r.score }));
-  const flaggedSkillAreaIds = rows.filter((r) => r.flagged_as_difficulty).map((r) => r.skill_areas.id);
-
   // @ts-expect-error -- joined relation shape isn't modeled in database.types.ts
   const gradeLevel: number = session.assessments?.grade_level ?? student.grade;
-  const recs = await getRecommendations(admin, flaggedSkillAreaIds, gradeLevel);
-  const overallLabel = computeOverallLabel(flaggedSkillAreaIds.length);
+  const pageData = await buildStudentReportPageData(admin, {
+    sessionId,
+    studentName: student.name,
+    displayGrade: student.grade,
+    contentGradeLevel: gradeLevel,
+    completedAt: session.completed_at,
+  });
 
   const pdfBuffer = await renderToBuffer(
-    createElement(StudentReportPdf, {
-      studentName: student.name,
-      grade: student.grade,
-      assessedDate: new Date(session.completed_at ?? Date.now()).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      }),
-      overallLabel,
-      skills,
-      recommendations: recs.map((r) => ({
-        skillName: r.skillAreaName,
-        text: r.text,
-        programReference: r.programReference,
-      })),
-    }) as unknown as ReactElement<DocumentProps>
+    createElement(StudentReportPdf, pageData) as unknown as ReactElement<DocumentProps>
   );
 
   const pdfPath = `student/${sessionId}.pdf`;
@@ -80,7 +104,7 @@ export async function generateStudentReport(sessionId: string): Promise<void> {
       {
         student_id: session.student_id,
         session_id: sessionId,
-        overall_label: overallLabel,
+        overall_label: pageData.overallLabel,
         pdf_path: pdfPath,
         status: "ready",
       },
@@ -167,7 +191,16 @@ export async function generateSchoolReport(schoolId: string, cycleId: string): P
     };
     const rows = (results ?? []) as unknown as ResultRow[];
 
-    avgOverallScore = rows.length > 0 ? Math.round(rows.reduce((sum, r) => sum + r.score, 0) / rows.length) : 0;
+    const { data: weightRows } = await admin
+      .from("school_skill_weights")
+      .select("skill_area_id, weight")
+      .eq("school_id", schoolId);
+    const weightBySkillAreaId = new Map((weightRows ?? []).map((w) => [w.skill_area_id, w.weight]));
+
+    avgOverallScore = computeWeightedAverage(
+      rows.map((r) => ({ score: r.score, skillAreaId: r.skill_areas.id })),
+      weightBySkillAreaId
+    );
 
     const bySkill = new Map<string, { name: string; flagged: number; total: number }>();
     for (const r of rows) {

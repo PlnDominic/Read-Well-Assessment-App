@@ -81,13 +81,24 @@ export default async function TeacherRosterPage() {
       latestSessionByStudent.set(s.student_id, { id: s.id, status: s.status, sessionCode: s.session_code });
     }
   }
+  const hasCompletedReport = [...latestSessionByStudent.values()].some((s) => s.status === "completed");
 
   return (
     <AppShell avatarSrc={ROLE_AVATAR[profile.role]}>
       <div className="w-full max-w-[840px]">
-        <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-ink)] m-0 mb-1">
-          {profile.role === "reading_specialist" ? "Assigned Students" : `${profile.name}'s Class`}
-        </h1>
+        <div className="flex justify-between items-start flex-wrap gap-3.5 mb-1">
+          <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-ink)] m-0">
+            {profile.role === "reading_specialist" ? "Assigned Students" : `${profile.name}'s Class`}
+          </h1>
+          {hasCompletedReport && (
+            <a
+              href="/api/reports/class"
+              className="bg-[var(--color-neutral)] border-none text-[var(--color-orange-dark)] font-bold text-sm px-4.5 py-2.5 rounded-full no-underline transition-colors hover:bg-[var(--color-neutral-divider)]"
+            >
+              Export all reports (PDF)
+            </a>
+          )}
+        </div>
         <p className="text-[var(--color-muted)] text-[15px] m-0 mb-6">
           Grade 1 · {cycle?.name ?? "No active assessment cycle"}
         </p>
