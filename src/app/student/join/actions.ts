@@ -22,7 +22,7 @@ export async function redeemSessionCode(
   if (!code) return { error: "Enter the code your teacher gave you." };
 
   const ip = await clientIp();
-  if (isRateLimited(`join-ip:${ip}`, MAX_ATTEMPTS_PER_IP)) {
+  if (await isRateLimited(`join-ip:${ip}`, MAX_ATTEMPTS_PER_IP)) {
     return { error: TOO_MANY_ATTEMPTS };
   }
 

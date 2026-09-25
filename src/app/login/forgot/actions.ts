@@ -22,10 +22,12 @@ export async function requestPasswordReset(
   if (!email) return { submitted: false };
 
   const ip = await clientIp();
-  const limited = [
-    isRateLimited(`reset-ip:${ip}`, MAX_ATTEMPTS_PER_IP),
-    isRateLimited(`reset-email:${email.toLowerCase()}`, MAX_ATTEMPTS_PER_EMAIL),
-  ].some(Boolean);
+  const limited = (
+    await Promise.all([
+      isRateLimited(`reset-ip:${ip}`, MAX_ATTEMPTS_PER_IP),
+      isRateLimited(`reset-email:${email.toLowerCase()}`, MAX_ATTEMPTS_PER_EMAIL),
+    ])
+  ).some(Boolean);
   // Same "always report success" reasoning as below: don't reveal that a
   // limit exists per-email either, since that itself would confirm the
   // address has an account.

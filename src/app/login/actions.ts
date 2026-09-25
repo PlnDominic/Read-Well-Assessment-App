@@ -26,10 +26,12 @@ export async function signInWithPassword(
   const ip = await clientIp();
   // Both calls need to run (each records its own attempt), so this isn't
   // short-circuited with ||.
-  const limited = [
-    isRateLimited(`ip:${ip}`, MAX_ATTEMPTS_PER_IP),
-    isRateLimited(`email:${email.toLowerCase()}`, MAX_ATTEMPTS_PER_EMAIL),
-  ].some(Boolean);
+  const limited = (
+    await Promise.all([
+      isRateLimited(`ip:${ip}`, MAX_ATTEMPTS_PER_IP),
+      isRateLimited(`email:${email.toLowerCase()}`, MAX_ATTEMPTS_PER_EMAIL),
+    ])
+  ).some(Boolean);
   if (limited) {
     return { error: TOO_MANY_ATTEMPTS };
   }
