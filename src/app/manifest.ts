@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Read Well",
+    name: "Read Well Assessment App",
     short_name: "Read Well",
     description: "Grade 1 Reading Assessment",
     start_url: "/login",

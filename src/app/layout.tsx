@@ -17,7 +17,7 @@ const nunitoSans = Nunito_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Read Well",
+  title: "Read Well Assessment App",
   description: "Grade 1 Reading Assessment",
   appleWebApp: {
     capable: true,
