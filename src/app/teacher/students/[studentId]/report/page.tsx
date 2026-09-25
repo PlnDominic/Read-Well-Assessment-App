@@ -5,7 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { ROLE_AVATAR } from "@/lib/avatars";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { computeOverallLabel } from "@/lib/scoring";
+import { computeOverallLabel, computeWeightedAverage } from "@/lib/scoring";
 import { FLAGGED_SCORE_THRESHOLD } from "@/lib/theme";
 import { retryStudentReport } from "./actions";
 import type { AssessmentItem } from "@/lib/database.types";
@@ -15,7 +15,7 @@ type HistorySessionRow = {
   id: string;
   completed_at: string | null;
   assessment_cycles: { name: string } | null;
-  results: { score: number; flagged_as_difficulty: boolean }[];
+  results: { score: number; flagged_as_difficulty: boolean; skill_areas: { id: string } }[];
 };
 
 function formatAnswer(item: AssessmentItem, answer: unknown): string {
@@ -47,10 +47,16 @@ export default async function StudentReportPage({
 
   const { data: student, error: studentError } = await supabase
     .from("students")
-    .select("id, name, grade")
+    .select("id, name, grade, school_id")
     .eq("id", studentId)
     .single();
   if (studentError || !student) notFound();
+
+  const { data: weightRows } = await supabase
+    .from("school_skill_weights")
+    .select("skill_area_id, weight")
+    .eq("school_id", student.school_id);
+  const weightBySkillAreaId = new Map((weightRows ?? []).map((w) => [w.skill_area_id, w.weight]));
 
   let sessionId = sessionIdParam;
   if (!sessionId) {
@@ -110,19 +116,21 @@ export default async function StudentReportPage({
 
   const { data: historyRaw } = await supabase
     .from("assessment_sessions")
-    .select("id, completed_at, assessment_cycles(name), results(score, flagged_as_difficulty)")
+    .select("id, completed_at, assessment_cycles(name), results(score, flagged_as_difficulty, skill_areas(id))")
     .eq("student_id", studentId)
     .eq("status", "completed")
     .order("completed_at", { ascending: true });
   const history = ((historyRaw ?? []) as unknown as HistorySessionRow[]).map((s) => {
-    const scores = s.results.map((r) => r.score);
     return {
       sessionId: s.id,
       cycleName: s.assessment_cycles?.name ?? "Unknown cycle",
       completedAt: s.completed_at
         ? new Date(s.completed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
         : "N/A",
-      avgScore: scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0,
+      avgScore: computeWeightedAverage(
+        s.results.map((r) => ({ score: r.score, skillAreaId: r.skill_areas.id })),
+        weightBySkillAreaId
+      ),
       label: computeOverallLabel(s.results.filter((r) => r.flagged_as_difficulty).length),
     };
   });
@@ -204,7 +212,7 @@ export default async function StudentReportPage({
           </div>
           <div className="flex flex-col gap-3.5">
             {rows.map((sk) => {
-              const flagged = sk.score < 65;
+              const flagged = sk.flagged_as_difficulty;
               return (
                 <div key={sk.skill_areas.id}>
                   <div className="flex justify-between text-sm mb-1.5">

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { computeWeightedAverage } from "@/lib/scoring";
 import { retrySchoolReport } from "./actions";
 
 type ResultRow = {
@@ -58,7 +59,16 @@ export default async function AdminDashboardPage() {
         .in("session_id", sessionIds);
       const rows = (results ?? []) as unknown as ResultRow[];
 
-      avgOverallScore = rows.length ? Math.round(rows.reduce((sum, r) => sum + r.score, 0) / rows.length) : 0;
+      const { data: weightRows } = await supabase
+        .from("school_skill_weights")
+        .select("skill_area_id, weight")
+        .eq("school_id", profile.school_id);
+      const weightBySkillAreaId = new Map((weightRows ?? []).map((w) => [w.skill_area_id, w.weight]));
+
+      avgOverallScore = computeWeightedAverage(
+        rows.map((r) => ({ score: r.score, skillAreaId: r.skill_areas.id })),
+        weightBySkillAreaId
+      );
 
       const bySkill = new Map<string, { name: string; flagged: number; total: number }>();
       for (const r of rows) {
@@ -118,6 +128,14 @@ export default async function AdminDashboardPage() {
                 className="bg-[var(--color-neutral)] border-none text-[var(--color-orange-dark)] font-bold text-sm px-4.5 py-2.5 rounded-full no-underline transition-colors hover:bg-[var(--color-neutral-divider)]"
               >
                 Export CSV
+              </a>
+            )}
+            {cycle && studentsAssessed > 0 && (
+              <a
+                href={`/api/reports/school/${cycle.id}/bulk`}
+                className="bg-[var(--color-neutral)] border-none text-[var(--color-orange-dark)] font-bold text-sm px-4.5 py-2.5 rounded-full no-underline transition-colors hover:bg-[var(--color-neutral-divider)]"
+              >
+                Export all reports (PDF)
               </a>
             )}
             {reportStatus === "ready" && cycle ? (

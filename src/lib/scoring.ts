@@ -26,7 +26,7 @@ export interface SkillScore {
 export async function scoreSession(admin: AdminClient, sessionId: string): Promise<SkillScore[]> {
   const { data: session, error: sessionError } = await admin
     .from("assessment_sessions")
-    .select("id, assessment_id")
+    .select("id, assessment_id, student_id")
     .eq("id", sessionId)
     .single();
   if (sessionError || !session) throw new Error(`Session ${sessionId} not found`);
@@ -50,10 +50,20 @@ export async function scoreSession(admin: AdminClient, sessionId: string): Promi
   if (skillAreasError) throw skillAreasError;
   const skillAreaIdByKey = new Map(skillAreas.map((s) => [s.key, s.id]));
 
+  const { data: student } = await admin.from("students").select("school_id").eq("id", session.student_id).single();
+  const { data: weightRows } = student
+    ? await admin.from("school_skill_weights").select("skill_area_id, flagged_threshold").eq("school_id", student.school_id)
+    : { data: [] };
+  const thresholdBySkillAreaId = new Map(
+    (weightRows ?? [])
+      .filter((w): w is typeof w & { flagged_threshold: number } => w.flagged_threshold != null)
+      .map((w) => [w.skill_area_id, w.flagged_threshold])
+  );
+
   const items = assessment.items as AssessmentItem[];
   const correctByItemId = new Map(responses.map((r) => [r.item_id, r.is_correct === true]));
 
-  const results = aggregateSkillScores(items, correctByItemId, skillAreaIdByKey);
+  const results = aggregateSkillScores(items, correctByItemId, skillAreaIdByKey, thresholdBySkillAreaId);
 
   const { error: upsertError } = await admin.from("results").upsert(
     results.map((r) => ({
@@ -72,15 +82,21 @@ export async function scoreSession(admin: AdminClient, sessionId: string): Promi
 /**
  * Pure aggregation step of the Scoring Service, pulled out of scoreSession
  * so it's testable without a Supabase client: percent-correct per skill
- * area, flagged when below FLAGGED_SCORE_THRESHOLD. Items whose
+ * area, flagged when below the flagging threshold. Items whose
  * skillAreaKey has no matching row in skillAreaIdByKey are skipped rather
  * than failing the whole session (reference data drift shouldn't block
  * scoring the items that do resolve).
+ *
+ * thresholdBySkillAreaId lets a school override FLAGGED_SCORE_THRESHOLD for
+ * a specific skill area (supabase/migrations/0011_school_skill_weights.sql,
+ * admin/content's weighting UI); a skill area absent from the map uses the
+ * global default.
  */
 export function aggregateSkillScores(
   items: AssessmentItem[],
   correctByItemId: Map<string, boolean>,
-  skillAreaIdByKey: Map<string, string>
+  skillAreaIdByKey: Map<string, string>,
+  thresholdBySkillAreaId: Map<string, number> = new Map()
 ): SkillScore[] {
   const totalsBySkill = new Map<string, { correct: number; total: number }>();
   for (const item of items) {
@@ -95,9 +111,32 @@ export function aggregateSkillScores(
     const skillAreaId = skillAreaIdByKey.get(skillAreaKey);
     if (!skillAreaId) continue;
     const score = total > 0 ? Math.round((correct / total) * 100) : 0;
-    results.push({ skillAreaId, skillAreaKey, score, flagged: score < FLAGGED_SCORE_THRESHOLD });
+    const threshold = thresholdBySkillAreaId.get(skillAreaId) ?? FLAGGED_SCORE_THRESHOLD;
+    results.push({ skillAreaId, skillAreaKey, score, flagged: score < threshold });
   }
   return results;
+}
+
+/**
+ * Weighted mean of a set of skill-area scores, using each school's
+ * configured weight (default 1 for any skill area without an override).
+ * Used for the "Avg. Overall Score" on the admin dashboard and the
+ * school-wide PDF, so a school that, say, doubles the weight on Fluency
+ * sees that reflected in the one number meant to summarize a cycle.
+ */
+export function computeWeightedAverage(
+  scores: { score: number; skillAreaId: string }[],
+  weightBySkillAreaId: Map<string, number> = new Map()
+): number {
+  if (scores.length === 0) return 0;
+  let weightedSum = 0;
+  let totalWeight = 0;
+  for (const s of scores) {
+    const weight = weightBySkillAreaId.get(s.skillAreaId) ?? 1;
+    weightedSum += s.score * weight;
+    totalWeight += weight;
+  }
+  return totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
 }
 
 /**

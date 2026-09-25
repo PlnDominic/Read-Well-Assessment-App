@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { FLAGGED_SCORE_THRESHOLD } from "@/lib/theme";
 import { AssessmentItemsEditor } from "./AssessmentItemsEditor";
 import { SkillAreasEditor } from "./SkillAreasEditor";
+import { SkillWeightsEditor } from "./SkillWeightsEditor";
 import { addRecommendationRule, deleteRecommendationRule } from "./actions";
 
 const GRADE_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8];
@@ -28,10 +30,16 @@ export default async function AdminContentPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("profiles").select("role, school_id").eq("id", user.id).single();
   if (!profile || profile.role !== "administrator") redirect("/");
 
   const { data: skillAreas } = await supabase.from("skill_areas").select("id, key, name").order("name");
+
+  const { data: weightRows } = await supabase
+    .from("school_skill_weights")
+    .select("skill_area_id, weight, flagged_threshold")
+    .eq("school_id", profile.school_id);
+  const weightBySkillAreaId = new Map((weightRows ?? []).map((w) => [w.skill_area_id, w]));
 
   const { data: allAssessmentItems } = await supabase.from("assessments").select("items");
   const usedSkillAreaKeys = new Set<string>();
@@ -85,6 +93,23 @@ export default async function AdminContentPage({
           skillAreas={(skillAreas ?? []).map((sa) => ({
             ...sa,
             inUse: usedSkillAreaKeys.has(sa.key) || usedSkillAreaIds.has(sa.id),
+          }))}
+        />
+      </div>
+
+      <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-6">
+        <div className="font-heading font-bold text-sm text-[var(--color-ink)] mb-1.5">Skill area weighting</div>
+        <p className="text-[var(--color-muted)] text-sm mb-4 mt-0">
+          Weight changes how much a skill area counts toward the school-wide average score. The flag threshold
+          overrides the {FLAGGED_SCORE_THRESHOLD}% default just for that skill area; leave it blank to use the
+          default.
+        </p>
+        <SkillWeightsEditor
+          skillAreas={(skillAreas ?? []).map((sa) => ({
+            id: sa.id,
+            name: sa.name,
+            weight: weightBySkillAreaId.get(sa.id)?.weight ?? 1,
+            flaggedThreshold: weightBySkillAreaId.get(sa.id)?.flagged_threshold ?? null,
           }))}
         />
       </div>

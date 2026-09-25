@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aggregateSkillScores, computeOverallLabel } from "./scoring";
+import { aggregateSkillScores, computeOverallLabel, computeWeightedAverage } from "./scoring";
 import type { AssessmentItem } from "./database.types";
 
 describe("computeOverallLabel", () => {
@@ -90,5 +90,48 @@ describe("aggregateSkillScores", () => {
       skillAreaIdByKey
     );
     expect(notFlagged[0]).toMatchObject({ score: 67, flagged: false });
+  });
+
+  it("uses a per-skill-area threshold override instead of the 65% default", () => {
+    // 70% would pass the global default but fail a school-configured 75%.
+    const tenItems: AssessmentItem[] = Array.from({ length: 10 }, (_, i) => ({
+      id: `q${i}`,
+      skillAreaKey: "phonics",
+      type: "choice",
+      prompt: "",
+      options: [],
+    }));
+    const correctByItemId = new Map(tenItems.slice(0, 7).map((i) => [i.id, true]));
+    const thresholdBySkillAreaId = new Map([["sa-phonics", 75]]);
+
+    const [defaultThreshold] = aggregateSkillScores(tenItems, correctByItemId, skillAreaIdByKey);
+    expect(defaultThreshold).toMatchObject({ score: 70, flagged: false });
+
+    const [overridden] = aggregateSkillScores(tenItems, correctByItemId, skillAreaIdByKey, thresholdBySkillAreaId);
+    expect(overridden).toMatchObject({ score: 70, flagged: true });
+  });
+});
+
+describe("computeWeightedAverage", () => {
+  it("returns 0 for an empty list", () => {
+    expect(computeWeightedAverage([])).toBe(0);
+  });
+
+  it("defaults to an unweighted mean when no weights are given", () => {
+    const scores = [
+      { score: 80, skillAreaId: "a" },
+      { score: 40, skillAreaId: "b" },
+    ];
+    expect(computeWeightedAverage(scores)).toBe(60);
+  });
+
+  it("weights a skill area's contribution per the configured weight", () => {
+    const scores = [
+      { score: 100, skillAreaId: "a" },
+      { score: 0, skillAreaId: "b" },
+    ];
+    // Weighting "a" 3x pulls the average toward its score.
+    const weights = new Map([["a", 3]]);
+    expect(computeWeightedAverage(scores, weights)).toBe(75);
   });
 });
