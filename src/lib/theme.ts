@@ -1,36 +1,39 @@
+// Brand palette is orange/black/white. The "sage"/"terracotta"/"gold" names
+// are kept (renaming every call site across the PDF renderer and inline SVG
+// icons was out of scope for the recolor), but every one now resolves to a
+// shade of orange, black, or neutral gray -- see the matching comment in
+// globals.css, which this file has to stay in sync with since PDF/SVG
+// rendering can't read CSS custom properties. This always uses the light-
+// mode values: a generated PDF is a printed page, not a themeable surface.
 export const colors = {
-  sage: "#6B8F71",
-  sageDark: "#4A6B52",
-  sageDeep: "#2E3B2F",
-  sageMid: "#5C7F62",
-  sageTint: "#EAF1E8",
-  sageTintBorder: "#B9CDBB",
+  sage: "#EA580C",
+  sageDark: "#C2410C",
+  sageDeep: "#171717",
+  sageMid: "#D9540B",
+  sageTint: "#FCE7DA",
+  sageTintBorder: "#F0BE97",
 
-  terracotta: "#C97B5F",
-  // Originally #A85C3F; see globals.css for the contrast numbers behind
-  // this and the other darkened tokens below; keep these two files in
-  // sync since this one feeds PDF/inline-SVG rendering, which can't read
-  // CSS custom properties.
-  terracottaDark: "#9C5238",
-  terracottaTint: "#FBF3EE",
+  terracotta: "#EA580C",
+  terracottaDark: "#C2410C",
+  terracottaTint: "#FCE7DA",
 
   neutral: "#F0F0F0",
   neutralBorder: "#DCDCDC",
   neutralBorderStrong: "#C9C9C9",
   neutralDivider: "#E6E6E6",
 
-  ink: "#2E3B2F",
-  inkSoft: "#3A463B",
-  body: "#5C6B5D",
-  muted: "#5A6B5C",
-  mutedLight: "#5A6B5C",
+  ink: "#171717",
+  inkSoft: "#2B2B2B",
+  body: "#444444",
+  muted: "#666666",
+  mutedLight: "#666666",
 
-  goldBg: "#FBF0DE",
-  goldText: "#7D5E28",
-  goldBorder: "#E3D3A8",
+  goldBg: "#FCE7DA",
+  goldText: "#C2410C",
+  goldBorder: "#F0BE97",
 
-  taupe: "#8B8365",
-  taupeBg: "#EDEAE0",
+  taupe: "#6B6B6B",
+  taupeBg: "#EDEDED",
 
   white: "#FFFFFF",
 } as const;

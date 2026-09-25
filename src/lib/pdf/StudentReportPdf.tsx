@@ -59,12 +59,15 @@ export function StudentReportPdf({
             <Text style={styles.name}>{studentName}</Text>
             <Text style={styles.meta}>Grade {grade} · Assessed {assessedDate}</Text>
           </View>
+          {/* On Track is solid black/white, not orange -- see the matching
+              comment in the web report page for why (sage/terracotta are
+              now the same orange, so this can't distinguish by hue alone). */}
           <Text
             style={[
               styles.badge,
               {
-                backgroundColor: isOnTrack ? colors.sageTint : colors.terracottaTint,
-                color: isOnTrack ? colors.sageDark : colors.terracottaDark,
+                backgroundColor: isOnTrack ? colors.ink : colors.terracottaTint,
+                color: isOnTrack ? colors.white : colors.terracottaDark,
               },
             ]}
           >
@@ -79,7 +82,7 @@ export function StudentReportPdf({
             <View style={styles.skillRow} key={sk.name}>
               <View style={styles.skillLabelRow}>
                 <Text style={styles.skillName}>{sk.name}</Text>
-                <Text style={{ fontWeight: 700, color: flagged ? colors.terracottaDark : colors.sageDark }}>
+                <Text style={{ fontWeight: 700, color: flagged ? colors.terracottaDark : colors.ink }}>
                   {sk.score}%
                 </Text>
               </View>
@@ -87,7 +90,7 @@ export function StudentReportPdf({
                 <View
                   style={[
                     styles.barFill,
-                    { width: `${sk.score}%`, backgroundColor: flagged ? colors.terracotta : colors.sage },
+                    { width: `${sk.score}%`, backgroundColor: flagged ? colors.terracotta : colors.ink },
                   ]}
                 />
               </View>

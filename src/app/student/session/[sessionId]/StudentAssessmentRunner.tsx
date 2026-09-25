@@ -491,7 +491,12 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
               }
               className="w-[120px] h-[120px] rounded-full border-none flex items-center justify-center mx-auto mb-3 cursor-pointer transition-transform"
               style={{
-                background: micStatus === "done" ? "var(--color-sage)" : micStatus === "recording" ? "var(--color-terracotta-dark)" : "var(--color-terracotta)",
+                background:
+                  micStatus === "done"
+                    ? "var(--color-ink)"
+                    : micStatus === "recording"
+                      ? "var(--color-terracotta-dark)"
+                      : "var(--color-terracotta)",
               }}
             >
               <MicIcon />

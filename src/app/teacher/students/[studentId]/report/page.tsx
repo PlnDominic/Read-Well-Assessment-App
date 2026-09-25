@@ -161,11 +161,15 @@ export default async function StudentReportPage({
               </p>
             </div>
             <div className="flex items-center gap-2.5">
+              {/* On Track is solid black/white rather than orange -- orange
+                  is reserved for "needs attention" states, and sage/
+                  terracotta are now the same orange, so this pairing had to
+                  stop relying on hue alone to read as good vs. needs-support. */}
               <span
                 className="font-extrabold text-sm px-4 py-2 rounded-full"
                 style={{
-                  background: isOnTrack ? "var(--color-sage-tint)" : "var(--color-terracotta-tint)",
-                  color: isOnTrack ? "var(--color-sage-dark)" : "var(--color-terracotta-dark)",
+                  background: isOnTrack ? "var(--color-ink)" : "var(--color-terracotta-tint)",
+                  color: isOnTrack ? "var(--color-surface)" : "var(--color-terracotta-dark)",
                 }}
               >
                 {overallLabel}
@@ -207,7 +211,7 @@ export default async function StudentReportPage({
                     <span className="font-bold text-[var(--color-ink-soft)]">{sk.skill_areas.name}</span>
                     <span
                       className="font-bold"
-                      style={{ color: flagged ? "var(--color-terracotta-dark)" : "var(--color-sage-dark)" }}
+                      style={{ color: flagged ? "var(--color-terracotta-dark)" : "var(--color-ink)" }}
                     >
                       {sk.score}%
                     </span>
@@ -217,7 +221,7 @@ export default async function StudentReportPage({
                       className="h-full rounded-full"
                       style={{
                         width: `${sk.score}%`,
-                        background: flagged ? "var(--color-terracotta)" : "var(--color-sage)",
+                        background: flagged ? "var(--color-terracotta)" : "var(--color-ink)",
                       }}
                     />
                   </div>
@@ -249,7 +253,7 @@ export default async function StudentReportPage({
                       </span>
                       <span
                         className="font-bold"
-                        style={{ color: flagged ? "var(--color-terracotta-dark)" : "var(--color-sage-dark)" }}
+                        style={{ color: flagged ? "var(--color-terracotta-dark)" : "var(--color-ink)" }}
                       >
                         {h.avgScore}% · {h.label}
                       </span>
@@ -259,7 +263,7 @@ export default async function StudentReportPage({
                         className="h-full rounded-full"
                         style={{
                           width: `${h.avgScore}%`,
-                          background: flagged ? "var(--color-terracotta)" : "var(--color-sage)",
+                          background: flagged ? "var(--color-terracotta)" : "var(--color-ink)",
                         }}
                       />
                     </div>
@@ -284,8 +288,11 @@ export default async function StudentReportPage({
                   className="flex items-start gap-3.5 bg-[var(--color-neutral)] rounded-xl px-4.5 py-3.5"
                 >
                   <span
-                    className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold text-white mt-0.5"
-                    style={{ background: isCorrect ? "var(--color-sage)" : "var(--color-terracotta)" }}
+                    className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold mt-0.5"
+                    style={{
+                      background: isCorrect ? "var(--color-ink)" : "var(--color-terracotta)",
+                      color: isCorrect ? "var(--color-surface)" : "white",
+                    }}
                   >
                     {isCorrect ? "✓" : "✕"}
                   </span>

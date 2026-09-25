@@ -11,13 +11,16 @@ const STATUS_STYLE: Record<
   string,
   { label: string; bg: string; color: string; actionBg: string; actionColor: string; actionBorder: string; actionLabel: string }
 > = {
+  // Solid black/white rather than the orange used everywhere else: orange
+  // is reserved for "needs attention" states (in progress, not started),
+  // so a finished assessment reads as the neutral, no-action-needed one.
   completed: {
     label: "Completed",
-    bg: "var(--color-sage-tint)",
-    color: "var(--color-sage-dark)",
+    bg: "var(--color-ink)",
+    color: "var(--color-surface)",
     actionBg: "var(--color-surface)",
-    actionColor: "var(--color-sage-dark)",
-    actionBorder: "var(--color-sage-tint-border)",
+    actionColor: "var(--color-ink)",
+    actionBorder: "var(--color-ink)",
     actionLabel: "View Report",
   },
   in_progress: {

@@ -4,8 +4,11 @@ import { AppShell } from "@/components/AppShell";
 import { ROLE_AVATAR } from "@/lib/avatars";
 import { createClient } from "@/lib/supabase/server";
 
+// completed is solid black/white rather than the orange used everywhere
+// else: orange is reserved for "needs attention" states, so a finished
+// assessment reads as the neutral, no-action-needed one.
 const STATUS_STYLE: Record<string, { label: string; bg: string; color: string }> = {
-  completed: { label: "Completed", bg: "var(--color-sage-tint)", color: "var(--color-sage-dark)" },
+  completed: { label: "Completed", bg: "var(--color-ink)", color: "var(--color-surface)" },
   in_progress: { label: "In Progress", bg: "var(--color-gold-bg)", color: "var(--color-gold-text)" },
   not_started: { label: "Not Started", bg: "var(--color-neutral)", color: "var(--color-muted)" },
 };
@@ -90,7 +93,7 @@ export default async function SpecialistPage() {
                   {status === "completed" && latest && (
                     <Link
                       href={`/teacher/students/${s.id}/report?session=${latest.id}`}
-                      className="font-bold text-sm px-4.5 py-2.25 rounded-full no-underline bg-[var(--color-surface)] border-[1.5px] border-[var(--color-sage-tint-border)] text-[var(--color-sage-dark)]"
+                      className="font-bold text-sm px-4.5 py-2.25 rounded-full no-underline bg-[var(--color-surface)] border-[1.5px] border-[var(--color-ink)] text-[var(--color-ink)]"
                     >
                       View Report
                     </Link>

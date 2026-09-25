@@ -26,7 +26,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#6b8f71",
+  themeColor: "#ea580c",
 };
 
 // Applies a stored light/dark override (see ThemeToggle) before first paint,
