@@ -42,10 +42,10 @@ export default async function AdminStudentsPage() {
 
   return (
     <div className="w-full max-w-[920px]">
-      <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-sage-deep)] m-0 mb-6">Students</h1>
+      <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-ink)] m-0 mb-6">Students</h1>
 
       <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-6">
-        <div className="font-heading font-bold text-sm text-[var(--color-sage-deep)] mb-4">Add a student</div>
+        <div className="font-heading font-bold text-sm text-[var(--color-ink)] mb-4">Add a student</div>
         <AddStudentForm teachers={teachers} />
         <ImportCsvForm />
       </div>
@@ -69,7 +69,7 @@ export default async function AdminStudentsPage() {
                   aria-label="Student name"
                   defaultValue={s.name}
                   required
-                  className="font-extrabold text-[var(--color-sage-deep)] text-base border-2 border-transparent hover:border-[var(--color-neutral-border)] focus:border-[var(--color-sage)] rounded-lg px-2 py-1 flex-1 min-w-[140px]"
+                  className="font-extrabold text-[var(--color-ink)] text-base border-2 border-transparent hover:border-[var(--color-neutral-border)] focus:border-[var(--color-orange)] rounded-lg px-2 py-1 flex-1 min-w-[140px]"
                 />
                 <select
                   name="grade"
@@ -97,7 +97,7 @@ export default async function AdminStudentsPage() {
                 </select>
                 <button
                   type="submit"
-                  className="bg-[var(--color-neutral)] border-none text-[var(--color-sage-dark)] transition-colors hover:bg-[var(--color-neutral-divider)] font-bold text-xs px-3 py-1.5 rounded-full cursor-pointer"
+                  className="bg-[var(--color-neutral)] border-none text-[var(--color-orange-dark)] transition-colors hover:bg-[var(--color-neutral-divider)] font-bold text-xs px-3 py-1.5 rounded-full cursor-pointer"
                 >
                   Save
                 </button>
@@ -108,7 +108,7 @@ export default async function AdminStudentsPage() {
                   <input type="hidden" name="id" value={s.id} />
                   <ConfirmSubmitButton
                     confirmMessage={`Delete ${s.name}? This also deletes their assessment sessions and reports.`}
-                    className="text-[var(--color-terracotta-dark)] text-xs font-bold bg-none border-none cursor-pointer"
+                    className="text-[var(--color-orange-dark)] text-xs font-bold bg-none border-none cursor-pointer"
                   >
                     Delete student
                   </ConfirmSubmitButton>
@@ -117,12 +117,12 @@ export default async function AdminStudentsPage() {
                   <form action={unassignSpecialist} key={specId} className="flex items-center gap-1.5">
                     <input type="hidden" name="studentId" value={s.id} />
                     <input type="hidden" name="specialistId" value={specId} />
-                    <span className="bg-[var(--color-gold-bg)] text-[var(--color-gold-text)] text-xs font-bold px-3 py-1.5 rounded-full">
+                    <span className="bg-[var(--color-orange-tint)] text-[var(--color-orange-dark)] text-xs font-bold px-3 py-1.5 rounded-full">
                       {specialistById.get(specId) ?? "Specialist"}
                     </span>
                     <button
                       type="submit"
-                      className="text-[var(--color-terracotta-dark)] text-xs font-bold bg-none border-none cursor-pointer"
+                      className="text-[var(--color-orange-dark)] text-xs font-bold bg-none border-none cursor-pointer"
                     >
                       Remove
                     </button>
@@ -148,7 +148,7 @@ export default async function AdminStudentsPage() {
                     </select>
                     <button
                       type="submit"
-                      className="bg-[var(--color-neutral)] border-none text-[var(--color-sage-dark)] transition-colors hover:bg-[var(--color-neutral-divider)] font-bold text-xs px-3 py-1.5 rounded-full cursor-pointer"
+                      className="bg-[var(--color-neutral)] border-none text-[var(--color-orange-dark)] transition-colors hover:bg-[var(--color-neutral-divider)] font-bold text-xs px-3 py-1.5 rounded-full cursor-pointer"
                     >
                       Assign
                     </button>

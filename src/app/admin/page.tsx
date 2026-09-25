@@ -104,7 +104,7 @@ export default async function AdminDashboardPage() {
     <div className="w-full max-w-[920px]">
       <div className="flex justify-between items-start flex-wrap gap-3.5 mb-6">
           <div>
-            <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-sage-deep)] m-0 mb-1">
+            <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-ink)] m-0 mb-1">
               {school?.name ?? "Your School"}
             </h1>
             <p className="text-[var(--color-muted)] text-[15px] m-0">
@@ -115,7 +115,7 @@ export default async function AdminDashboardPage() {
             {cycle && studentsAssessed > 0 && (
               <a
                 href={`/api/reports/school/${cycle.id}/csv`}
-                className="bg-[var(--color-neutral)] border-none text-[var(--color-sage-dark)] font-bold text-sm px-4.5 py-2.5 rounded-full no-underline transition-colors hover:bg-[var(--color-neutral-divider)]"
+                className="bg-[var(--color-neutral)] border-none text-[var(--color-orange-dark)] font-bold text-sm px-4.5 py-2.5 rounded-full no-underline transition-colors hover:bg-[var(--color-neutral-divider)]"
               >
                 Export CSV
               </a>
@@ -123,7 +123,7 @@ export default async function AdminDashboardPage() {
             {reportStatus === "ready" && cycle ? (
               <a
                 href={`/api/reports/school/${cycle.id}`}
-                className="bg-[var(--color-neutral)] border-none text-[var(--color-sage-dark)] font-bold text-sm px-4.5 py-2.5 rounded-full no-underline transition-colors hover:bg-[var(--color-neutral-divider)]"
+                className="bg-[var(--color-neutral)] border-none text-[var(--color-orange-dark)] font-bold text-sm px-4.5 py-2.5 rounded-full no-underline transition-colors hover:bg-[var(--color-neutral-divider)]"
               >
                 Export PDF
               </a>
@@ -132,7 +132,7 @@ export default async function AdminDashboardPage() {
                 <input type="hidden" name="cycleId" value={cycle.id} />
                 <button
                   type="submit"
-                  className="bg-[var(--color-terracotta-tint)] border-none text-[var(--color-terracotta-dark)] font-bold text-sm px-4.5 py-2.5 rounded-full cursor-pointer"
+                  className="bg-[var(--color-orange-tint)] border-none text-[var(--color-orange-dark)] font-bold text-sm px-4.5 py-2.5 rounded-full cursor-pointer"
                 >
                   Retry PDF
                 </button>
@@ -148,11 +148,11 @@ export default async function AdminDashboardPage() {
         <div className="grid gap-4 mb-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
           <StatCard label="Students Assessed" value={`${studentsAssessed} / ${studentsTotal ?? 0}`} />
           <StatCard label="Grade Level" value={`Grade ${gradeLevel}`} />
-          <StatCard label="Avg. Overall Score" value={`${avgOverallScore}%`} valueColor="var(--color-sage)" />
+          <StatCard label="Avg. Overall Score" value={`${avgOverallScore}%`} valueColor="var(--color-orange)" />
         </div>
 
         <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-5">
-          <div className="font-heading font-bold text-sm text-[var(--color-sage-deep)] mb-4.5">
+          <div className="font-heading font-bold text-sm text-[var(--color-ink)] mb-4.5">
             Difficulty Area Distribution (% of students flagged)
           </div>
           <div className="flex flex-col gap-4">
@@ -163,11 +163,11 @@ export default async function AdminDashboardPage() {
               <div key={sk.name}>
                 <div className="flex justify-between text-sm mb-1.5">
                   <span className="font-bold text-[var(--color-ink-soft)]">{sk.name}</span>
-                  <span className="font-bold text-[var(--color-gold-text)]">{sk.pct}% flagged</span>
+                  <span className="font-bold text-[var(--color-orange-dark)]">{sk.pct}% flagged</span>
                 </div>
                 <div className="h-3.5 bg-[var(--color-neutral-divider)] rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-[var(--color-terracotta)] rounded-full"
+                    className="h-full bg-[var(--color-orange)] rounded-full"
                     style={{ width: `${sk.pct}%` }}
                   />
                 </div>
@@ -176,8 +176,8 @@ export default async function AdminDashboardPage() {
           </div>
         </div>
 
-      <div className="bg-[var(--color-sage-tint)] rounded-[24px] px-6.5 py-5.5 text-[var(--color-ink-soft)] text-sm leading-relaxed">
-        <strong className="text-[var(--color-sage-deep)]">Planning note:</strong> {planningNote}
+      <div className="bg-[var(--color-orange-tint)] rounded-[24px] px-6.5 py-5.5 text-[var(--color-ink-soft)] text-sm leading-relaxed">
+        <strong className="text-[var(--color-ink)]">Planning note:</strong> {planningNote}
       </div>
     </div>
   );
@@ -189,7 +189,7 @@ function StatCard({ label, value, valueColor }: { label: string; value: string; 
       <div className="text-[var(--color-muted-light)] text-[13px] font-bold mb-2">{label}</div>
       <div
         className="font-heading font-bold text-[30px]"
-        style={{ color: valueColor ?? "var(--color-sage-deep)" }}
+        style={{ color: valueColor ?? "var(--color-ink)" }}
       >
         {value}
       </div>

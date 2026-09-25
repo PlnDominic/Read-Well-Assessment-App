@@ -41,7 +41,7 @@ export function AddStudentForm({ teachers }: { teachers: { id: string; name: str
         <button
           type="submit"
           disabled={teachers.length === 0 || isPending}
-          className="bg-[var(--color-sage)] text-white border-none rounded-full font-bold text-sm shadow-[0_6px_16px_rgba(74,107,82,0.25)] transition-transform hover:-translate-y-0.5 px-5 py-2.75 cursor-pointer disabled:opacity-50"
+          className="bg-[var(--color-orange)] text-white border-none rounded-full font-bold text-sm shadow-[0_6px_16px_rgba(74,107,82,0.25)] transition-transform hover:-translate-y-0.5 px-5 py-2.75 cursor-pointer disabled:opacity-50"
         >
           {isPending ? "Adding…" : "Add student"}
         </button>
@@ -52,10 +52,10 @@ export function AddStudentForm({ teachers }: { teachers: { id: string; name: str
         </p>
       )}
 
-      {state.error && <p className="text-[var(--color-terracotta-dark)] text-sm mt-3 mb-0">{state.error}</p>}
+      {state.error && <p className="text-[var(--color-orange-dark)] text-sm mt-3 mb-0">{state.error}</p>}
 
       {state.result && (
-        <div className="mt-4 bg-[var(--color-sage-tint)] rounded-xl px-4.5 py-3.5 text-sm text-[var(--color-ink-soft)]">
+        <div className="mt-4 bg-[var(--color-orange-tint)] rounded-xl px-4.5 py-3.5 text-sm text-[var(--color-ink-soft)]">
           <strong>{state.result.name}</strong> added.{" "}
           {state.result.sessionCode ? (
             <>

@@ -330,7 +330,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
   if (error) {
     return (
       <div className="w-full max-w-[480px] mt-[10vh] text-center">
-        <p className="text-[var(--color-terracotta-dark)] text-lg">{error}</p>
+        <p className="text-[var(--color-orange-dark)] text-lg">{error}</p>
       </div>
     );
   }
@@ -341,12 +341,12 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
         <div className="relative flex justify-center mb-6.5">
           <div
             className="absolute inset-0 m-auto w-[170px] h-[170px] rounded-full blur-3xl opacity-70 pointer-events-none"
-            style={{ background: "var(--color-terracotta-tint)" }}
+            style={{ background: "var(--color-orange-tint)" }}
             aria-hidden
           />
           <SunnyAvatar size={128} />
         </div>
-        <h1 className="font-heading font-bold text-[32px] tracking-tight text-[var(--color-sage-deep)] m-0 mb-2.5">
+        <h1 className="font-heading font-bold text-[32px] tracking-tight text-[var(--color-ink)] m-0 mb-2.5">
           Almost done!
         </h1>
         <p className="text-[var(--color-body)] text-lg leading-relaxed m-0 mb-6">
@@ -362,7 +362,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
             if (!ok) writePendingComplete(sessionId, true);
           }}
           disabled={completing}
-          className="bg-[var(--color-sage)] text-white border-none rounded-full font-heading font-bold text-lg px-10 py-4 cursor-pointer shadow-[0_10px_24px_rgba(74,107,82,0.3)] transition-transform hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0"
+          className="bg-[var(--color-orange)] text-white border-none rounded-full font-heading font-bold text-lg px-10 py-4 cursor-pointer shadow-[0_10px_24px_rgba(74,107,82,0.3)] transition-transform hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0"
         >
           {completing ? "Trying…" : "Try again"}
         </button>
@@ -380,14 +380,14 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
         <div className="relative flex justify-center mb-7">
           <div
             className="absolute inset-0 m-auto w-[190px] h-[190px] rounded-full blur-3xl opacity-70 pointer-events-none"
-            style={{ background: "var(--color-terracotta-tint)" }}
+            style={{ background: "var(--color-orange-tint)" }}
             aria-hidden
           />
-          <div className="relative w-[150px] h-[150px] rounded-full bg-[var(--color-terracotta)] flex items-center justify-center shadow-[0_14px_30px_rgba(201,123,95,0.3)]">
+          <div className="relative w-[150px] h-[150px] rounded-full bg-[var(--color-orange)] flex items-center justify-center shadow-[0_14px_30px_rgba(201,123,95,0.3)]">
             <CheckIcon />
           </div>
         </div>
-        <h1 className="font-heading font-bold text-4xl tracking-tight text-[var(--color-sage-deep)] m-0 mb-3">
+        <h1 className="font-heading font-bold text-4xl tracking-tight text-[var(--color-ink)] m-0 mb-3">
           You&apos;re all done!
         </h1>
         <p className="text-[var(--color-body)] text-lg leading-relaxed m-0 mb-10">
@@ -395,7 +395,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
         </p>
         <button
           onClick={() => router.push("/login")}
-          className="bg-[var(--color-sage)] text-white border-none rounded-full font-heading font-bold text-xl px-12 py-4.5 cursor-pointer shadow-[0_10px_24px_rgba(74,107,82,0.3)] transition-transform hover:-translate-y-0.5"
+          className="bg-[var(--color-orange)] text-white border-none rounded-full font-heading font-bold text-xl px-12 py-4.5 cursor-pointer shadow-[0_10px_24px_rgba(74,107,82,0.3)] transition-transform hover:-translate-y-0.5"
         >
           Finish
         </button>
@@ -404,7 +404,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
   }
 
   const offlineBanner = !isOnline && (
-    <div className="w-full max-w-[640px] mb-4 bg-[var(--color-gold-bg)] border border-[var(--color-gold-border)] text-[var(--color-gold-text)] text-sm font-bold rounded-xl px-4 py-2.5 text-center">
+    <div className="w-full max-w-[640px] mb-4 bg-[var(--color-orange-tint)] border border-[var(--color-orange-tint-border)] text-[var(--color-orange-dark)] text-sm font-bold rounded-xl px-4 py-2.5 text-center">
       You&apos;re offline. Answers are saved on this device and will sync automatically when you&apos;re back online.
     </div>
   );
@@ -416,12 +416,12 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
         <div className="relative flex justify-center mb-6.5">
           <div
             className="absolute inset-0 m-auto w-[190px] h-[190px] rounded-full blur-3xl opacity-70 pointer-events-none"
-            style={{ background: "var(--color-sage-tint)" }}
+            style={{ background: "var(--color-orange-tint)" }}
             aria-hidden
           />
           <SunnyAvatar size={140} />
         </div>
-        <h1 className="font-heading font-bold text-[34px] tracking-tight text-[var(--color-sage-deep)] m-0 mb-2.5">
+        <h1 className="font-heading font-bold text-[34px] tracking-tight text-[var(--color-ink)] m-0 mb-2.5">
           Hi! I&apos;m Sunny.
         </h1>
         <p className="text-[var(--color-body)] text-lg leading-relaxed m-0 mb-10">
@@ -429,7 +429,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
         </p>
         <button
           onClick={() => setStarted(true)}
-          className="bg-[var(--color-terracotta)] text-white border-none rounded-full font-heading font-bold text-xl px-14 py-5 cursor-pointer shadow-[0_10px_24px_rgba(201,123,95,0.35)] transition-transform hover:-translate-y-0.5"
+          className="bg-[var(--color-orange)] text-white border-none rounded-full font-heading font-bold text-xl px-14 py-5 cursor-pointer shadow-[0_10px_24px_rgba(201,123,95,0.35)] transition-transform hover:-translate-y-0.5"
         >
           Let&apos;s Start!
         </button>
@@ -439,7 +439,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
 
   const item = state.items[qIndex];
   const skillLabel = item.skillAreaKey.replace(/([A-Z])/g, " $1").toUpperCase();
-  const tileColor = SKILL_AREA_TILE_COLOR[item.skillAreaKey as SkillAreaKey] ?? "var(--color-sage)";
+  const tileColor = SKILL_AREA_TILE_COLOR[item.skillAreaKey as SkillAreaKey] ?? "var(--color-orange)";
   const savedAnswer = state.answersByItemId[item.id];
   const selectedOption = typeof savedAnswer === "string" ? savedAnswer : null;
   const micDone = typeof savedAnswer === "string" && savedAnswer.length > 0;
@@ -454,7 +454,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
       <div className="flex items-center gap-3.5 mb-7">
         <div className="flex-1 h-3.5 bg-[var(--color-neutral-border)] rounded-full overflow-hidden">
           <div
-            className="h-full bg-[var(--color-sage)] rounded-full transition-[width]"
+            className="h-full bg-[var(--color-orange)] rounded-full transition-[width]"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
@@ -478,7 +478,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
           </div>
         )}
 
-        <p className="font-heading font-bold text-2xl text-[var(--color-sage-deep)] m-0 mb-7 leading-snug">
+        <p className="font-heading font-bold text-2xl text-[var(--color-ink)] m-0 mb-7 leading-snug">
           {item.prompt}
         </p>
 
@@ -495,8 +495,8 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
                   micStatus === "done"
                     ? "var(--color-ink)"
                     : micStatus === "recording"
-                      ? "var(--color-terracotta-dark)"
-                      : "var(--color-terracotta)",
+                      ? "var(--color-orange-dark)"
+                      : "var(--color-orange)",
               }}
             >
               <MicIcon />
@@ -517,9 +517,9 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
                   onClick={() => selectOption(text)}
                   className="text-center font-heading font-bold text-lg py-5 rounded-2xl cursor-pointer border-[2.5px] transition-colors"
                   style={{
-                    borderColor: isSelected ? "var(--color-sage)" : "var(--color-neutral-border)",
-                    background: isSelected ? "var(--color-sage-tint)" : "white",
-                    color: "var(--color-sage-deep)",
+                    borderColor: isSelected ? "var(--color-orange)" : "var(--color-neutral-border)",
+                    background: isSelected ? "var(--color-orange-tint)" : "white",
+                    color: "var(--color-ink)",
                   }}
                 >
                   {text}
@@ -535,7 +535,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
           <button
             onClick={goNext}
             disabled={completing}
-            className="bg-[var(--color-sage)] text-white border-none rounded-full font-heading font-bold text-lg px-9.5 py-3.5 cursor-pointer disabled:opacity-60"
+            className="bg-[var(--color-orange)] text-white border-none rounded-full font-heading font-bold text-lg px-9.5 py-3.5 cursor-pointer disabled:opacity-60"
           >
             {completing ? "Finishing…" : isLast ? "I'm Done!" : "Next"}
           </button>

@@ -135,7 +135,7 @@ export function AssessmentItemsEditor({
               </select>
               <button
                 onClick={() => removeItem(i)}
-                className="ml-auto text-[var(--color-terracotta-dark)] text-sm font-bold bg-none border-none cursor-pointer"
+                className="ml-auto text-[var(--color-orange-dark)] text-sm font-bold bg-none border-none cursor-pointer"
               >
                 Remove item
               </button>
@@ -198,7 +198,7 @@ export function AssessmentItemsEditor({
                     />
                     <button
                       onClick={() => removeOption(i, oi)}
-                      className="text-[var(--color-terracotta-dark)] text-xs font-bold bg-none border-none cursor-pointer"
+                      className="text-[var(--color-orange-dark)] text-xs font-bold bg-none border-none cursor-pointer"
                     >
                       Remove
                     </button>
@@ -206,7 +206,7 @@ export function AssessmentItemsEditor({
                 ))}
                 <button
                   onClick={() => addOption(i)}
-                  className="self-start text-[var(--color-sage)] text-sm font-bold bg-none border-none cursor-pointer"
+                  className="self-start text-[var(--color-orange)] text-sm font-bold bg-none border-none cursor-pointer"
                 >
                   + Add option
                 </button>
@@ -219,19 +219,19 @@ export function AssessmentItemsEditor({
       <div className="flex items-center gap-3 mt-5">
         <button
           onClick={addItem}
-          className="bg-[var(--color-neutral)] border-none text-[var(--color-sage-dark)] transition-colors hover:bg-[var(--color-neutral-divider)] font-bold text-sm px-4.5 py-2.25 rounded-full cursor-pointer"
+          className="bg-[var(--color-neutral)] border-none text-[var(--color-orange-dark)] transition-colors hover:bg-[var(--color-neutral-divider)] font-bold text-sm px-4.5 py-2.25 rounded-full cursor-pointer"
         >
           + Add item
         </button>
         <button
           onClick={save}
           disabled={isPending}
-          className="bg-[var(--color-sage)] text-white border-none rounded-full font-bold text-sm shadow-[0_6px_16px_rgba(74,107,82,0.25)] transition-transform hover:-translate-y-0.5 px-5 py-2.5 cursor-pointer disabled:opacity-60"
+          className="bg-[var(--color-orange)] text-white border-none rounded-full font-bold text-sm shadow-[0_6px_16px_rgba(74,107,82,0.25)] transition-transform hover:-translate-y-0.5 px-5 py-2.5 cursor-pointer disabled:opacity-60"
         >
           {isPending ? "Saving…" : "Save as new version"}
         </button>
-        {saved && <span className="text-[var(--color-sage-dark)] text-sm font-bold">Saved ✓</span>}
-        {error && <span className="text-[var(--color-terracotta-dark)] text-sm">{error}</span>}
+        {saved && <span className="text-[var(--color-orange-dark)] text-sm font-bold">Saved ✓</span>}
+        {error && <span className="text-[var(--color-orange-dark)] text-sm">{error}</span>}
       </div>
     </div>
   );

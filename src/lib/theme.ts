@@ -1,21 +1,16 @@
-// Brand palette is orange/black/white. The "sage"/"terracotta"/"gold" names
-// are kept (renaming every call site across the PDF renderer and inline SVG
-// icons was out of scope for the recolor), but every one now resolves to a
-// shade of orange, black, or neutral gray -- see the matching comment in
-// globals.css, which this file has to stay in sync with since PDF/SVG
-// rendering can't read CSS custom properties. This always uses the light-
-// mode values: a generated PDF is a printed page, not a themeable surface.
+// Brand palette is orange/black/white -- see the matching comment in
+// globals.css, which this file has to stay in sync with since PDF/inline-
+// SVG rendering can't read CSS custom properties. This always uses the
+// light-mode values: a generated PDF is a printed page, not a themeable
+// surface.
 export const colors = {
-  sage: "#EA580C",
-  sageDark: "#C2410C",
-  sageDeep: "#171717",
-  sageMid: "#D9540B",
-  sageTint: "#FCE7DA",
-  sageTintBorder: "#F0BE97",
-
-  terracotta: "#EA580C",
-  terracottaDark: "#C2410C",
-  terracottaTint: "#FCE7DA",
+  orange: "#EA580C",
+  // ~4.9:1 against white -- see the muted/body comments below for the same
+  // "just past AA" contrast-tuning approach applied throughout this file.
+  orangeDark: "#C2410C",
+  orangeMid: "#D9540B",
+  orangeTint: "#FCE7DA",
+  orangeTintBorder: "#F0BE97",
 
   neutral: "#F0F0F0",
   neutralBorder: "#DCDCDC",
@@ -27,13 +22,6 @@ export const colors = {
   body: "#444444",
   muted: "#666666",
   mutedLight: "#666666",
-
-  goldBg: "#FCE7DA",
-  goldText: "#C2410C",
-  goldBorder: "#F0BE97",
-
-  taupe: "#6B6B6B",
-  taupeBg: "#EDEDED",
 
   white: "#FFFFFF",
 } as const;
@@ -60,9 +48,9 @@ export const SKILL_AREA_LABELS: Record<SkillAreaKey, string> = {
 };
 
 export const SKILL_AREA_TILE_COLOR: Record<SkillAreaKey, string> = {
-  phonics: colors.sage,
-  sightWords: colors.terracotta,
-  fluency: colors.taupe,
-  vocabulary: colors.sage,
-  comprehension: colors.terracotta,
+  phonics: colors.orange,
+  sightWords: colors.orange,
+  fluency: colors.muted,
+  vocabulary: colors.orange,
+  comprehension: colors.orange,
 };

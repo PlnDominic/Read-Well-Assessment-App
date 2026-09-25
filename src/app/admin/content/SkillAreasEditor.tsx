@@ -29,7 +29,7 @@ export function SkillAreasEditor({ skillAreas }: { skillAreas: SkillArea[] }) {
             />
             <button
               type="submit"
-              className="bg-[var(--color-neutral)] border-none text-[var(--color-sage-dark)] transition-colors hover:bg-[var(--color-neutral-divider)] font-bold text-xs px-3 py-1.5 rounded-full cursor-pointer whitespace-nowrap"
+              className="bg-[var(--color-neutral)] border-none text-[var(--color-orange-dark)] transition-colors hover:bg-[var(--color-neutral-divider)] font-bold text-xs px-3 py-1.5 rounded-full cursor-pointer whitespace-nowrap"
             >
               Save
             </button>
@@ -39,7 +39,7 @@ export function SkillAreasEditor({ skillAreas }: { skillAreas: SkillArea[] }) {
               <ConfirmSubmitButton
                 formAction={deleteSkillArea}
                 confirmMessage={`Delete the "${sa.name}" skill area?`}
-                className="text-[var(--color-terracotta-dark)] text-xs font-bold bg-none border-none cursor-pointer whitespace-nowrap"
+                className="text-[var(--color-orange-dark)] text-xs font-bold bg-none border-none cursor-pointer whitespace-nowrap"
               >
                 Delete
               </ConfirmSubmitButton>
@@ -69,7 +69,7 @@ export function SkillAreasEditor({ skillAreas }: { skillAreas: SkillArea[] }) {
         </label>
         <button
           type="submit"
-          className="bg-[var(--color-sage)] text-white border-none rounded-full font-bold text-sm shadow-[0_6px_16px_rgba(74,107,82,0.25)] transition-transform hover:-translate-y-0.5 px-4.5 py-2 cursor-pointer"
+          className="bg-[var(--color-orange)] text-white border-none rounded-full font-bold text-sm shadow-[0_6px_16px_rgba(74,107,82,0.25)] transition-transform hover:-translate-y-0.5 px-4.5 py-2 cursor-pointer"
         >
           Add skill area
         </button>

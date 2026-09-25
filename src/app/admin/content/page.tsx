@@ -56,7 +56,7 @@ export default async function AdminContentPage({
 
   return (
     <div className="w-full max-w-[920px]">
-      <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-sage-deep)] m-0 mb-1">Content</h1>
+      <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-ink)] m-0 mb-1">Content</h1>
       <p className="text-[var(--color-muted)] text-sm m-0 mb-5">
         Edits here don&apos;t require a code deploy. Saving the assessment creates a new version so past
         sessions keep the content they were assessed against.
@@ -69,7 +69,7 @@ export default async function AdminContentPage({
             href={`/admin/content?grade=${g}`}
             className="px-3.5 py-1.5 rounded-full text-xs font-bold no-underline transition-colors"
             style={{
-              background: g === GRADE_LEVEL ? "var(--color-sage)" : "transparent",
+              background: g === GRADE_LEVEL ? "var(--color-orange)" : "transparent",
               color: g === GRADE_LEVEL ? "white" : "var(--color-muted)",
               boxShadow: g === GRADE_LEVEL ? "0 4px 10px rgba(74,107,82,0.3)" : "none",
             }}
@@ -80,7 +80,7 @@ export default async function AdminContentPage({
       </div>
 
       <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-6">
-        <div className="font-heading font-bold text-sm text-[var(--color-sage-deep)] mb-4.5">Skill areas</div>
+        <div className="font-heading font-bold text-sm text-[var(--color-ink)] mb-4.5">Skill areas</div>
         <SkillAreasEditor
           skillAreas={(skillAreas ?? []).map((sa) => ({
             ...sa,
@@ -91,7 +91,7 @@ export default async function AdminContentPage({
 
       <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-6">
         <div className="flex items-center justify-between mb-4.5">
-          <div className="font-heading font-bold text-sm text-[var(--color-sage-deep)]">
+          <div className="font-heading font-bold text-sm text-[var(--color-ink)]">
             Grade {GRADE_LEVEL} assessment items
           </div>
           {assessment && (
@@ -106,7 +106,7 @@ export default async function AdminContentPage({
       </div>
 
       <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5">
-        <div className="font-heading font-bold text-sm text-[var(--color-sage-deep)] mb-4.5">
+        <div className="font-heading font-bold text-sm text-[var(--color-ink)] mb-4.5">
           Program-aligned recommendations
         </div>
 
@@ -120,7 +120,7 @@ export default async function AdminContentPage({
               className="flex items-start justify-between gap-3 bg-[var(--color-neutral)] rounded-xl px-4.5 py-3.5"
             >
               <div>
-                <div className="font-extrabold text-[var(--color-sage-deep)] text-sm mb-1">
+                <div className="font-extrabold text-[var(--color-ink)] text-sm mb-1">
                   {rule.skill_areas.name}
                 </div>
                 <div className="text-[var(--color-body)] text-sm">{rule.recommendation_text}</div>
@@ -132,7 +132,7 @@ export default async function AdminContentPage({
                 <input type="hidden" name="id" value={rule.id} />
                 <button
                   type="submit"
-                  className="text-[var(--color-terracotta-dark)] text-xs font-bold bg-none border-none cursor-pointer whitespace-nowrap"
+                  className="text-[var(--color-orange-dark)] text-xs font-bold bg-none border-none cursor-pointer whitespace-nowrap"
                 >
                   Delete
                 </button>
@@ -174,7 +174,7 @@ export default async function AdminContentPage({
           />
           <button
             type="submit"
-            className="self-start bg-[var(--color-sage)] text-white border-none rounded-full font-bold text-sm shadow-[0_6px_16px_rgba(74,107,82,0.25)] transition-transform hover:-translate-y-0.5 px-4.5 py-2.25 cursor-pointer"
+            className="self-start bg-[var(--color-orange)] text-white border-none rounded-full font-bold text-sm shadow-[0_6px_16px_rgba(74,107,82,0.25)] transition-transform hover:-translate-y-0.5 px-4.5 py-2.25 cursor-pointer"
           >
             Add rule
           </button>

@@ -4,7 +4,7 @@ import { colors } from "@/lib/theme";
 const styles = StyleSheet.create({
   page: { backgroundColor: colors.white, padding: 40, fontSize: 11, color: colors.ink },
   headerRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 24 },
-  name: { fontSize: 22, fontWeight: 700, color: colors.sageDeep, marginBottom: 4 },
+  name: { fontSize: 22, fontWeight: 700, color: colors.ink, marginBottom: 4 },
   meta: { fontSize: 11, color: colors.muted },
   badge: {
     alignSelf: "flex-start",
@@ -14,21 +14,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 999,
   },
-  sectionTitle: { fontSize: 13, fontWeight: 700, color: colors.sageDeep, marginBottom: 12, marginTop: 20 },
+  sectionTitle: { fontSize: 13, fontWeight: 700, color: colors.ink, marginBottom: 12, marginTop: 20 },
   skillRow: { marginBottom: 12 },
   skillLabelRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
   skillName: { fontWeight: 700, color: colors.inkSoft },
   barTrack: { height: 8, backgroundColor: colors.neutralBorder, borderRadius: 999 },
   barFill: { height: 8, borderRadius: 999 },
   recCard: {
-    backgroundColor: colors.terracottaTint,
+    backgroundColor: colors.orangeTint,
     borderLeftWidth: 3,
-    borderLeftColor: colors.terracotta,
+    borderLeftColor: colors.orange,
     borderRadius: 6,
     padding: 12,
     marginBottom: 10,
   },
-  recSkill: { fontWeight: 700, color: colors.sageDeep, marginBottom: 3, fontSize: 11 },
+  recSkill: { fontWeight: 700, color: colors.ink, marginBottom: 3, fontSize: 11 },
   recText: { color: colors.body, fontSize: 11, lineHeight: 1.4 },
   footer: { position: "absolute", bottom: 30, left: 40, right: 40, fontSize: 9, color: colors.mutedLight },
 });
@@ -60,14 +60,14 @@ export function StudentReportPdf({
             <Text style={styles.meta}>Grade {grade} · Assessed {assessedDate}</Text>
           </View>
           {/* On Track is solid black/white, not orange -- see the matching
-              comment in the web report page for why (sage/terracotta are
-              now the same orange, so this can't distinguish by hue alone). */}
+              comment in the web report page: orange is the only accent
+              color in this palette, so it can't distinguish by hue alone. */}
           <Text
             style={[
               styles.badge,
               {
-                backgroundColor: isOnTrack ? colors.ink : colors.terracottaTint,
-                color: isOnTrack ? colors.white : colors.terracottaDark,
+                backgroundColor: isOnTrack ? colors.ink : colors.orangeTint,
+                color: isOnTrack ? colors.white : colors.orangeDark,
               },
             ]}
           >
@@ -82,7 +82,7 @@ export function StudentReportPdf({
             <View style={styles.skillRow} key={sk.name}>
               <View style={styles.skillLabelRow}>
                 <Text style={styles.skillName}>{sk.name}</Text>
-                <Text style={{ fontWeight: 700, color: flagged ? colors.terracottaDark : colors.ink }}>
+                <Text style={{ fontWeight: 700, color: flagged ? colors.orangeDark : colors.ink }}>
                   {sk.score}%
                 </Text>
               </View>
@@ -90,7 +90,7 @@ export function StudentReportPdf({
                 <View
                   style={[
                     styles.barFill,
-                    { width: `${sk.score}%`, backgroundColor: flagged ? colors.terracotta : colors.ink },
+                    { width: `${sk.score}%`, backgroundColor: flagged ? colors.orange : colors.ink },
                   ]}
                 />
               </View>

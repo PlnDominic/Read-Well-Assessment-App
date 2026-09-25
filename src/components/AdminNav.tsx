@@ -26,7 +26,7 @@ export function AdminNav() {
             href={tab.href}
             className="px-4 py-2 rounded-full text-sm font-bold no-underline transition-colors"
             style={{
-              background: active ? "var(--color-sage)" : "transparent",
+              background: active ? "var(--color-orange)" : "transparent",
               color: active ? "white" : "var(--color-muted)",
               boxShadow: active ? "0 4px 10px rgba(74,107,82,0.3)" : "none",
             }}

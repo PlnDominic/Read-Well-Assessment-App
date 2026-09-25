@@ -14,13 +14,13 @@ const ROLE_COPY: Record<Exclude<Mode, "select">, { title: string; subtitle: stri
     title: "Teacher Sign In",
     subtitle: "Start assessments and view your class's reports",
     avatarSrc: "/avatars/teacher.png",
-    tint: "var(--color-terracotta-tint)",
+    tint: "var(--color-orange-tint)",
   },
   administrator: {
     title: "Administrator Sign In",
     subtitle: "View the school-wide report",
     avatarSrc: "/avatars/admin.png",
-    tint: "var(--color-taupe-bg)",
+    tint: "var(--color-neutral)",
   },
 };
 
@@ -45,22 +45,22 @@ export function LoginScreen() {
       <div className="relative flex justify-center mb-4">
         <div
           className="absolute inset-0 m-auto w-[240px] h-[240px] rounded-full blur-3xl opacity-70 pointer-events-none"
-          style={{ background: "var(--color-sage-tint)" }}
+          style={{ background: "var(--color-orange-tint)" }}
           aria-hidden
         />
         <SunnyAvatar size={176} />
       </div>
-      <h1 className="font-heading font-bold text-5xl tracking-tight text-[var(--color-sage-deep)] m-0 mb-3">
+      <h1 className="font-heading font-bold text-5xl tracking-tight text-[var(--color-ink)] m-0 mb-3">
         Read Well
       </h1>
-      <span className="inline-block bg-[var(--color-sage-tint)] text-[var(--color-sage-dark)] text-sm font-bold px-4 py-1.5 rounded-full mb-9">
+      <span className="inline-block bg-[var(--color-orange-tint)] text-[var(--color-orange-dark)] text-sm font-bold px-4 py-1.5 rounded-full mb-9">
         Grade 1 Reading Assessment
       </span>
 
       {offlineHome && (
         <a
           href={offlineHome}
-          className="block mb-6 bg-[var(--color-gold-bg)] border border-[var(--color-gold-border)] text-[var(--color-gold-text)] text-sm font-bold rounded-xl px-4 py-3 no-underline"
+          className="block mb-6 bg-[var(--color-orange-tint)] border border-[var(--color-orange-tint-border)] text-[var(--color-orange-dark)] text-sm font-bold rounded-xl px-4 py-3 no-underline"
         >
           You&apos;re offline. Continue to your saved dashboard &rarr;
         </a>
@@ -69,21 +69,21 @@ export function LoginScreen() {
       <div className="flex flex-col gap-4">
         <RoleTile
           avatarSrc="/avatars/student.png"
-          tint="var(--color-sage-tint)"
+          tint="var(--color-orange-tint)"
           title="I'm a Student"
           subtitle="Take my reading assessment"
           onClick={() => router.push("/student/join")}
         />
         <RoleTile
           avatarSrc="/avatars/teacher.png"
-          tint="var(--color-terracotta-tint)"
+          tint="var(--color-orange-tint)"
           title="I'm a Teacher"
           subtitle="Start assessments & view reports"
           onClick={() => setMode("teacher")}
         />
         <RoleTile
           avatarSrc="/avatars/admin.png"
-          tint="var(--color-taupe-bg)"
+          tint="var(--color-neutral)"
           title="I'm an Administrator"
           subtitle="View the school-wide report"
           onClick={() => setMode("administrator")}
@@ -122,11 +122,11 @@ function RoleTile({
         className="w-32 h-32 rounded-full object-cover flex-shrink-0 shadow-[0_8px_20px_rgba(0,0,0,0.18)] ring-4 ring-white"
       />
       <div className="flex-1 min-w-0">
-        <div className="font-extrabold text-[var(--color-sage-deep)] text-xl">{title}</div>
+        <div className="font-extrabold text-[var(--color-ink)] text-xl">{title}</div>
         <div className="text-[var(--color-muted)] text-sm mt-0.5">{subtitle}</div>
       </div>
       <span className="flex-shrink-0 w-8 h-8 rounded-full bg-[var(--color-surface)] flex items-center justify-center shadow-[0_2px_6px_rgba(0,0,0,0.1)] transition-transform group-hover:translate-x-1">
-        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" className="text-[var(--color-sage-deep)]">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" className="text-[var(--color-ink)]">
           <path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </span>
@@ -176,12 +176,12 @@ function StaffLoginForm({ mode, onBack }: { mode: Exclude<Mode, "select">; onBac
 
       <button
         onClick={onBack}
-        className="bg-none border-none text-[var(--color-sage)] font-bold text-sm cursor-pointer p-0 mb-5"
+        className="bg-none border-none text-[var(--color-orange)] font-bold text-sm cursor-pointer p-0 mb-5"
       >
         &larr; Back
       </button>
       <div className="bg-[var(--color-surface)] rounded-[28px] p-9 shadow-[0_10px_32px_rgba(0,0,0,0.08)] text-left">
-        <h1 className="font-heading font-bold text-2xl text-[var(--color-sage-deep)] m-0 mb-1.5">{copy.title}</h1>
+        <h1 className="font-heading font-bold text-2xl text-[var(--color-ink)] m-0 mb-1.5">{copy.title}</h1>
         <p className="text-[var(--color-body)] text-sm m-0 mb-7">{copy.subtitle}</p>
 
         <form action={formAction} className="flex flex-col gap-4">
@@ -193,7 +193,7 @@ function StaffLoginForm({ mode, onBack }: { mode: Exclude<Mode, "select">; onBac
               name="email"
               required
               autoComplete="email"
-              className="bg-[var(--color-neutral)] border-2 border-transparent rounded-2xl px-4 py-3.5 text-base focus:outline-none focus:border-[var(--color-sage)] focus:bg-[var(--color-surface)] transition-colors"
+              className="bg-[var(--color-neutral)] border-2 border-transparent rounded-2xl px-4 py-3.5 text-base focus:outline-none focus:border-[var(--color-orange)] focus:bg-[var(--color-surface)] transition-colors"
             />
           </label>
           <label className="flex flex-col gap-1.5 text-left">
@@ -203,23 +203,23 @@ function StaffLoginForm({ mode, onBack }: { mode: Exclude<Mode, "select">; onBac
               name="password"
               required
               autoComplete="current-password"
-              className="bg-[var(--color-neutral)] border-2 border-transparent rounded-2xl px-4 py-3.5 text-base focus:outline-none focus:border-[var(--color-sage)] focus:bg-[var(--color-surface)] transition-colors"
+              className="bg-[var(--color-neutral)] border-2 border-transparent rounded-2xl px-4 py-3.5 text-base focus:outline-none focus:border-[var(--color-orange)] focus:bg-[var(--color-surface)] transition-colors"
             />
           </label>
 
-          {state.error && <p className="text-[var(--color-terracotta-dark)] text-sm m-0">{state.error}</p>}
+          {state.error && <p className="text-[var(--color-orange-dark)] text-sm m-0">{state.error}</p>}
 
           <button
             type="submit"
             disabled={isPending}
-            className="mt-2 bg-[var(--color-sage)] text-white border-none rounded-full font-heading font-bold text-lg py-4 cursor-pointer shadow-[0_10px_24px_rgba(74,107,82,0.3)] transition-transform hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0"
+            className="mt-2 bg-[var(--color-orange)] text-white border-none rounded-full font-heading font-bold text-lg py-4 cursor-pointer shadow-[0_10px_24px_rgba(74,107,82,0.3)] transition-transform hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0"
           >
             {isPending ? "Signing in…" : "Sign In"}
           </button>
         </form>
         <Link
           href="/login/forgot"
-          className="block text-center mt-4 text-[var(--color-sage)] font-bold text-sm no-underline hover:underline"
+          className="block text-center mt-4 text-[var(--color-orange)] font-bold text-sm no-underline hover:underline"
         >
           Forgot your password?
         </Link>

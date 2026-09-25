@@ -22,12 +22,12 @@ export default async function AdminCyclesPage() {
 
   return (
     <div className="w-full max-w-[920px]">
-      <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-sage-deep)] m-0 mb-6">
+      <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-ink)] m-0 mb-6">
         Assessment Cycles
       </h1>
 
       <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-6">
-        <div className="font-heading font-bold text-sm text-[var(--color-sage-deep)] mb-4">
+        <div className="font-heading font-bold text-sm text-[var(--color-ink)] mb-4">
           Start a new cycle
         </div>
         <p className="text-[var(--color-muted)] text-sm mb-4 mt-0">
@@ -56,7 +56,7 @@ export default async function AdminCyclesPage() {
           </label>
           <button
             type="submit"
-            className="bg-[var(--color-sage)] text-white border-none rounded-full font-bold text-sm shadow-[0_6px_16px_rgba(74,107,82,0.25)] transition-transform hover:-translate-y-0.5 px-5 py-2.75 cursor-pointer"
+            className="bg-[var(--color-orange)] text-white border-none rounded-full font-bold text-sm shadow-[0_6px_16px_rgba(74,107,82,0.25)] transition-transform hover:-translate-y-0.5 px-5 py-2.75 cursor-pointer"
           >
             Start cycle
           </button>
@@ -73,11 +73,11 @@ export default async function AdminCyclesPage() {
             className="px-6 py-4 border-b border-[var(--color-neutral-divider)] last:border-b-0 flex items-center justify-between gap-3"
           >
             <div>
-              <div className="font-extrabold text-[var(--color-sage-deep)] text-base">{c.name}</div>
+              <div className="font-extrabold text-[var(--color-ink)] text-base">{c.name}</div>
               <div className="text-[13px] text-[var(--color-muted-light)]">Starts {c.starts_at}</div>
             </div>
             {c.is_current && (
-              <span className="bg-[var(--color-sage-tint)] text-[var(--color-sage-dark)] text-xs font-bold px-3 py-1.5 rounded-full">
+              <span className="bg-[var(--color-orange-tint)] text-[var(--color-orange-dark)] text-xs font-bold px-3 py-1.5 rounded-full">
                 Current
               </span>
             )}

@@ -18,7 +18,7 @@ export default function AppError({ reset }: { error: Error & { digest?: string }
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)] flex flex-col items-center px-4 pt-[14vh] text-center">
-      <h1 className="font-heading font-bold text-[26px] text-[var(--color-sage-deep)] m-0 mb-2.5">
+      <h1 className="font-heading font-bold text-[26px] text-[var(--color-ink)] m-0 mb-2.5">
         {offline ? "You're offline" : "Something went wrong"}
       </h1>
       <p className="text-[var(--color-body)] text-base leading-relaxed m-0 mb-7 max-w-[440px]">
@@ -28,7 +28,7 @@ export default function AppError({ reset }: { error: Error & { digest?: string }
       </p>
       <button
         onClick={() => reset()}
-        className="bg-[var(--color-sage)] text-white border-none rounded-full font-bold text-base px-8 py-3 cursor-pointer"
+        className="bg-[var(--color-orange)] text-white border-none rounded-full font-bold text-base px-8 py-3 cursor-pointer"
       >
         Back to the page
       </button>

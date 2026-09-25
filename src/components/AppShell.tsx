@@ -21,10 +21,10 @@ export function AppShell({
       {showTopBar && (
         <div className="w-full max-w-[1100px] flex justify-between items-center flex-wrap gap-2.5 bg-[var(--color-surface)] rounded-[20px] shadow-[0_4px_16px_rgba(0,0,0,0.05)] px-5 py-3.5 mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[var(--color-sage)] flex items-center justify-center shadow-[0_4px_10px_rgba(74,107,82,0.3)]">
+            <div className="w-10 h-10 rounded-full bg-[var(--color-orange)] flex items-center justify-center shadow-[0_4px_10px_rgba(74,107,82,0.3)]">
               <ReadWellMark size={22} />
             </div>
-            <span className="font-heading font-bold text-xl tracking-tight text-[var(--color-sage-deep)]">
+            <span className="font-heading font-bold text-xl tracking-tight text-[var(--color-ink)]">
               Read Well
             </span>
           </div>

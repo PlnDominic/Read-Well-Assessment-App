@@ -4,11 +4,11 @@ export function ReadWellMark({ size = 20 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 20 20">
       <circle cx="10" cy="10" r="9" fill={colors.neutral} />
-      <circle cx="7" cy="9" r="1.6" fill={colors.sageDark} />
-      <circle cx="13" cy="9" r="1.6" fill={colors.sageDark} />
+      <circle cx="7" cy="9" r="1.6" fill={colors.orangeDark} />
+      <circle cx="13" cy="9" r="1.6" fill={colors.orangeDark} />
       <path
         d="M6 13 Q10 16 14 13"
-        stroke={colors.sageDark}
+        stroke={colors.orangeDark}
         strokeWidth="1.4"
         fill="none"
         strokeLinecap="round"
@@ -25,15 +25,15 @@ export function SunnyMascot({ size = 56, mood = "smile" }: { size?: number; mood
       : "M25 33 Q28 37 31 33";
   return (
     <svg width={size} height={size} viewBox="0 0 56 56">
-      <ellipse cx="18" cy="30" rx="7" ry="10" fill={colors.sageMid} />
-      <ellipse cx="38" cy="30" rx="7" ry="10" fill={colors.sageMid} />
+      <ellipse cx="18" cy="30" rx="7" ry="10" fill={colors.orangeMid} />
+      <ellipse cx="38" cy="30" rx="7" ry="10" fill={colors.orangeMid} />
       <circle cx="28" cy="26" r="17" fill={colors.neutral} />
-      <circle cx="21" cy="24" r="4.2" fill={colors.sageDeep} />
-      <circle cx="35" cy="24" r="4.2" fill={colors.sageDeep} />
+      <circle cx="21" cy="24" r="4.2" fill={colors.ink} />
+      <circle cx="35" cy="24" r="4.2" fill={colors.ink} />
       <circle cx="22" cy="23" r="1.3" fill={colors.neutral} />
       <circle cx="36" cy="23" r="1.3" fill={colors.neutral} />
-      <path d={mouth} stroke={colors.sageDeep} strokeWidth="2" fill="none" strokeLinecap="round" />
-      <polygon points="25,29 31,29 28,33" fill={colors.terracotta} />
+      <path d={mouth} stroke={colors.ink} strokeWidth="2" fill="none" strokeLinecap="round" />
+      <polygon points="25,29 31,29 28,33" fill={colors.orange} />
     </svg>
   );
 }
@@ -63,11 +63,11 @@ export function MicIcon({ size = 46 }: { size?: number }) {
   );
 }
 
-// "var(--color-sage-dark)" (not colors.sageDark) so these track the light/
+// "var(--color-orange-dark)" (not colors.orangeDark) so these track the light/
 // dark theme swap in globals.css -- fine for icons rendered in the browser,
 // but see the comment on `colors` in lib/theme.ts for why PDF rendering
 // can't do the same and has to keep using literal hex.
-export function BellIcon({ size = 20, color = "var(--color-sage-dark)" }: { size?: number; color?: string }) {
+export function BellIcon({ size = 20, color = "var(--color-orange-dark)" }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <path
@@ -81,7 +81,7 @@ export function BellIcon({ size = 20, color = "var(--color-sage-dark)" }: { size
   );
 }
 
-export function SunIcon({ size = 20, color = "var(--color-sage-dark)" }: { size?: number; color?: string }) {
+export function SunIcon({ size = 20, color = "var(--color-orange-dark)" }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <circle cx="12" cy="12" r="4.5" stroke={color} strokeWidth="1.8" />
@@ -95,7 +95,7 @@ export function SunIcon({ size = 20, color = "var(--color-sage-dark)" }: { size?
   );
 }
 
-export function MoonIcon({ size = 20, color = "var(--color-sage-dark)" }: { size?: number; color?: string }) {
+export function MoonIcon({ size = 20, color = "var(--color-orange-dark)" }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <path

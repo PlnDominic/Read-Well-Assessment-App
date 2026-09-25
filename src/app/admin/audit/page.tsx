@@ -45,7 +45,7 @@ export default async function AdminAuditPage() {
 
   return (
     <div className="w-full max-w-[920px]">
-      <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-sage-deep)] m-0 mb-1">Audit Log</h1>
+      <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-ink)] m-0 mb-1">Audit Log</h1>
       <p className="text-[var(--color-muted)] text-sm m-0 mb-6">
         Who viewed or exported a report, most recent first (last 200 events).
       </p>
@@ -60,7 +60,7 @@ export default async function AdminAuditPage() {
             className="px-6 py-3.5 border-b border-[var(--color-neutral-divider)] last:border-b-0 flex items-center justify-between gap-3 flex-wrap"
           >
             <div className="text-sm text-[var(--color-ink-soft)]">
-              <span className="font-extrabold text-[var(--color-sage-deep)]">
+              <span className="font-extrabold text-[var(--color-ink)]">
                 {(log.actor_id && nameByActorId.get(log.actor_id)) ?? "Unknown"}
               </span>{" "}
               {ACTION_LABELS[log.action] ?? log.action}{" "}

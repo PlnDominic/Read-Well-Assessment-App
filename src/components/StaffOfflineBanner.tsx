@@ -29,7 +29,7 @@ export function StaffOfflineBanner() {
   return (
     <div
       role="status"
-      className="w-full max-w-[1100px] mb-4 bg-[var(--color-gold-bg)] border border-[var(--color-gold-border)] text-[var(--color-gold-text)] text-sm font-bold rounded-xl px-4 py-2.5 text-center"
+      className="w-full max-w-[1100px] mb-4 bg-[var(--color-orange-tint)] border border-[var(--color-orange-tint-border)] text-[var(--color-orange-dark)] text-sm font-bold rounded-xl px-4 py-2.5 text-center"
     >
       You&apos;re offline. You&apos;re seeing this page as it was when last loaded on this device. Changes
       need an internet connection.

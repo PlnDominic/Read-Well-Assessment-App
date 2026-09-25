@@ -146,14 +146,14 @@ export default async function StudentReportPage({
   return (
     <AppShell avatarSrc={profile ? ROLE_AVATAR[profile.role] : undefined}>
       <div className="w-full max-w-[760px]">
-        <Link href="/teacher" className="text-[var(--color-sage)] font-bold text-sm no-underline inline-block mb-4">
+        <Link href="/teacher" className="text-[var(--color-orange)] font-bold text-sm no-underline inline-block mb-4">
           &larr; Back to class
         </Link>
 
         <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-5">
           <div className="flex justify-between items-start flex-wrap gap-4 mb-5.5">
             <div>
-              <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-sage-deep)] m-0 mb-1">
+              <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-ink)] m-0 mb-1">
                 {student.name}
               </h1>
               <p className="text-[var(--color-muted)] text-sm m-0">
@@ -161,15 +161,15 @@ export default async function StudentReportPage({
               </p>
             </div>
             <div className="flex items-center gap-2.5">
-              {/* On Track is solid black/white rather than orange -- orange
-                  is reserved for "needs attention" states, and sage/
-                  terracotta are now the same orange, so this pairing had to
-                  stop relying on hue alone to read as good vs. needs-support. */}
+              {/* On Track is solid black/white rather than orange: orange is
+                  the only accent color left in this palette, reserved for
+                  "needs attention" states, so this pairing can't rely on a
+                  second hue to read as good vs. needs-support. */}
               <span
                 className="font-extrabold text-sm px-4 py-2 rounded-full"
                 style={{
-                  background: isOnTrack ? "var(--color-ink)" : "var(--color-terracotta-tint)",
-                  color: isOnTrack ? "var(--color-surface)" : "var(--color-terracotta-dark)",
+                  background: isOnTrack ? "var(--color-ink)" : "var(--color-orange-tint)",
+                  color: isOnTrack ? "var(--color-surface)" : "var(--color-orange-dark)",
                 }}
               >
                 {overallLabel}
@@ -177,7 +177,7 @@ export default async function StudentReportPage({
               {report?.status === "ready" ? (
                 <a
                   href={`/api/reports/student/${sessionId}`}
-                  className="bg-[var(--color-neutral)] border-none text-[var(--color-sage-dark)] font-bold text-sm px-4 py-2.25 rounded-full no-underline transition-colors hover:bg-[var(--color-neutral-divider)]"
+                  className="bg-[var(--color-neutral)] border-none text-[var(--color-orange-dark)] font-bold text-sm px-4 py-2.25 rounded-full no-underline transition-colors hover:bg-[var(--color-neutral-divider)]"
                 >
                   Export PDF
                 </a>
@@ -186,7 +186,7 @@ export default async function StudentReportPage({
                   <input type="hidden" name="sessionId" value={sessionId} />
                   <button
                     type="submit"
-                    className="bg-[var(--color-terracotta-tint)] border-none text-[var(--color-terracotta-dark)] font-bold text-sm px-4 py-2.25 rounded-full cursor-pointer"
+                    className="bg-[var(--color-orange-tint)] border-none text-[var(--color-orange-dark)] font-bold text-sm px-4 py-2.25 rounded-full cursor-pointer"
                   >
                     Retry PDF
                   </button>
@@ -199,7 +199,7 @@ export default async function StudentReportPage({
             </div>
           </div>
 
-          <div className="font-heading font-bold text-sm text-[var(--color-sage-deep)] mb-3.5">
+          <div className="font-heading font-bold text-sm text-[var(--color-ink)] mb-3.5">
             Skill Area Breakdown
           </div>
           <div className="flex flex-col gap-3.5">
@@ -211,7 +211,7 @@ export default async function StudentReportPage({
                     <span className="font-bold text-[var(--color-ink-soft)]">{sk.skill_areas.name}</span>
                     <span
                       className="font-bold"
-                      style={{ color: flagged ? "var(--color-terracotta-dark)" : "var(--color-ink)" }}
+                      style={{ color: flagged ? "var(--color-orange-dark)" : "var(--color-ink)" }}
                     >
                       {sk.score}%
                     </span>
@@ -221,7 +221,7 @@ export default async function StudentReportPage({
                       className="h-full rounded-full"
                       style={{
                         width: `${sk.score}%`,
-                        background: flagged ? "var(--color-terracotta)" : "var(--color-ink)",
+                        background: flagged ? "var(--color-orange)" : "var(--color-ink)",
                       }}
                     />
                   </div>
@@ -233,7 +233,7 @@ export default async function StudentReportPage({
 
         {history.length > 1 && (
           <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-5">
-            <div className="font-heading font-bold text-sm text-[var(--color-sage-deep)] mb-3.5">
+            <div className="font-heading font-bold text-sm text-[var(--color-ink)] mb-3.5">
               Progress Over Time
             </div>
             <div className="flex flex-col gap-3.5">
@@ -246,14 +246,14 @@ export default async function StudentReportPage({
                       <span className="font-bold text-[var(--color-ink-soft)]">
                         {h.cycleName} · {h.completedAt}
                         {isCurrent && (
-                          <span className="ml-2 text-[11px] font-extrabold text-[var(--color-sage-dark)] bg-[var(--color-sage-tint)] px-2 py-0.5 rounded-full align-middle">
+                          <span className="ml-2 text-[11px] font-extrabold text-[var(--color-orange-dark)] bg-[var(--color-orange-tint)] px-2 py-0.5 rounded-full align-middle">
                             Viewing
                           </span>
                         )}
                       </span>
                       <span
                         className="font-bold"
-                        style={{ color: flagged ? "var(--color-terracotta-dark)" : "var(--color-ink)" }}
+                        style={{ color: flagged ? "var(--color-orange-dark)" : "var(--color-ink)" }}
                       >
                         {h.avgScore}% · {h.label}
                       </span>
@@ -263,7 +263,7 @@ export default async function StudentReportPage({
                         className="h-full rounded-full"
                         style={{
                           width: `${h.avgScore}%`,
-                          background: flagged ? "var(--color-terracotta)" : "var(--color-ink)",
+                          background: flagged ? "var(--color-orange)" : "var(--color-ink)",
                         }}
                       />
                     </div>
@@ -275,7 +275,7 @@ export default async function StudentReportPage({
         )}
 
         <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-5">
-          <div className="font-heading font-bold text-sm text-[var(--color-sage-deep)] mb-4">
+          <div className="font-heading font-bold text-sm text-[var(--color-ink)] mb-4">
             Question-by-Question
           </div>
           <div className="flex flex-col gap-3">
@@ -290,7 +290,7 @@ export default async function StudentReportPage({
                   <span
                     className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold mt-0.5"
                     style={{
-                      background: isCorrect ? "var(--color-ink)" : "var(--color-terracotta)",
+                      background: isCorrect ? "var(--color-ink)" : "var(--color-orange)",
                       color: isCorrect ? "var(--color-surface)" : "white",
                     }}
                   >
@@ -312,7 +312,7 @@ export default async function StudentReportPage({
         </div>
 
         <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5">
-          <div className="font-heading font-bold text-sm text-[var(--color-sage-deep)] mb-4">
+          <div className="font-heading font-bold text-sm text-[var(--color-ink)] mb-4">
             Program-Aligned Recommendations
           </div>
           <div className="flex flex-col gap-3.5">
@@ -324,11 +324,11 @@ export default async function StudentReportPage({
               (recRows ?? []).map((rec, i) => (
                 <div
                   key={i}
-                  className="flex gap-3.5 bg-[var(--color-terracotta-tint)] border-l-4 border-[var(--color-terracotta)] rounded-[10px] px-4.5 py-3.5"
+                  className="flex gap-3.5 bg-[var(--color-orange-tint)] border-l-4 border-[var(--color-orange)] rounded-[10px] px-4.5 py-3.5"
                 >
                   <div className="flex-1">
                     {/* @ts-expect-error -- joined relation shape isn't modeled in database.types.ts */}
-                    <div className="font-extrabold text-[var(--color-sage-deep)] text-sm mb-1">{rec.skill_areas?.name}</div>
+                    <div className="font-extrabold text-[var(--color-ink)] text-sm mb-1">{rec.skill_areas?.name}</div>
                     <div className="text-[var(--color-body)] text-sm leading-relaxed">{rec.recommendation_text}</div>
                   </div>
                 </div>

@@ -25,20 +25,20 @@ const STATUS_STYLE: Record<
   },
   in_progress: {
     label: "In Progress",
-    bg: "var(--color-gold-bg)",
-    color: "var(--color-gold-text)",
+    bg: "var(--color-orange-tint)",
+    color: "var(--color-orange-dark)",
     actionBg: "var(--color-surface)",
-    actionColor: "var(--color-gold-text)",
-    actionBorder: "var(--color-gold-border)",
+    actionColor: "var(--color-orange-dark)",
+    actionBorder: "var(--color-orange-tint-border)",
     actionLabel: "Resume",
   },
   not_started: {
     label: "Not Started",
     bg: "var(--color-neutral)",
     color: "var(--color-muted)",
-    actionBg: "var(--color-sage)",
+    actionBg: "var(--color-orange)",
     actionColor: "white",
-    actionBorder: "var(--color-sage)",
+    actionBorder: "var(--color-orange)",
     actionLabel: "Start Assessment",
   },
 };
@@ -85,7 +85,7 @@ export default async function TeacherRosterPage() {
   return (
     <AppShell avatarSrc={ROLE_AVATAR[profile.role]}>
       <div className="w-full max-w-[840px]">
-        <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-sage-deep)] m-0 mb-1">
+        <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-ink)] m-0 mb-1">
           {profile.role === "reading_specialist" ? "Assigned Students" : `${profile.name}'s Class`}
         </h1>
         <p className="text-[var(--color-muted)] text-[15px] m-0 mb-6">
@@ -117,11 +117,11 @@ export default async function TeacherRosterPage() {
                 className="flex items-center justify-between gap-3.5 px-6 py-4.5 border-b border-[var(--color-neutral-divider)] flex-wrap last:border-b-0"
               >
                 <div className="flex items-center gap-3.5">
-                  <div className="w-10.5 h-10.5 rounded-full bg-[var(--color-sage-tint)] flex items-center justify-center font-heading font-bold text-[var(--color-sage-dark)]">
+                  <div className="w-10.5 h-10.5 rounded-full bg-[var(--color-orange-tint)] flex items-center justify-center font-heading font-bold text-[var(--color-orange-dark)]">
                     {initials}
                   </div>
                   <div>
-                    <div className="font-extrabold text-[var(--color-sage-deep)] text-base">{s.name}</div>
+                    <div className="font-extrabold text-[var(--color-ink)] text-base">{s.name}</div>
                     <div className="text-[13px] text-[var(--color-muted-light)]">Grade {s.grade}</div>
                   </div>
                 </div>
@@ -156,7 +156,7 @@ export default async function TeacherRosterPage() {
                       <form action={startOrResumeAssessment.bind(null, s.id)}>
                         <button
                           type="submit"
-                          className="font-bold text-sm px-4.5 py-2.25 rounded-full cursor-pointer bg-[var(--color-neutral)] border-none text-[var(--color-sage-dark)] transition-colors hover:bg-[var(--color-neutral-divider)]"
+                          className="font-bold text-sm px-4.5 py-2.25 rounded-full cursor-pointer bg-[var(--color-neutral)] border-none text-[var(--color-orange-dark)] transition-colors hover:bg-[var(--color-neutral-divider)]"
                         >
                           Start New Assessment
                         </button>
@@ -182,7 +182,7 @@ export default async function TeacherRosterPage() {
                           <input type="hidden" name="sessionId" value={latest.id} />
                           <ConfirmSubmitButton
                             confirmMessage={`Cancel ${s.name}'s in-progress session? They'll need a new code to start over.`}
-                            className="text-[var(--color-terracotta-dark)] text-xs font-bold bg-none border-none cursor-pointer"
+                            className="text-[var(--color-orange-dark)] text-xs font-bold bg-none border-none cursor-pointer"
                           >
                             Cancel
                           </ConfirmSubmitButton>

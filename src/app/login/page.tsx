@@ -11,7 +11,7 @@ export default async function LoginPage({
   return (
     <AppShell showTopBar={false}>
       {deactivated && (
-        <p className="w-full max-w-[460px] mx-auto -mb-4 mt-[4vh] text-center text-[var(--color-terracotta-dark)] text-sm">
+        <p className="w-full max-w-[460px] mx-auto -mb-4 mt-[4vh] text-center text-[var(--color-orange-dark)] text-sm">
           That account has been deactivated. Contact your school administrator.
         </p>
       )}

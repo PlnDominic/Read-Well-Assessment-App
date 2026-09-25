@@ -31,12 +31,12 @@ export default async function NotificationsPage() {
     <AppShell avatarSrc={profile ? ROLE_AVATAR[profile.role] : undefined}>
       <div className="w-full max-w-[760px]">
         <div className="flex justify-between items-center flex-wrap gap-3 mb-6">
-          <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-sage-deep)] m-0">Notifications</h1>
+          <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-ink)] m-0">Notifications</h1>
           {unreadCount > 0 && (
             <form action={markAllNotificationsRead}>
               <button
                 type="submit"
-                className="bg-[var(--color-neutral)] border-none text-[var(--color-sage-dark)] transition-colors hover:bg-[var(--color-neutral-divider)] font-bold text-sm px-4 py-2 rounded-full cursor-pointer"
+                className="bg-[var(--color-neutral)] border-none text-[var(--color-orange-dark)] transition-colors hover:bg-[var(--color-neutral-divider)] font-bold text-sm px-4 py-2 rounded-full cursor-pointer"
               >
                 Mark all as read
               </button>
@@ -52,7 +52,7 @@ export default async function NotificationsPage() {
             <div
               key={n.id}
               className="px-6 py-4 border-b border-[var(--color-neutral-divider)] last:border-b-0 flex items-center justify-between gap-3 flex-wrap"
-              style={{ background: n.read ? "transparent" : "var(--color-sage-tint)" }}
+              style={{ background: n.read ? "transparent" : "var(--color-orange-tint)" }}
             >
               <div className="text-sm">
                 <span className="font-bold text-[var(--color-muted)] text-xs uppercase mr-2">
@@ -74,7 +74,7 @@ export default async function NotificationsPage() {
                   <input type="hidden" name="id" value={n.id} />
                   <button
                     type="submit"
-                    className="text-[var(--color-sage-dark)] text-xs font-bold bg-none border-none cursor-pointer whitespace-nowrap"
+                    className="text-[var(--color-orange-dark)] text-xs font-bold bg-none border-none cursor-pointer whitespace-nowrap"
                   >
                     Mark as read
                   </button>

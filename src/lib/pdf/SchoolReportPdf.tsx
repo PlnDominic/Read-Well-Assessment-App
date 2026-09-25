@@ -4,20 +4,20 @@ import { colors } from "@/lib/theme";
 const styles = StyleSheet.create({
   page: { backgroundColor: colors.white, padding: 40, fontSize: 11, color: colors.ink },
   headerRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 20 },
-  name: { fontSize: 22, fontWeight: 700, color: colors.sageDeep, marginBottom: 4 },
+  name: { fontSize: 22, fontWeight: 700, color: colors.ink, marginBottom: 4 },
   meta: { fontSize: 11, color: colors.muted },
   statsRow: { flexDirection: "row", gap: 12, marginBottom: 24 },
   statCard: { flex: 1, backgroundColor: colors.neutral, borderRadius: 10, padding: 14 },
   statLabel: { fontSize: 9, color: colors.mutedLight, fontWeight: 700, marginBottom: 6 },
-  statValue: { fontSize: 20, fontWeight: 700, color: colors.sageDeep },
-  sectionTitle: { fontSize: 13, fontWeight: 700, color: colors.sageDeep, marginBottom: 12 },
+  statValue: { fontSize: 20, fontWeight: 700, color: colors.ink },
+  sectionTitle: { fontSize: 13, fontWeight: 700, color: colors.ink, marginBottom: 12 },
   skillRow: { marginBottom: 12 },
   skillLabelRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
   skillName: { fontWeight: 700, color: colors.inkSoft },
   barTrack: { height: 8, backgroundColor: colors.neutralBorder, borderRadius: 999 },
-  barFill: { height: 8, borderRadius: 999, backgroundColor: colors.terracotta },
+  barFill: { height: 8, borderRadius: 999, backgroundColor: colors.orange },
   note: {
-    backgroundColor: colors.sageTint,
+    backgroundColor: colors.orangeTint,
     borderRadius: 8,
     padding: 14,
     marginTop: 22,
@@ -72,7 +72,7 @@ export function SchoolReportPdf({
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>AVG. OVERALL SCORE</Text>
-            <Text style={[styles.statValue, { color: colors.sage }]}>{avgOverallScore}%</Text>
+            <Text style={[styles.statValue, { color: colors.orange }]}>{avgOverallScore}%</Text>
           </View>
         </View>
 
@@ -81,7 +81,7 @@ export function SchoolReportPdf({
           <View style={styles.skillRow} key={sk.name}>
             <View style={styles.skillLabelRow}>
               <Text style={styles.skillName}>{sk.name}</Text>
-              <Text style={{ fontWeight: 700, color: colors.goldText }}>{sk.pctFlagged}% flagged</Text>
+              <Text style={{ fontWeight: 700, color: colors.orangeDark }}>{sk.pctFlagged}% flagged</Text>
             </View>
             <View style={styles.barTrack}>
               <View style={[styles.barFill, { width: `${sk.pctFlagged}%` }]} />

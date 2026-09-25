@@ -1,28 +1,23 @@
 @import "tailwindcss";
 
-/* Brand palette is orange/black/white (see the design note at the top of
-   lib/theme.ts): the "sage"/"terracotta"/"gold" token names are kept as-is
-   to avoid a sweeping rename across every page, but every one of them now
-   resolves to a shade of orange, black, or neutral gray -- none are green,
-   red/brown, or gold anymore. "sage-deep" (headings) and "ink"/"body"/
-   "muted" (text) are near-black/gray rather than orange, so orange stays
-   reserved for accents/CTAs/status rather than bleeding into body copy. */
+/* Brand palette is orange/black/white. Sage/terracotta/gold used to be
+   three separate hues; the recolor made them all the same orange, and this
+   consolidates what were four color families (sage, terracotta, gold, plus
+   sage-deep as a heading color distinct from body text) down to the two
+   that are actually still distinct: --color-orange* for accents/CTAs/
+   status, and --color-ink for all heading/body-adjacent black text
+   (sage-deep and ink had converged to the same value, so it's one token
+   now). --color-body/--color-muted are the lighter grays for de-emphasized
+   text. lib/theme.ts mirrors this exactly for PDF/inline-SVG rendering,
+   which can't read CSS custom properties -- keep the two in sync. */
 :root {
-  --color-sage: #ea580c;
-  /* ~4.9:1 against white -- see the muted/gold comments below for the same
+  --color-orange: #ea580c;
+  /* ~4.9:1 against white -- see the muted/body comments below for the same
      "just past AA" contrast-tuning approach applied throughout this file. */
-  --color-sage-dark: #c2410c;
-  --color-sage-deep: #171717;
-  --color-sage-mid: #d9540b;
-  --color-sage-tint: #fce7da;
-  --color-sage-tint-border: #f0be97;
-
-  /* Same orange as --color-sage* -- terracotta was a distinct hue before
-     this palette change, now it's a synonym so every existing call site
-     (error text, Cancel/Retry actions) recolors without being touched. */
-  --color-terracotta: #ea580c;
-  --color-terracotta-dark: #c2410c;
-  --color-terracotta-tint: #fce7da;
+  --color-orange-dark: #c2410c;
+  --color-orange-mid: #d9540b;
+  --color-orange-tint: #fce7da;
+  --color-orange-tint-border: #f0be97;
 
   --color-neutral: #f0f0f0;
   --color-neutral-border: #dcdcdc;
@@ -37,16 +32,6 @@
   --color-body: #444444;
   --color-muted: #666666;
   --color-muted-light: #666666;
-
-  /* Also folded into the orange family (was a distinct gold hue). */
-  --color-gold-bg: #fce7da;
-  --color-gold-text: #c2410c;
-  --color-gold-border: #f0be97;
-
-  /* Was a fourth decorative hue (skill-tile variety, a login role tile);
-     folded into neutral gray now that only orange/black/white remain. */
-  --color-taupe: #6b6b6b;
-  --color-taupe-bg: #ededed;
 
   /* Card/panel background. Kept a separate token from --color-bg (the page
      background) even though both are white in light mode, since dark mode
@@ -66,16 +51,11 @@
    token is used for. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --color-sage: #ff7a33;
-    --color-sage-dark: #ffa366;
-    --color-sage-deep: #f5f5f5;
-    --color-sage-mid: #e8611c;
-    --color-sage-tint: #2e1b10;
-    --color-sage-tint-border: #5c3a22;
-
-    --color-terracotta: #ff7a33;
-    --color-terracotta-dark: #ffa366;
-    --color-terracotta-tint: #2e1b10;
+    --color-orange: #ff7a33;
+    --color-orange-dark: #ffa366;
+    --color-orange-mid: #e8611c;
+    --color-orange-tint: #2e1b10;
+    --color-orange-tint-border: #5c3a22;
 
     --color-neutral: #242424;
     --color-neutral-border: #383838;
@@ -91,27 +71,15 @@
     --color-body: #a3a3a3;
     --color-muted: #8a8a8a;
     --color-muted-light: #8a8a8a;
-
-    --color-gold-bg: #2e1b10;
-    --color-gold-text: #ffa366;
-    --color-gold-border: #5c3a22;
-
-    --color-taupe: #a3a3a3;
-    --color-taupe-bg: #262626;
   }
 }
 
 :root[data-theme="dark"] {
-  --color-sage: #ff7a33;
-  --color-sage-dark: #ffa366;
-  --color-sage-deep: #f5f5f5;
-  --color-sage-mid: #e8611c;
-  --color-sage-tint: #2e1b10;
-  --color-sage-tint-border: #5c3a22;
-
-  --color-terracotta: #ff7a33;
-  --color-terracotta-dark: #ffa366;
-  --color-terracotta-tint: #2e1b10;
+  --color-orange: #ff7a33;
+  --color-orange-dark: #ffa366;
+  --color-orange-mid: #e8611c;
+  --color-orange-tint: #2e1b10;
+  --color-orange-tint-border: #5c3a22;
 
   --color-neutral: #242424;
   --color-neutral-border: #383838;
@@ -127,13 +95,6 @@
   --color-body: #a3a3a3;
   --color-muted: #8a8a8a;
   --color-muted-light: #8a8a8a;
-
-  --color-gold-bg: #2e1b10;
-  --color-gold-text: #ffa366;
-  --color-gold-border: #5c3a22;
-
-  --color-taupe: #a3a3a3;
-  --color-taupe-bg: #262626;
 }
 
 body {
@@ -157,11 +118,11 @@ body {
 }
 
 a {
-  color: var(--color-sage);
+  color: var(--color-orange);
   text-decoration: none;
 }
 a:hover {
-  color: var(--color-sage-dark);
+  color: var(--color-orange-dark);
   text-decoration: underline;
 }
 

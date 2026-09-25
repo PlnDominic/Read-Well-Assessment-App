@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 // assessment reads as the neutral, no-action-needed one.
 const STATUS_STYLE: Record<string, { label: string; bg: string; color: string }> = {
   completed: { label: "Completed", bg: "var(--color-ink)", color: "var(--color-surface)" },
-  in_progress: { label: "In Progress", bg: "var(--color-gold-bg)", color: "var(--color-gold-text)" },
+  in_progress: { label: "In Progress", bg: "var(--color-orange-tint)", color: "var(--color-orange-dark)" },
   not_started: { label: "Not Started", bg: "var(--color-neutral)", color: "var(--color-muted)" },
 };
 
@@ -52,7 +52,7 @@ export default async function SpecialistPage() {
   return (
     <AppShell avatarSrc={ROLE_AVATAR[profile.role]}>
       <div className="w-full max-w-[840px]">
-        <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-sage-deep)] m-0 mb-1">
+        <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-ink)] m-0 mb-1">
           Assigned Students
         </h1>
         <p className="text-[var(--color-muted)] text-[15px] m-0 mb-6">{cycle?.name ?? "No active assessment cycle"}</p>
@@ -75,11 +75,11 @@ export default async function SpecialistPage() {
                 className="flex items-center justify-between gap-3.5 px-6 py-4.5 border-b border-[var(--color-neutral-divider)] flex-wrap last:border-b-0"
               >
                 <div className="flex items-center gap-3.5">
-                  <div className="w-10.5 h-10.5 rounded-full bg-[var(--color-sage-tint)] flex items-center justify-center font-heading font-bold text-[var(--color-sage-dark)]">
+                  <div className="w-10.5 h-10.5 rounded-full bg-[var(--color-orange-tint)] flex items-center justify-center font-heading font-bold text-[var(--color-orange-dark)]">
                     {initials}
                   </div>
                   <div>
-                    <div className="font-extrabold text-[var(--color-sage-deep)] text-base">{s.name}</div>
+                    <div className="font-extrabold text-[var(--color-ink)] text-base">{s.name}</div>
                     <div className="text-[13px] text-[var(--color-muted-light)]">Grade {s.grade}</div>
                   </div>
                 </div>

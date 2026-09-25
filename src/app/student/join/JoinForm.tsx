@@ -49,12 +49,12 @@ export function JoinForm() {
       <div className="relative flex justify-center mb-6">
         <div
           className="absolute inset-0 m-auto w-[190px] h-[190px] rounded-full blur-3xl opacity-70 pointer-events-none"
-          style={{ background: "var(--color-sage-tint)" }}
+          style={{ background: "var(--color-orange-tint)" }}
           aria-hidden
         />
         <SunnyAvatar size={140} />
       </div>
-      <h1 className="font-heading font-bold text-[32px] tracking-tight text-[var(--color-sage-deep)] m-0 mb-2.5">
+      <h1 className="font-heading font-bold text-[32px] tracking-tight text-[var(--color-ink)] m-0 mb-2.5">
         What&apos;s your code?
       </h1>
       <p className="text-[var(--color-body)] text-lg leading-relaxed m-0 mb-8">
@@ -69,15 +69,15 @@ export function JoinForm() {
           autoComplete="off"
           autoCapitalize="characters"
           placeholder="ABC123"
-          className="w-full text-center tracking-[0.3em] uppercase font-heading font-bold text-3xl bg-[var(--color-neutral)] border-2 border-transparent rounded-2xl py-5 focus:outline-none focus:border-[var(--color-sage)] focus:bg-[var(--color-surface)] transition-colors"
+          className="w-full text-center tracking-[0.3em] uppercase font-heading font-bold text-3xl bg-[var(--color-neutral)] border-2 border-transparent rounded-2xl py-5 focus:outline-none focus:border-[var(--color-orange)] focus:bg-[var(--color-surface)] transition-colors"
         />
 
-        {state.error && <p className="text-[var(--color-terracotta-dark)] text-base m-0">{state.error}</p>}
+        {state.error && <p className="text-[var(--color-orange-dark)] text-base m-0">{state.error}</p>}
 
         <button
           type="submit"
           disabled={isPending}
-          className="bg-[var(--color-terracotta)] text-white border-none rounded-full font-heading font-bold text-xl px-14 py-5 cursor-pointer shadow-[0_10px_24px_rgba(201,123,95,0.35)] transition-transform hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0"
+          className="bg-[var(--color-orange)] text-white border-none rounded-full font-heading font-bold text-xl px-14 py-5 cursor-pointer shadow-[0_10px_24px_rgba(201,123,95,0.35)] transition-transform hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0"
         >
           {isPending ? "Checking…" : "Let's Go!"}
         </button>
@@ -85,7 +85,7 @@ export function JoinForm() {
 
       <Link
         href="/login"
-        className="inline-block mt-8 text-[var(--color-sage)] font-bold text-sm no-underline hover:underline"
+        className="inline-block mt-8 text-[var(--color-orange)] font-bold text-sm no-underline hover:underline"
       >
         &larr; Back
       </Link>

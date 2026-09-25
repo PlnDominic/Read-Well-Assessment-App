@@ -31,7 +31,7 @@ export function StaffRow({
     <div className="px-6 py-4 border-b border-[var(--color-neutral-divider)] last:border-b-0 flex flex-col gap-2.5">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <div className="font-extrabold text-[var(--color-sage-deep)] text-base">
+          <div className="font-extrabold text-[var(--color-ink)] text-base">
             {staffMember.name} {isSelf && <span className="text-[var(--color-muted-light)] text-xs">(you)</span>}
           </div>
           <div className="text-[13px] text-[var(--color-muted-light)]">{staffMember.email}</div>
@@ -39,13 +39,13 @@ export function StaffRow({
 
         <div className="flex items-center gap-2 flex-wrap">
           {!staffMember.is_active && (
-            <span className="bg-[var(--color-terracotta-tint)] text-[var(--color-terracotta-dark)] text-xs font-bold px-3 py-1.5 rounded-full">
+            <span className="bg-[var(--color-orange-tint)] text-[var(--color-orange-dark)] text-xs font-bold px-3 py-1.5 rounded-full">
               Deactivated
             </span>
           )}
 
           {isSelf ? (
-            <span className="bg-[var(--color-sage-tint)] text-[var(--color-sage-dark)] text-xs font-bold px-3 py-1.5 rounded-full">
+            <span className="bg-[var(--color-orange-tint)] text-[var(--color-orange-dark)] text-xs font-bold px-3 py-1.5 rounded-full">
               {ROLE_LABELS[staffMember.role] ?? staffMember.role}
             </span>
           ) : (
@@ -63,7 +63,7 @@ export function StaffRow({
               </select>
               <button
                 type="submit"
-                className="bg-[var(--color-neutral)] border-none text-[var(--color-sage-dark)] transition-colors hover:bg-[var(--color-neutral-divider)] font-bold text-xs px-3 py-1.5 rounded-full cursor-pointer"
+                className="bg-[var(--color-neutral)] border-none text-[var(--color-orange-dark)] transition-colors hover:bg-[var(--color-neutral-divider)] font-bold text-xs px-3 py-1.5 rounded-full cursor-pointer"
               >
                 Save
               </button>
@@ -76,7 +76,7 @@ export function StaffRow({
             <button
               type="submit"
               disabled={isResetting}
-              className="bg-[var(--color-neutral)] border-none text-[var(--color-sage-dark)] transition-colors hover:bg-[var(--color-neutral-divider)] font-bold text-xs px-3 py-1.5 rounded-full cursor-pointer disabled:opacity-60"
+              className="bg-[var(--color-neutral)] border-none text-[var(--color-orange-dark)] transition-colors hover:bg-[var(--color-neutral-divider)] font-bold text-xs px-3 py-1.5 rounded-full cursor-pointer disabled:opacity-60"
             >
               {isResetting ? "Resetting…" : "Reset password"}
             </button>
@@ -88,7 +88,7 @@ export function StaffRow({
                 <input type="hidden" name="id" value={staffMember.id} />
                 <ConfirmSubmitButton
                   confirmMessage={`Deactivate ${staffMember.name}? They won't be able to sign in until reactivated.`}
-                  className="text-[var(--color-terracotta-dark)] text-xs font-bold bg-none border-none cursor-pointer"
+                  className="text-[var(--color-orange-dark)] text-xs font-bold bg-none border-none cursor-pointer"
                 >
                   Deactivate
                 </ConfirmSubmitButton>
@@ -98,7 +98,7 @@ export function StaffRow({
                 <input type="hidden" name="id" value={staffMember.id} />
                 <button
                   type="submit"
-                  className="text-[var(--color-sage-dark)] text-xs font-bold bg-none border-none cursor-pointer"
+                  className="text-[var(--color-orange-dark)] text-xs font-bold bg-none border-none cursor-pointer"
                 >
                   Reactivate
                 </button>
@@ -107,9 +107,9 @@ export function StaffRow({
         </div>
       </div>
 
-      {resetState.error && <p className="text-[var(--color-terracotta-dark)] text-xs m-0">{resetState.error}</p>}
+      {resetState.error && <p className="text-[var(--color-orange-dark)] text-xs m-0">{resetState.error}</p>}
       {resetState.result && (
-        <div className="bg-[var(--color-sage-tint)] rounded-lg px-3.5 py-2.5 text-xs text-[var(--color-ink-soft)]">
+        <div className="bg-[var(--color-orange-tint)] rounded-lg px-3.5 py-2.5 text-xs text-[var(--color-ink-soft)]">
           New temporary password (shown once; share it securely):{" "}
           <code className="bg-[var(--color-surface)] px-1.5 py-0.5 rounded font-bold">{resetState.result.tempPassword}</code>
         </div>
