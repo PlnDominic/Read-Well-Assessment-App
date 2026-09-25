@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/AppShell";
 import { LoginScreen } from "./LoginScreen";
+import { StaffOnboarding } from "./StaffOnboarding";
 
 export default async function LoginPage({
   searchParams,
@@ -16,6 +17,7 @@ export default async function LoginPage({
         </p>
       )}
       <LoginScreen />
+      <StaffOnboarding />
     </AppShell>
   );
 }

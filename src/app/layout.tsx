@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Quicksand, Nunito_Sans } from "next/font/google";
 import "./globals.css";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
+import { SplashScreen } from "@/components/SplashScreen";
 
 const quicksand = Quicksand({
   variable: "--font-quicksand",
@@ -22,6 +23,9 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: "default",
     title: "Read Well",
+  },
+  icons: {
+    apple: "/icons/icon-192.png",
   },
 };
 
@@ -49,6 +53,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-full flex flex-col">
         {children}
         <ServiceWorkerRegistrar />
+        <SplashScreen />
       </body>
     </html>
   );
