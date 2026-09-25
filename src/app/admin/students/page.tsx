@@ -1,7 +1,14 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
-import { assignSpecialist, deleteStudent, unassignSpecialist, updateStudent } from "./actions";
+import {
+  assignSpecialist,
+  deleteStudent,
+  listDeletedStudents,
+  restoreStudent,
+  unassignSpecialist,
+  updateStudent,
+} from "./actions";
 import { AddStudentForm } from "./AddStudentForm";
 import { ImportCsvForm } from "./ImportCsvForm";
 
@@ -31,6 +38,8 @@ export default async function AdminStudentsPage() {
   const { data: assignments } = await supabase
     .from("specialist_assignments")
     .select("student_id, specialist_id");
+
+  const deletedStudents = await listDeletedStudents(profile.school_id);
 
   const specialistById = new Map((specialists ?? []).map((s) => [s.id, s.name]));
   const specialistIdsByStudent = new Map<string, string[]>();
@@ -107,7 +116,7 @@ export default async function AdminStudentsPage() {
                 <form action={deleteStudent}>
                   <input type="hidden" name="id" value={s.id} />
                   <ConfirmSubmitButton
-                    confirmMessage={`Delete ${s.name}? This also deletes their assessment sessions and reports.`}
+                    confirmMessage={`Delete ${s.name}? They'll be removed from rosters and reports, but you can restore them from Deleted students below.`}
                     className="text-[var(--color-orange-dark)] text-xs font-bold bg-none border-none cursor-pointer"
                   >
                     Delete student
@@ -159,6 +168,37 @@ export default async function AdminStudentsPage() {
           );
         })}
       </div>
+
+      {deletedStudents.length > 0 && (
+        <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] overflow-hidden mt-6">
+          <div className="font-heading font-bold text-sm text-[var(--color-ink)] px-6 pt-6">Deleted students</div>
+          <p className="text-[var(--color-muted)] text-sm px-6 mt-1 mb-4">
+            Restoring puts a student back on their teacher&apos;s roster with their assessment history intact.
+          </p>
+          {deletedStudents.map((s) => (
+            <div
+              key={s.id}
+              className="px-6 py-4 border-t border-[var(--color-neutral-divider)] flex items-center justify-between gap-3"
+            >
+              <div>
+                <div className="font-extrabold text-[var(--color-ink)] text-base">{s.name}</div>
+                <div className="text-[13px] text-[var(--color-muted-light)]">
+                  Grade {s.grade} · Deleted {new Date(s.deleted_at!).toLocaleDateString()}
+                </div>
+              </div>
+              <form action={restoreStudent}>
+                <input type="hidden" name="id" value={s.id} />
+                <button
+                  type="submit"
+                  className="bg-[var(--color-neutral)] border-none text-[var(--color-orange-dark)] transition-colors hover:bg-[var(--color-neutral-divider)] font-bold text-xs px-3.5 py-1.5 rounded-full cursor-pointer"
+                >
+                  Restore
+                </button>
+              </form>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

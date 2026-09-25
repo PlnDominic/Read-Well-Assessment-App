@@ -3,6 +3,7 @@
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/authz";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createSessionForStudent } from "@/lib/kiosk";
 
 export interface AddStudentState {
@@ -76,13 +77,57 @@ export async function updateStudent(formData: FormData) {
   revalidatePath("/admin/students");
 }
 
+/**
+ * Soft delete (supabase/migrations/0010_students_soft_delete.sql): sets
+ * deleted_at rather than removing the row, so it's recoverable via
+ * restoreStudent and existing assessment history for the student isn't
+ * destroyed. Goes through the normal RLS-scoped client -- the update
+ * policy doesn't care about deleted_at, only the select policy does.
+ */
 export async function deleteStudent(formData: FormData) {
   const { supabase, profile } = await requireAdmin();
 
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Missing student id");
 
-  const { error } = await supabase.from("students").delete().eq("id", id).eq("school_id", profile.school_id);
+  const { error } = await supabase
+    .from("students")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("school_id", profile.school_id);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/admin/students");
+}
+
+/**
+ * Listing deleted students (for the "Deleted students" panel) needs the
+ * service-role client: the select policy filters out deleted_at rows, by
+ * design, for every other read in the app.
+ */
+export async function listDeletedStudents(schoolId: string) {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("students")
+    .select("id, name, grade, deleted_at")
+    .eq("school_id", schoolId)
+    .not("deleted_at", "is", null)
+    .order("deleted_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function restoreStudent(formData: FormData) {
+  const { supabase, profile } = await requireAdmin();
+
+  const id = String(formData.get("id") ?? "");
+  if (!id) throw new Error("Missing student id");
+
+  const { error } = await supabase
+    .from("students")
+    .update({ deleted_at: null })
+    .eq("id", id)
+    .eq("school_id", profile.school_id);
   if (error) throw new Error(error.message);
 
   revalidatePath("/admin/students");

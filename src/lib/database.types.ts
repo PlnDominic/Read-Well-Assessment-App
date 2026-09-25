@@ -71,6 +71,7 @@ export interface Database {
           name: string;
           grade: number;
           created_at: string;
+          deleted_at: string | null;
         },
         {
           id?: string;
@@ -78,6 +79,7 @@ export interface Database {
           teacher_id: string;
           name: string;
           grade: number;
+          deleted_at?: string | null;
         }
       >;
       specialist_assignments: Table<
@@ -87,6 +89,15 @@ export interface Database {
       skill_areas: Table<
         { id: string; key: string; name: string },
         { id?: string; key: string; name: string }
+      >;
+      school_skill_weights: Table<
+        { school_id: string; skill_area_id: string; weight: number; flagged_threshold: number | null },
+        {
+          school_id: string;
+          skill_area_id: string;
+          weight?: number;
+          flagged_threshold?: number | null;
+        }
       >;
       assessments: Table<
         {
