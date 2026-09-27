@@ -67,6 +67,15 @@ A few things the PRD/TRD left open that needed a concrete decision to ship:
   (from the no-SpeechRecognition-support path) always counts as correct,
   and a mic item with no `expectedText` configured counts any non-empty
   attempt as correct.
+  Because the transcript can still mishear an early reader, the student's
+  teacher (or an administrator) can review each read-aloud answer on the
+  report page and mark it correct or incorrect, or undo that. This calls
+  `reviewSpokenAnswer` in
+  `src/app/teacher/students/[studentId]/report/actions.ts`, which
+  re-scores the session and re-renders both PDFs. The automatic score is
+  kept in `responses.auto_is_correct`
+  (`supabase/migrations/0012_response_review.sql`), and each review is
+  written to the audit log. Reading specialists stay read-only.
 - **Overall report label.** "On Track" vs. "Needs Support" wasn't specified
   as a formula anywhere. `computeOverallLabel` in `src/lib/scoring.ts` uses
   "2+ flagged skill areas → Needs Support", chosen because it reproduces the
