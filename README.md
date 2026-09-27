@@ -102,6 +102,22 @@ A few things the PRD/TRD left open that needed a concrete decision to ship:
   results by the student's teacher, computing per-classroom average score
   and % of students flagged "Needs Support"; it's shown on the admin
   dashboard and in the exported school PDF.
+- **Failed report generation now retries itself, then alerts an admin.**
+  Previously a failed PDF just sat there until a human happened to notice
+  the "Retry PDF" button; there was also no way to tell a generation had
+  silently stalled (e.g. the serverless function running `after()` was
+  killed mid-render, leaving `status` stuck at `'pending'` forever with no
+  error recorded). `src/app/api/cron/retry-failed-reports/route.ts`, run
+  every 15 minutes (`vercel.json`; sub-daily cron schedules need a paid
+  Vercel plan), applies the pure policy in `src/lib/reportRetry.ts`:
+  automatically retry a failed or stalled report up to
+  `MAX_AUTOMATIC_RETRIES` (3) times, then email and in-app-notify the
+  school's administrators once (`alertStudentReportFailure`/
+  `alertSchoolReportFailure` in `src/lib/reports.ts`) rather than retrying
+  forever. The existing manual "Retry PDF" button is untouched and doesn't
+  count against the automatic budget, and a report's `last_error` is shown
+  next to that button so a human doesn't have to dig through logs
+  (`supabase/migrations/0013_report_retry_tracking.sql`).
 - **Sunny (the mascot) is a plain static image** (`public/sunny.png`), shown
   by `src/components/SunnyAvatar.tsx` as an ordinary `<img>` — deliberately
   not `next/image`, since its on-demand `/_next/image` endpoint needs the
@@ -303,12 +319,28 @@ npm run build
 
 ### Report generation retry
 
-If a student or school report's PDF generation fails (`student_reports`/
-`school_reports.status = 'failed'`), a **Retry** button appears right where
-the "Export PDF" button would be: on the student report page and the admin
-dashboard, respectively. It re-runs `generateStudentReport`/
-`generateSchoolReport` synchronously so the page shows the outcome
-immediately.
+**Manual:** if a student or school report's PDF generation fails
+(`student_reports`/`school_reports.status = 'failed'`), a **Retry** button
+appears right where the "Export PDF" button would be: on the student
+report page and the admin dashboard, respectively. It re-runs
+`generateStudentReport`/`generateSchoolReport` synchronously so the page
+shows the outcome immediately, and the specific error is shown next to the
+button (`last_error`) so a human doesn't have to dig through logs.
+
+**Automatic:** `/api/cron/retry-failed-reports` (`vercel.json`, every 15
+minutes) also retries on its own, so most transient failures are fixed
+before anyone notices. It applies the pure policy in
+`src/lib/reportRetry.ts`'s `decideReportRetry` to every `failed` or
+stalled-`pending` report (`attempted_at` unset/stale for more than 15
+minutes means a previous attempt died mid-render without ever reaching a
+final status): retry up to `MAX_AUTOMATIC_RETRIES` (3) times, tracked in
+`retry_count` (`supabase/migrations/0013_report_retry_tracking.sql`), then
+email and in-app-notify the school's administrators exactly once
+(`alertStudentReportFailure`/`alertSchoolReportFailure` in
+`src/lib/reports.ts`, `alerted_at`) instead of retrying forever. A manual
+retry that succeeds resets the whole trail (`retry_count`, `last_error`,
+`alerted_at`) so a later failure gets its own fresh budget and can alert
+again. Manual retries never count against the automatic budget.
 
 ### Data retention
 
@@ -358,26 +390,55 @@ changes go through a PR rather than a direct push to `main`*.
 
 ### Accessibility
 
-A manual pass (not a full automated audit, no axe-core/Lighthouse run,
-since there's no browser available to drive one in this environment) found
-and fixed concrete WCAG AA contrast failures: `--color-muted` (~3.2:1),
-`--color-muted-light` (~2.6:1), and `--color-gold-text` (~4.44:1) all fell
-short of the 4.5:1 required for normal text against the backgrounds they're
-used on; see the comments in `src/app/globals.css` and `src/lib/theme.ts`
-for the before/after values (both files are updated together since PDF/SVG
-rendering reads `theme.ts`'s JS constants, not CSS custom properties).
-Also added `aria-label`s to a few controls that had no accessible name
-(the mic recording button, several bare `<select>`s in the admin screens).
+Manual passes (not a full automated audit — no axe-core/Lighthouse run,
+since there's no browser available to drive one in this environment) have
+found and fixed, across a few rounds:
 
-**Known, deliberately unfixed**: white text on the primary sage-green
-button background (`--color-sage`) measures ~3.6:1, enough for large/bold
-text but short of 4.5:1 for the smaller buttons. Fixing it means either
-darkening the brand's primary color or resizing button text, both of which
-change the approved visual design rather than just correcting an
-oversight, so it's left as a flagged decision rather than something I
-changed unilaterally. A full audit (every color pairing, keyboard
-navigation order, screen-reader testing) is still open; see the CI note
-above about no browser/AT tooling being available here.
+- **Contrast.** `--color-orange-dark` (`#c2410c`) cleared AA (4.5:1) against
+  white (5.2:1) but fell short against its own `--color-orange-tint`
+  background (4.3:1) — the exact pairing used throughout the app for
+  badges, pills, and banners (the "Needs Support" label, role badges,
+  offline/error banners, notification highlights). Darkened to `#b83d0b`
+  (5.7:1 / 4.7:1) in `src/app/globals.css` and mirrored in `src/lib/theme.ts`
+  (PDF/SVG rendering can't read CSS custom properties, so the two have to
+  be kept in sync manually — see the comments in both files for the exact
+  numbers). An earlier round fixed `--color-muted`/`--color-muted-light`;
+  see git history for that palette's since-superseded values.
+- **Accessible names.** Added `aria-label`s to controls with no accessible
+  name at all (relying on a `placeholder` alone, which isn't reliably
+  exposed as a label): the student kiosk-code input, the forgot/reset
+  password inputs, a few bare `<select>`s and placeholder-only `<input>`s
+  in the admin content/skill-area editors, and the per-option radio
+  buttons in the assessment item editor (which previously had no way to
+  tell them apart by name at all).
+- **Bypass Blocks (WCAG 2.4.1).** Added a "Skip to main content" link as
+  the first focusable element on every staff/student page
+  (`src/components/AppShell.tsx`), hidden until it receives keyboard
+  focus, jumping past the top bar and (on admin pages) `AdminNav`'s seven
+  tabs into a newly added `<main id="main-content">` landmark.
+  Previously there was no way to reach page content without tabbing
+  through all of it every time.
+- **Focus management.** The first-run onboarding dialog
+  (`src/components/Onboarding.tsx`, `role="dialog" aria-modal="true"`) now
+  actually behaves like a modal: opening it moves focus to its first
+  button, Tab/Shift+Tab wrap between its two buttons instead of escaping
+  into the page underneath, and Escape closes it — none of which
+  `aria-modal` enforces by itself in every browser/screen-reader
+  combination.
+
+**Known, deliberately unfixed**: white button text on the primary orange
+background (`--color-orange`, `#ea580c`) measures 3.56:1 — enough for the
+large 18px+/20px+ bold text on the biggest CTAs (student "Let's Start!",
+"I'm Done!", etc.) but short of the 4.5:1 normal text needs, which several
+smaller (`text-sm`, 14px bold) admin buttons using the same background
+don't clear either. Fixing it means
+either darkening the brand's primary accent color or resizing that text,
+both of which change the approved visual design rather than just
+correcting an oversight, so it's left as a flagged decision rather than
+something changed unilaterally. A full audit (every color pairing,
+keyboard navigation order end-to-end, real screen-reader testing) is still
+open; see the CI note above about no browser/AT tooling being available
+here.
 
 ## Deploying
 
