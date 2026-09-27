@@ -85,6 +85,23 @@ A few things the PRD/TRD left open that needed a concrete decision to ship:
   (Next.js 15+) rather than a separate queue/worker, which is the pragmatic
   reading of the TRD's "must not block the assessment-completion response"
   requirement without standing up separate infrastructure for an MVP.
+- **Assessment questions and passages are read aloud** on the student
+  screen (`StudentAssessmentRunner.tsx`), per the PRD/BRD's "minimal
+  reliance on reading instructions independently." This uses the browser's
+  built-in Web Speech *Synthesis* API — the read-aloud counterpart to the
+  SpeechRecognition used for mic items, same reasoning as `evaluateResponse`
+  in `src/lib/kiosk.ts`: free, no account/API key, broadly supported.
+  Each question plays automatically once the student taps "Let's Start!"
+  (the user gesture Safari/iOS requires before it will play audio at all),
+  and a speaker button lets them replay it. Devices without
+  SpeechSynthesis support just don't show the button; nothing else in the
+  flow depends on it.
+- **The school-wide report breaks results down by classroom as well as by
+  grade** (PRD open question 6: "by classroom, by grade only, or both?").
+  `aggregateClassroomBreakdown` in `src/lib/scoring.ts` groups a cycle's
+  results by the student's teacher, computing per-classroom average score
+  and % of students flagged "Needs Support"; it's shown on the admin
+  dashboard and in the exported school PDF.
 - **Sunny (the mascot) is a plain static image** (`public/sunny.png`), shown
   by `src/components/SunnyAvatar.tsx` as an ordinary `<img>` — deliberately
   not `next/image`, since its on-demand `/_next/image` endpoint needs the

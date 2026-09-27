@@ -16,6 +16,20 @@ const styles = StyleSheet.create({
   skillName: { fontWeight: 700, color: colors.inkSoft },
   barTrack: { height: 8, backgroundColor: colors.neutralBorder, borderRadius: 999 },
   barFill: { height: 8, borderRadius: 999, backgroundColor: colors.orange },
+  table: { marginTop: 8, marginBottom: 22 },
+  tableHeaderRow: {
+    flexDirection: "row",
+    borderBottom: `1px solid ${colors.neutralBorder}`,
+    paddingBottom: 6,
+    marginBottom: 6,
+  },
+  tableRow: { flexDirection: "row", paddingVertical: 5 },
+  tableHeaderCell: { fontSize: 9, fontWeight: 700, color: colors.mutedLight },
+  tableCell: { fontSize: 10, color: colors.inkSoft },
+  colTeacher: { flex: 2 },
+  colStudents: { flex: 1, textAlign: "right" },
+  colScore: { flex: 1, textAlign: "right" },
+  colFlagged: { flex: 1.4, textAlign: "right" },
   note: {
     backgroundColor: colors.orangeTint,
     borderRadius: 8,
@@ -36,6 +50,7 @@ export interface SchoolReportPdfProps {
   gradeLevel: number;
   avgOverallScore: number;
   skillDistribution: { name: string; pctFlagged: number }[];
+  classroomBreakdown: { teacherName: string; studentsAssessed: number; avgScore: number; pctNeedsSupport: number }[];
   planningNote: string;
 }
 
@@ -47,6 +62,7 @@ export function SchoolReportPdf({
   gradeLevel,
   avgOverallScore,
   skillDistribution,
+  classroomBreakdown,
   planningNote,
 }: SchoolReportPdfProps) {
   return (
@@ -88,6 +104,30 @@ export function SchoolReportPdf({
             </View>
           </View>
         ))}
+
+        {classroomBreakdown.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>By Classroom</Text>
+            <View style={styles.table}>
+              <View style={styles.tableHeaderRow}>
+                <Text style={[styles.tableHeaderCell, styles.colTeacher]}>TEACHER</Text>
+                <Text style={[styles.tableHeaderCell, styles.colStudents]}>STUDENTS</Text>
+                <Text style={[styles.tableHeaderCell, styles.colScore]}>AVG. SCORE</Text>
+                <Text style={[styles.tableHeaderCell, styles.colFlagged]}>NEEDS SUPPORT</Text>
+              </View>
+              {classroomBreakdown.map((c) => (
+                <View style={styles.tableRow} key={c.teacherName}>
+                  <Text style={[styles.tableCell, styles.colTeacher]}>{c.teacherName}</Text>
+                  <Text style={[styles.tableCell, styles.colStudents]}>{c.studentsAssessed}</Text>
+                  <Text style={[styles.tableCell, styles.colScore]}>{c.avgScore}%</Text>
+                  <Text style={[styles.tableCell, styles.colFlagged, { color: colors.orangeDark, fontWeight: 700 }]}>
+                    {c.pctNeedsSupport}%
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
 
         <Text style={styles.note}>{planningNote}</Text>
 

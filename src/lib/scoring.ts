@@ -147,3 +147,76 @@ export function computeWeightedAverage(
 export function computeOverallLabel(flaggedCount: number): "On Track" | "Needs Support" {
   return flaggedCount >= 2 ? "Needs Support" : "On Track";
 }
+
+export interface ClassroomBreakdownRow {
+  teacherId: string;
+  teacherName: string;
+  sessionId: string;
+  skillAreaId: string;
+  score: number;
+  flagged: boolean;
+}
+
+export interface ClassroomSummary {
+  teacherId: string;
+  teacherName: string;
+  studentsAssessed: number;
+  avgScore: number;
+  pctNeedsSupport: number;
+}
+
+/**
+ * Groups a cycle's per-session, per-skill-area result rows by the
+ * student's teacher, for the school-wide report's classroom breakdown
+ * (PRD open question 6: "by classroom, by grade only, or both?" — this
+ * app shows both). One row per (session, skill area); a session with
+ * multiple skill areas contributes multiple rows, same shape the
+ * school-wide skill distribution already consumes.
+ *
+ * avgScore is the same weighted-mean calculation as computeWeightedAverage,
+ * scoped to that teacher's rows. pctNeedsSupport re-derives each session's
+ * flagged-skill-area count from these rows and applies computeOverallLabel,
+ * so it always agrees with the label shown on that student's own report.
+ * Sorted by teacher name for a stable, readable table.
+ */
+export function aggregateClassroomBreakdown(
+  rows: ClassroomBreakdownRow[],
+  weightBySkillAreaId: Map<string, number> = new Map()
+): ClassroomSummary[] {
+  const byTeacher = new Map<string, { teacherName: string; rows: ClassroomBreakdownRow[]; sessionIds: Set<string> }>();
+  for (const row of rows) {
+    const bucket = byTeacher.get(row.teacherId) ?? {
+      teacherName: row.teacherName,
+      rows: [],
+      sessionIds: new Set<string>(),
+    };
+    bucket.rows.push(row);
+    bucket.sessionIds.add(row.sessionId);
+    byTeacher.set(row.teacherId, bucket);
+  }
+
+  const summaries: ClassroomSummary[] = [];
+  for (const [teacherId, { teacherName, rows: teacherRows, sessionIds }] of byTeacher) {
+    const flaggedCountBySession = new Map<string, number>();
+    for (const row of teacherRows) {
+      if (!row.flagged) continue;
+      flaggedCountBySession.set(row.sessionId, (flaggedCountBySession.get(row.sessionId) ?? 0) + 1);
+    }
+    const needsSupportCount = [...sessionIds].filter(
+      (id) => computeOverallLabel(flaggedCountBySession.get(id) ?? 0) === "Needs Support"
+    ).length;
+
+    summaries.push({
+      teacherId,
+      teacherName,
+      studentsAssessed: sessionIds.size,
+      avgScore: computeWeightedAverage(
+        teacherRows.map((r) => ({ score: r.score, skillAreaId: r.skillAreaId })),
+        weightBySkillAreaId
+      ),
+      pctNeedsSupport: sessionIds.size > 0 ? Math.round((needsSupportCount / sessionIds.size) * 100) : 0,
+    });
+  }
+
+  return summaries.sort((a, b) => a.teacherName.localeCompare(b.teacherName));
+}

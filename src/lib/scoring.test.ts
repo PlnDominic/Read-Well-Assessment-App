@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { aggregateSkillScores, computeOverallLabel, computeWeightedAverage } from "./scoring";
+import {
+  aggregateClassroomBreakdown,
+  aggregateSkillScores,
+  computeOverallLabel,
+  computeWeightedAverage,
+} from "./scoring";
 import type { AssessmentItem } from "./database.types";
 
 describe("computeOverallLabel", () => {
@@ -133,5 +138,52 @@ describe("computeWeightedAverage", () => {
     // Weighting "a" 3x pulls the average toward its score.
     const weights = new Map([["a", 3]]);
     expect(computeWeightedAverage(scores, weights)).toBe(75);
+  });
+});
+
+describe("aggregateClassroomBreakdown", () => {
+  it("returns nothing for no rows", () => {
+    expect(aggregateClassroomBreakdown([])).toEqual([]);
+  });
+
+  it("groups rows by teacher and computes per-classroom stats", () => {
+    const rows = [
+      // Ms. Rivera: one session, one flagged skill area -> On Track (< 2 flags)
+      { teacherId: "t1", teacherName: "Ms. Rivera", sessionId: "s1", skillAreaId: "phonics", score: 40, flagged: true },
+      { teacherId: "t1", teacherName: "Ms. Rivera", sessionId: "s1", skillAreaId: "fluency", score: 100, flagged: false },
+      // Mr. Okafor: one session, two flagged skill areas -> Needs Support
+      { teacherId: "t2", teacherName: "Mr. Okafor", sessionId: "s2", skillAreaId: "phonics", score: 30, flagged: true },
+      { teacherId: "t2", teacherName: "Mr. Okafor", sessionId: "s2", skillAreaId: "fluency", score: 20, flagged: true },
+    ];
+
+    const result = aggregateClassroomBreakdown(rows);
+    expect(result).toEqual([
+      { teacherId: "t2", teacherName: "Mr. Okafor", studentsAssessed: 1, avgScore: 25, pctNeedsSupport: 100 },
+      { teacherId: "t1", teacherName: "Ms. Rivera", studentsAssessed: 1, avgScore: 70, pctNeedsSupport: 0 },
+    ]);
+  });
+
+  it("counts each session once toward studentsAssessed regardless of skill-area rows", () => {
+    const rows = [
+      { teacherId: "t1", teacherName: "Ms. Rivera", sessionId: "s1", skillAreaId: "phonics", score: 80, flagged: false },
+      { teacherId: "t1", teacherName: "Ms. Rivera", sessionId: "s2", skillAreaId: "phonics", score: 60, flagged: false },
+    ];
+    expect(aggregateClassroomBreakdown(rows)[0].studentsAssessed).toBe(2);
+  });
+
+  it("applies per-skill-area weights the same way computeWeightedAverage does", () => {
+    const rows = [
+      { teacherId: "t1", teacherName: "Ms. Rivera", sessionId: "s1", skillAreaId: "a", score: 100, flagged: false },
+      { teacherId: "t1", teacherName: "Ms. Rivera", sessionId: "s1", skillAreaId: "b", score: 0, flagged: false },
+    ];
+    expect(aggregateClassroomBreakdown(rows, new Map([["a", 3]]))[0].avgScore).toBe(75);
+  });
+
+  it("sorts classrooms by teacher name", () => {
+    const rows = [
+      { teacherId: "t2", teacherName: "Zoe", sessionId: "s2", skillAreaId: "a", score: 50, flagged: false },
+      { teacherId: "t1", teacherName: "Amara", sessionId: "s1", skillAreaId: "a", score: 50, flagged: false },
+    ];
+    expect(aggregateClassroomBreakdown(rows).map((c) => c.teacherName)).toEqual(["Amara", "Zoe"]);
   });
 });

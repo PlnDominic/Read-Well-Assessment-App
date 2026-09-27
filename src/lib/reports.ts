@@ -3,7 +3,7 @@ import { renderToBuffer, type DocumentProps } from "@react-pdf/renderer";
 import { createElement, type ReactElement } from "react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getRecommendations } from "@/lib/recommendations";
-import { computeOverallLabel, computeWeightedAverage } from "@/lib/scoring";
+import { aggregateClassroomBreakdown, computeOverallLabel, computeWeightedAverage } from "@/lib/scoring";
 import { StudentReportPdf, type StudentReportPageProps } from "@/lib/pdf/StudentReportPdf";
 import { SchoolReportPdf } from "@/lib/pdf/SchoolReportPdf";
 import { appUrl, escapeHtml, sendEmail } from "@/lib/email";
@@ -171,19 +171,29 @@ export async function generateSchoolReport(schoolId: string, cycleId: string): P
 
   const { data: sessions, error: sessionsError } = await admin
     .from("assessment_sessions")
-    .select("id, student_id, students!inner(school_id, grade)")
+    .select("id, student_id, students!inner(school_id, grade, teacher_id, profiles(name))")
     .eq("cycle_id", cycleId)
     .eq("status", "completed")
     .eq("students.school_id", schoolId);
   if (sessionsError) throw sessionsError;
 
-  const sessionIds = sessions.map((s) => s.id);
-  const studentsAssessed = new Set(sessions.map((s) => s.student_id)).size;
-  // @ts-expect-error -- joined relation shape isn't modeled in database.types.ts
-  const gradeLevel: number = sessions[0]?.students?.grade ?? 1;
+  type SessionRow = {
+    id: string;
+    student_id: string;
+    students: { grade: number; teacher_id: string; profiles: { name: string } };
+  };
+  const sessionRows = sessions as unknown as SessionRow[];
+
+  const sessionIds = sessionRows.map((s) => s.id);
+  const studentsAssessed = new Set(sessionRows.map((s) => s.student_id)).size;
+  const gradeLevel: number = sessionRows[0]?.students?.grade ?? 1;
+  const teacherBySessionId = new Map(
+    sessionRows.map((s) => [s.id, { teacherId: s.students.teacher_id, teacherName: s.students.profiles.name }])
+  );
 
   let avgOverallScore = 0;
   const skillDistribution: { name: string; pctFlagged: number }[] = [];
+  let classroomBreakdown: ReturnType<typeof aggregateClassroomBreakdown> = [];
 
   if (sessionIds.length > 0) {
     const { data: results, error: resultsError } = await admin
@@ -222,6 +232,25 @@ export async function generateSchoolReport(schoolId: string, cycleId: string): P
       skillDistribution.push({ name, pctFlagged: total > 0 ? Math.round((flagged / total) * 100) : 0 });
     }
     skillDistribution.sort((a, b) => b.pctFlagged - a.pctFlagged);
+
+    classroomBreakdown = aggregateClassroomBreakdown(
+      rows
+        .map((r) => {
+          const teacher = teacherBySessionId.get(r.session_id);
+          return teacher
+            ? {
+                teacherId: teacher.teacherId,
+                teacherName: teacher.teacherName,
+                sessionId: r.session_id,
+                skillAreaId: r.skill_areas.id,
+                score: r.score,
+                flagged: r.flagged_as_difficulty,
+              }
+            : null;
+        })
+        .filter((r): r is NonNullable<typeof r> => r !== null),
+      weightBySkillAreaId
+    );
   }
 
   const topFlagged = skillDistribution.slice(0, 2).map((s) => s.name);
@@ -243,6 +272,7 @@ export async function generateSchoolReport(schoolId: string, cycleId: string): P
       gradeLevel,
       avgOverallScore,
       skillDistribution,
+      classroomBreakdown,
       planningNote,
     }) as unknown as ReactElement<DocumentProps>
   );

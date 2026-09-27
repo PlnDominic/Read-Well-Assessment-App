@@ -67,6 +67,33 @@ export function MicIcon({ size = 46 }: { size?: number }) {
 // dark theme swap in globals.css -- fine for icons rendered in the browser,
 // but see the comment on `colors` in lib/theme.ts for why PDF rendering
 // can't do the same and has to keep using literal hex.
+// Used by the student assessment's "Listen" control (StudentAssessmentRunner),
+// which reads the question aloud via the Web Speech Synthesis API for
+// early readers -- see the "minimal reliance on reading instructions
+// independently" usability requirement in the PRD/BRD.
+export function SpeakerIcon({ size = 22, color = colors.white }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M4 9v6h4l5 4V5L8 9H4Z" fill={color} />
+      <path
+        d="M16.5 8.5a5 5 0 0 1 0 7"
+        stroke={color}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        fill="none"
+      />
+      <path
+        d="M19 6a9 9 0 0 1 0 12"
+        stroke={color}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        fill="none"
+        opacity="0.6"
+      />
+    </svg>
+  );
+}
+
 export function BellIcon({ size = 20, color = "var(--color-orange-dark)" }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">

@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { computeWeightedAverage } from "@/lib/scoring";
+import { aggregateClassroomBreakdown, computeWeightedAverage } from "@/lib/scoring";
 import { retrySchoolReport } from "./actions";
 
 type ResultRow = {
@@ -38,19 +38,29 @@ export default async function AdminDashboardPage() {
   let gradeLevel = 1;
   let avgOverallScore = 0;
   let skillDistribution: { name: string; pct: number }[] = [];
+  let classroomBreakdown: ReturnType<typeof aggregateClassroomBreakdown> = [];
   let reportStatus: string | null = null;
 
   if (cycle) {
     const { data: sessions } = await supabase
       .from("assessment_sessions")
-      .select("id, student_id, students(grade)")
+      .select("id, student_id, students(grade, teacher_id, profiles(name))")
       .eq("cycle_id", cycle.id)
       .eq("status", "completed");
 
-    const sessionIds = (sessions ?? []).map((s) => s.id);
-    studentsAssessed = new Set((sessions ?? []).map((s) => s.student_id)).size;
-    // @ts-expect-error -- joined relation shape isn't modeled in database.types.ts
-    gradeLevel = sessions?.[0]?.students?.grade ?? 1;
+    type SessionRow = {
+      id: string;
+      student_id: string;
+      students: { grade: number; teacher_id: string; profiles: { name: string } };
+    };
+    const sessionRows = (sessions ?? []) as unknown as SessionRow[];
+
+    const sessionIds = sessionRows.map((s) => s.id);
+    studentsAssessed = new Set(sessionRows.map((s) => s.student_id)).size;
+    gradeLevel = sessionRows[0]?.students?.grade ?? 1;
+    const teacherBySessionId = new Map(
+      sessionRows.map((s) => [s.id, { teacherId: s.students.teacher_id, teacherName: s.students.profiles.name }])
+    );
 
     if (sessionIds.length > 0) {
       const { data: results } = await supabase
@@ -80,6 +90,25 @@ export default async function AdminDashboardPage() {
       skillDistribution = [...bySkill.values()]
         .map((b) => ({ name: b.name, pct: b.total ? Math.round((b.flagged / b.total) * 100) : 0 }))
         .sort((a, b) => b.pct - a.pct);
+
+      classroomBreakdown = aggregateClassroomBreakdown(
+        rows
+          .map((r) => {
+            const teacher = teacherBySessionId.get(r.session_id);
+            return teacher
+              ? {
+                  teacherId: teacher.teacherId,
+                  teacherName: teacher.teacherName,
+                  sessionId: r.session_id,
+                  skillAreaId: r.skill_areas.id,
+                  score: r.score,
+                  flagged: r.flagged_as_difficulty,
+                }
+              : null;
+          })
+          .filter((r): r is NonNullable<typeof r> => r !== null),
+        weightBySkillAreaId
+      );
     }
 
     const { data: report } = await supabase
@@ -193,6 +222,32 @@ export default async function AdminDashboardPage() {
             ))}
           </div>
         </div>
+
+      {classroomBreakdown.length > 0 && (
+        <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-5">
+          <div className="font-heading font-bold text-sm text-[var(--color-ink)] mb-4.5">By Classroom</div>
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-[var(--color-neutral-divider)]">
+                <th className="text-left font-bold text-[var(--color-muted-light)] text-xs pb-2.5">Teacher</th>
+                <th className="text-right font-bold text-[var(--color-muted-light)] text-xs pb-2.5">Students</th>
+                <th className="text-right font-bold text-[var(--color-muted-light)] text-xs pb-2.5">Avg. Score</th>
+                <th className="text-right font-bold text-[var(--color-muted-light)] text-xs pb-2.5">Needs Support</th>
+              </tr>
+            </thead>
+            <tbody>
+              {classroomBreakdown.map((c) => (
+                <tr key={c.teacherId} className="border-b border-[var(--color-neutral-divider)] last:border-0">
+                  <td className="py-2.5 font-bold text-[var(--color-ink-soft)]">{c.teacherName}</td>
+                  <td className="py-2.5 text-right text-[var(--color-body)]">{c.studentsAssessed}</td>
+                  <td className="py-2.5 text-right text-[var(--color-body)]">{c.avgScore}%</td>
+                  <td className="py-2.5 text-right font-bold text-[var(--color-orange-dark)]">{c.pctNeedsSupport}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <div className="bg-[var(--color-orange-tint)] rounded-[24px] px-6.5 py-5.5 text-[var(--color-ink-soft)] text-sm leading-relaxed">
         <strong className="text-[var(--color-ink)]">Planning note:</strong> {planningNote}

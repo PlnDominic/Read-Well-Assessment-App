@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { MicIcon, CheckIcon } from "@/components/icons";
+import { MicIcon, CheckIcon, SpeakerIcon } from "@/components/icons";
 import { SunnyAvatar } from "@/components/SunnyAvatar";
 import { SKILL_AREA_TILE_COLOR, type SkillAreaKey } from "@/lib/theme";
 
@@ -94,6 +94,34 @@ function withLocalProgress(sessionId: string, data: KioskState): KioskState {
   };
 }
 
+// --- Read-aloud (PRD/BRD: "minimal reliance on reading instructions
+// independently") -------------------------------------------------------
+// Uses the browser's built-in Web Speech *Synthesis* API (distinct from
+// the SpeechRecognition used for mic items above): no account/API key,
+// same reasoning as evaluateResponse's ASR choice in lib/kiosk.ts. Support
+// is broad (Chrome, Edge, Safari, Firefox all ship it) but not universal,
+// so every call site here is a no-op when it's missing rather than an
+// error the student would see.
+
+function itemSpokenText(item: KioskItem): string {
+  const parts = [item.passage, item.prompt].filter((p): p is string => !!p);
+  if (item.type === "choice" && item.options) {
+    parts.push(`Your choices are: ${item.options.join(", ")}.`);
+  }
+  return parts.join(". ");
+}
+
+function speak(text: string) {
+  if (typeof window === "undefined" || !window.speechSynthesis) return;
+  // Cancel whatever's still playing (e.g. the previous question) before
+  // starting the new one, rather than letting them queue up and overlap.
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "en-US";
+  utterance.rate = 0.9; // a little slower than default, for early readers
+  window.speechSynthesis.speak(utterance);
+}
+
 function pendingCompleteKey(sessionId: string) {
   return `rw:pendingComplete:${sessionId}`;
 }
@@ -125,6 +153,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
   const [syncing, setSyncing] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [pendingComplete, setPendingComplete] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
   const pendingRef = useRef<Record<string, unknown>>({});
 
   const applyState = useCallback((data: KioskState) => {
@@ -176,9 +205,38 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsOnline(navigator.onLine);
     setPendingComplete(readPendingComplete(sessionId));
+    setSpeechSupported(typeof window.speechSynthesis !== "undefined");
     pendingRef.current = readPending(sessionId);
     load();
   }, [load, sessionId]);
+
+  // Reads the current question aloud automatically as the student reaches
+  // it. Runs only once `started` is true, since "Let's Start!" is the user
+  // gesture some browsers (notably Safari/iOS) require before speech
+  // synthesis is allowed to play at all; the manual "Listen again" button
+  // below covers everything else (repeats, browsers that block this too).
+  useEffect(() => {
+    if (!speechSupported || !started || !state || state.status === "completed") return;
+    const item = state.items[qIndex];
+    if (!item) return;
+    speak(itemSpokenText(item));
+    return () => {
+      window.speechSynthesis?.cancel();
+    };
+    // Deliberately not depending on `state` itself: saveAnswer's setState
+    // keeps `prev.items` (and so `prev.items[qIndex]`) referentially the
+    // same on every answer save, so depending on `state?.items` here means
+    // only a real question change (or a fresh load()) retriggers this,
+    // not every answer autosave.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [speechSupported, started, qIndex, state?.items, state?.status]);
+
+  // Stop any in-flight speech on unmount (navigating away mid-question).
+  useEffect(() => {
+    return () => {
+      window.speechSynthesis?.cancel();
+    };
+  }, []);
 
   const flushPending = useCallback(async (): Promise<boolean> => {
     const pending = { ...pendingRef.current };
@@ -428,7 +486,16 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
           Let&apos;s read some words together. There are no wrong answers. Just try your best!
         </p>
         <button
-          onClick={() => setStarted(true)}
+          onClick={() => {
+            // Speaking synchronously inside this click (rather than only in
+            // the qIndex effect below) matters on Safari, which only allows
+            // the *first* speechSynthesis utterance in a page to start
+            // directly from a user gesture like this one; once that's
+            // happened, later programmatic calls (the effect, "Listen
+            // again") are allowed too.
+            if (state && speechSupported) speak(itemSpokenText(state.items[qIndex]));
+            setStarted(true);
+          }}
           className="bg-[var(--color-orange)] text-white border-none rounded-full font-heading font-bold text-xl px-14 py-5 cursor-pointer shadow-[0_10px_24px_rgba(201,123,95,0.35)] transition-transform hover:-translate-y-0.5"
         >
           Let&apos;s Start!
@@ -465,11 +532,22 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
       </div>
 
       <div className="bg-[var(--color-surface)] rounded-3xl px-7.5 py-9 shadow-[0_6px_20px_rgba(0,0,0,0.06)] text-center">
-        <div
-          className="inline-block text-white font-extrabold text-xs tracking-wide px-3.5 py-1.5 rounded-full mb-4.5"
-          style={{ background: tileColor }}
-        >
-          {skillLabel}
+        <div className="flex items-center justify-center gap-2.5 mb-4.5">
+          <div
+            className="inline-block text-white font-extrabold text-xs tracking-wide px-3.5 py-1.5 rounded-full"
+            style={{ background: tileColor }}
+          >
+            {skillLabel}
+          </div>
+          {speechSupported && (
+            <button
+              onClick={() => speak(itemSpokenText(item))}
+              aria-label="Listen to this question again"
+              className="w-9 h-9 rounded-full border-none flex items-center justify-center cursor-pointer bg-[var(--color-orange)] transition-transform hover:scale-105"
+            >
+              <SpeakerIcon size={18} />
+            </button>
+          )}
         </div>
 
         {item.passage && (
