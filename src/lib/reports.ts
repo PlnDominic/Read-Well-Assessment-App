@@ -60,8 +60,15 @@ export async function buildStudentReportPageData(
  * Report Generation Service (TRD §4.4/§5): renders and stores the
  * per-student PDF. Called via `after()` from the session-completion route
  * so a slow render never blocks the student/teacher-facing response.
+ *
+ * `notify: false` skips the "report is ready" notification and email, for
+ * re-renders of a report the teacher already has (e.g. after they review a
+ * read-aloud answer, see teacher/students/[studentId]/report/actions.ts).
  */
-export async function generateStudentReport(sessionId: string): Promise<void> {
+export async function generateStudentReport(
+  sessionId: string,
+  { notify = true }: { notify?: boolean } = {}
+): Promise<void> {
   const admin = createAdminClient();
 
   const { data: session, error: sessionError } = await admin
@@ -111,6 +118,8 @@ export async function generateStudentReport(sessionId: string): Promise<void> {
       { onConflict: "session_id" }
     );
   if (upsertError) throw upsertError;
+
+  if (!notify) return;
 
   const reportLink = `/teacher/students/${session.student_id}/report?session=${sessionId}`;
   await admin.from("notifications").insert({

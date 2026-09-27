@@ -7,7 +7,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { computeOverallLabel, computeWeightedAverage } from "@/lib/scoring";
 import { FLAGGED_SCORE_THRESHOLD } from "@/lib/theme";
-import { retryStudentReport } from "./actions";
+import { isScoreChangedByReview } from "@/lib/review";
+import { retryStudentReport, reviewSpokenAnswer } from "./actions";
 import type { AssessmentItem } from "@/lib/database.types";
 
 type ResultRow = { score: number; flagged_as_difficulty: boolean; skill_areas: { id: string; name: string } };
@@ -88,9 +89,17 @@ export default async function StudentReportPage({
 
   const { data: responses } = await supabase
     .from("responses")
-    .select("item_id, answer, is_correct")
+    .select("item_id, answer, is_correct, auto_is_correct, reviewed_at")
     .eq("session_id", sessionId);
   const responseByItemId = new Map((responses ?? []).map((r) => [r.item_id, r]));
+
+  // Reading specialists see this page too (via /specialist) but are
+  // read-only; see reviewSpokenAnswer in ./actions.ts.
+  const canReview = profile?.role === "teacher" || profile?.role === "administrator";
+  const unreviewedWrongMicCount = items.filter((item) => {
+    const r = responseByItemId.get(item.id);
+    return item.type === "mic" && r && r.is_correct !== true && r.reviewed_at === null;
+  }).length;
 
   const { data: results, error: resultsError } = await supabase
     .from("results")
@@ -286,10 +295,25 @@ export default async function StudentReportPage({
           <div className="font-heading font-bold text-sm text-[var(--color-ink)] mb-4">
             Question-by-Question
           </div>
+          {canReview && unreviewedWrongMicCount > 0 && (
+            <p
+              role="status"
+              className="bg-[var(--color-orange-tint)] border border-[var(--color-orange-tint-border)] text-[var(--color-ink-soft)] text-sm rounded-xl px-4.5 py-3 m-0 mb-3"
+            >
+              {unreviewedWrongMicCount === 1
+                ? "1 read-aloud answer was automatically marked incorrect."
+                : `${unreviewedWrongMicCount} read-aloud answers were automatically marked incorrect.`}{" "}
+              Speech recognition can mishear early readers. If you heard the student read it correctly, mark it
+              correct below and the report will update.
+            </p>
+          )}
           <div className="flex flex-col gap-3">
             {items.map((item, i) => {
               const response = responseByItemId.get(item.id);
               const isCorrect = response?.is_correct === true;
+              const isReviewable = canReview && item.type === "mic" && response !== undefined;
+              const isReviewed = response?.reviewed_at != null;
+              const reviewChangedScore = response ? isScoreChangedByReview(response) : false;
               return (
                 <div
                   key={item.id}
@@ -312,6 +336,64 @@ export default async function StudentReportPage({
                     <div className="text-[var(--color-body)] text-sm">
                       Answer: {response ? formatAnswer(item, response.answer) : "Not answered"}
                     </div>
+                    {isReviewed && (
+                      <div className="text-[var(--color-muted)] text-xs font-bold mt-1">
+                        {reviewChangedScore
+                          ? `Marked ${isCorrect ? "correct" : "incorrect"} by teacher (automatically scored ${
+                              isCorrect ? "incorrect" : "correct"
+                            })`
+                          : "Automatic score confirmed by teacher"}
+                      </div>
+                    )}
+                    {isReviewable && (
+                      <form action={reviewSpokenAnswer} className="flex flex-wrap gap-2 mt-2.5">
+                        <input type="hidden" name="sessionId" value={sessionId} />
+                        <input type="hidden" name="itemId" value={item.id} />
+                        {isCorrect ? (
+                          <button
+                            type="submit"
+                            name="verdict"
+                            value="incorrect"
+                            aria-label={`Mark question ${i + 1} incorrect`}
+                            className="bg-[var(--color-surface)] border border-[var(--color-neutral-border-strong)] text-[var(--color-ink-soft)] font-bold text-xs px-3 py-1.5 rounded-full cursor-pointer"
+                          >
+                            Mark incorrect
+                          </button>
+                        ) : (
+                          <button
+                            type="submit"
+                            name="verdict"
+                            value="correct"
+                            aria-label={`Mark question ${i + 1} correct`}
+                            className="bg-[var(--color-ink)] border-none text-[var(--color-surface)] font-bold text-xs px-3 py-1.5 rounded-full cursor-pointer"
+                          >
+                            Mark correct
+                          </button>
+                        )}
+                        {!isReviewed && (
+                          <button
+                            type="submit"
+                            name="verdict"
+                            value={isCorrect ? "correct" : "incorrect"}
+                            aria-label={`Confirm the automatic score for question ${i + 1}`}
+                            className="bg-transparent border border-[var(--color-neutral-border-strong)] text-[var(--color-muted)] font-bold text-xs px-3 py-1.5 rounded-full cursor-pointer"
+                          >
+                            Looks right
+                          </button>
+                        )}
+                        {reviewChangedScore && (
+                          <button
+                            type="submit"
+                            name="verdict"
+                            value="reset"
+                            aria-label={`Reset question ${i + 1} to the automatic score`}
+                            className="bg-transparent border-none text-[var(--color-orange-dark)] font-bold text-xs px-1 py-1.5 cursor-pointer underline"
+                          >
+                            Undo
+                          </button>
+                        )}
+                      </form>
+                    )}
                   </div>
                 </div>
               );

@@ -187,6 +187,9 @@ export interface Database {
           answer: unknown;
           is_correct: boolean | null;
           answered_at: string;
+          auto_is_correct: boolean | null;
+          reviewed_by: string | null;
+          reviewed_at: string | null;
         },
         {
           id?: string;
@@ -194,6 +197,9 @@ export interface Database {
           item_id: string;
           answer: unknown;
           is_correct?: boolean | null;
+          auto_is_correct?: boolean | null;
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
         }
       >;
       results: Table<
