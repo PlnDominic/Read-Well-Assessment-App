@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/authz";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { generateSchoolReport } from "@/lib/reports";
+import { generateSchoolReport, markSchoolReportFailed } from "@/lib/reports";
 
 export async function retrySchoolReport(formData: FormData) {
   const { profile } = await requireAdmin();
@@ -17,7 +17,7 @@ export async function retrySchoolReport(formData: FormData) {
   try {
     await generateSchoolReport(profile.school_id, cycleId);
   } catch (err) {
-    await admin.from("school_reports").update({ status: "failed" }).eq("cycle_id", cycleId);
+    await markSchoolReportFailed(admin, profile.school_id, cycleId, err);
     throw err;
   }
 

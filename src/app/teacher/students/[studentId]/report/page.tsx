@@ -119,7 +119,7 @@ export default async function StudentReportPage({
 
   const { data: report } = await supabase
     .from("student_reports")
-    .select("status, pdf_path")
+    .select("status, pdf_path, last_error")
     .eq("session_id", sessionId)
     .maybeSingle();
 
@@ -215,6 +215,15 @@ export default async function StudentReportPage({
               )}
             </div>
           </div>
+
+          {report?.status === "failed" && report.last_error && (
+            <p
+              role="status"
+              className="text-[var(--color-orange-dark)] text-xs font-bold m-0 mb-5.5 -mt-3.5"
+            >
+              PDF generation error: {report.last_error}
+            </p>
+          )}
 
           <div className="font-heading font-bold text-sm text-[var(--color-ink)] mb-3.5">
             Skill Area Breakdown

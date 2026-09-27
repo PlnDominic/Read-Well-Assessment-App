@@ -8,6 +8,7 @@ import { markAllNotificationsRead, markNotificationRead } from "./actions";
 const TYPE_LABELS: Record<string, string> = {
   student_report_ready: "Student report",
   school_report_ready: "School report",
+  report_generation_failed: "Needs attention",
 };
 
 export default async function NotificationsPage() {

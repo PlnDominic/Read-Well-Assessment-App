@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { generateSchoolReport, generateStudentReport } from "@/lib/reports";
+import { generateSchoolReport, generateStudentReport, markSchoolReportFailed, markStudentReportFailed } from "@/lib/reports";
 import { scoreSession } from "@/lib/scoring";
 import { applyReview, parseReviewVerdict } from "@/lib/review";
 import type { AssessmentItem } from "@/lib/database.types";
@@ -40,7 +40,7 @@ export async function retryStudentReport(formData: FormData) {
   try {
     await generateStudentReport(sessionId);
   } catch (err) {
-    await admin.from("student_reports").update({ status: "failed" }).eq("session_id", sessionId);
+    await markStudentReportFailed(admin, sessionId, err);
     throw err;
   }
 
@@ -128,7 +128,7 @@ export async function reviewSpokenAnswer(formData: FormData) {
       await generateStudentReport(sessionId, { notify: false });
     } catch (err) {
       console.error(`generateStudentReport failed after review of session ${sessionId}`, err);
-      await admin.from("student_reports").update({ status: "failed" }).eq("session_id", sessionId);
+      await markStudentReportFailed(admin, sessionId, err);
     }
 
     if (student?.school_id) {
@@ -136,6 +136,7 @@ export async function reviewSpokenAnswer(formData: FormData) {
         await generateSchoolReport(student.school_id, session.cycle_id);
       } catch (err) {
         console.error(`generateSchoolReport failed for school ${student.school_id}`, err);
+        await markSchoolReportFailed(admin, student.school_id, session.cycle_id, err);
       }
     }
   });

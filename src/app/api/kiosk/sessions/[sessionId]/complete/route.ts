@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { after } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { scoreSession } from "@/lib/scoring";
-import { generateSchoolReport, generateStudentReport } from "@/lib/reports";
+import { generateSchoolReport, generateStudentReport, markSchoolReportFailed, markStudentReportFailed } from "@/lib/reports";
 
 /**
  * POST /api/kiosk/sessions/:id/complete: Assessment Service "complete"
@@ -41,12 +41,23 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ se
     .eq("id", session.student_id)
     .single();
 
+  // A placeholder row so a failure has somewhere to record status/last_error
+  // against (the student_reports row above serves the same purpose for the
+  // per-student PDF) -- without this, a school report that fails on its
+  // very first attempt for a cycle would leave no row at all, and the
+  // admin dashboard would show "PDF pending" forever with no way to retry.
+  if (student?.school_id) {
+    await admin
+      .from("school_reports")
+      .upsert({ school_id: student.school_id, cycle_id: session.cycle_id, status: "pending" }, { onConflict: "school_id,cycle_id" });
+  }
+
   after(async () => {
     try {
       await generateStudentReport(sessionId);
     } catch (err) {
       console.error(`generateStudentReport failed for session ${sessionId}`, err);
-      await admin.from("student_reports").update({ status: "failed" }).eq("session_id", sessionId);
+      await markStudentReportFailed(admin, sessionId, err);
     }
 
     if (student?.school_id) {
@@ -54,6 +65,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ se
         await generateSchoolReport(student.school_id, session.cycle_id);
       } catch (err) {
         console.error(`generateSchoolReport failed for school ${student.school_id}`, err);
+        await markSchoolReportFailed(admin, student.school_id, session.cycle_id, err);
       }
     }
   });

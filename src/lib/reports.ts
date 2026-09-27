@@ -71,6 +71,13 @@ export async function generateStudentReport(
 ): Promise<void> {
   const admin = createAdminClient();
 
+  // Best-effort: lets the retry cron (src/app/api/cron/retry-failed-reports)
+  // tell a report that's actively being (re)rendered from one that's been
+  // stuck at 'pending' because a previous attempt died mid-render without
+  // ever reaching the success/failure update below. A no-op, not an error,
+  // if the row doesn't exist yet.
+  await admin.from("student_reports").update({ attempted_at: new Date().toISOString() }).eq("session_id", sessionId);
+
   const { data: session, error: sessionError } = await admin
     .from("assessment_sessions")
     .select("id, student_id, completed_at, assessments(grade_level)")
@@ -114,6 +121,12 @@ export async function generateStudentReport(
         overall_label: pageData.overallLabel,
         pdf_path: pdfPath,
         status: "ready",
+        // Clear the retry/alert trail on success so a *future* failure on
+        // this same report starts its own retry budget and can alert
+        // again, rather than inheriting a spent one from a past incident.
+        retry_count: 0,
+        last_error: null,
+        alerted_at: null,
       },
       { onConflict: "session_id" }
     );
@@ -149,6 +162,13 @@ export async function generateStudentReport(
  */
 export async function generateSchoolReport(schoolId: string, cycleId: string): Promise<void> {
   const admin = createAdminClient();
+
+  // See the matching comment in generateStudentReport.
+  await admin
+    .from("school_reports")
+    .update({ attempted_at: new Date().toISOString() })
+    .eq("school_id", schoolId)
+    .eq("cycle_id", cycleId);
 
   const { data: school, error: schoolError } = await admin
     .from("schools")
@@ -285,7 +305,18 @@ export async function generateSchoolReport(schoolId: string, cycleId: string): P
 
   const { error: upsertError } = await admin
     .from("school_reports")
-    .upsert({ school_id: schoolId, cycle_id: cycleId, pdf_path: pdfPath, status: "ready" }, { onConflict: "school_id,cycle_id" });
+    .upsert(
+      {
+        school_id: schoolId,
+        cycle_id: cycleId,
+        pdf_path: pdfPath,
+        status: "ready",
+        retry_count: 0,
+        last_error: null,
+        alerted_at: null,
+      },
+      { onConflict: "school_id,cycle_id" }
+    );
   if (upsertError) throw upsertError;
 
   const { data: admins } = await admin
@@ -316,4 +347,127 @@ export async function generateSchoolReport(schoolId: string, cycleId: string): P
         )
     );
   }
+}
+
+/**
+ * Records a student report generation failure -- both for a human to see
+ * (the report page's "Retry PDF" state) and for the retry cron's
+ * bookkeeping (last_error). Used by every call site that catches a thrown
+ * generateStudentReport: the completion route's background job, the
+ * teacher/admin "Retry PDF" action, the read-aloud review action, and the
+ * retry cron itself.
+ */
+export async function markStudentReportFailed(admin: AdminClient, sessionId: string, error: unknown): Promise<void> {
+  await admin
+    .from("student_reports")
+    .update({ status: "failed", last_error: errorMessage(error) })
+    .eq("session_id", sessionId);
+}
+
+/** School-report counterpart to markStudentReportFailed. */
+export async function markSchoolReportFailed(
+  admin: AdminClient,
+  schoolId: string,
+  cycleId: string,
+  error: unknown
+): Promise<void> {
+  await admin
+    .from("school_reports")
+    .update({ status: "failed", last_error: errorMessage(error) })
+    .eq("school_id", schoolId)
+    .eq("cycle_id", cycleId);
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * Notifies a school's administrators that a student's report has failed
+ * every automatic retry (src/app/api/cron/retry-failed-reports) and needs
+ * a human to look at it -- TRD §7's "catch failed report generation
+ * before a teacher notices," for the failures automatic retries can't fix
+ * on their own. Sent once per failure (see alerted_at in
+ * supabase/migrations/0013_report_retry_tracking.sql); a manual "Retry
+ * PDF" that succeeds clears it, so a later failure can alert again.
+ */
+export async function alertStudentReportFailure(
+  admin: AdminClient,
+  report: { id: string; session_id: string; student_id: string; last_error: string | null }
+): Promise<void> {
+  const { data: student } = await admin
+    .from("students")
+    .select("name, school_id")
+    .eq("id", report.student_id)
+    .single();
+  if (!student) return;
+
+  const { data: admins } = await admin
+    .from("profiles")
+    .select("id, name, email")
+    .eq("school_id", student.school_id)
+    .eq("role", "administrator");
+
+  const link = `/teacher/students/${report.student_id}/report?session=${report.session_id}`;
+  const reason = report.last_error ?? "Report generation kept failing.";
+  for (const a of admins ?? []) {
+    await admin.from("notifications").insert({
+      recipient_id: a.id,
+      type: "report_generation_failed",
+      message: `${student.name}'s report failed to generate after several attempts.`,
+      link,
+    });
+    if (a.email) {
+      await sendEmail({
+        to: a.email,
+        subject: `${student.name}'s report needs attention`,
+        html: `<p>Hi ${escapeHtml(a.name)},</p><p><a href="${appUrl(link)}">${escapeHtml(
+          student.name
+        )}'s report</a> failed to generate after several automatic retries and needs to be retried manually.</p><p>Last error: ${escapeHtml(
+          reason
+        )}</p>`,
+      });
+    }
+  }
+
+  await admin.from("student_reports").update({ alerted_at: new Date().toISOString() }).eq("id", report.id);
+}
+
+/** School-report counterpart to alertStudentReportFailure. */
+export async function alertSchoolReportFailure(
+  admin: AdminClient,
+  report: { id: string; school_id: string; cycle_id: string; last_error: string | null }
+): Promise<void> {
+  const { data: school } = await admin.from("schools").select("name").eq("id", report.school_id).single();
+  const { data: cycle } = await admin.from("assessment_cycles").select("name").eq("id", report.cycle_id).single();
+
+  const { data: admins } = await admin
+    .from("profiles")
+    .select("id, name, email")
+    .eq("school_id", report.school_id)
+    .eq("role", "administrator");
+
+  const cycleName = cycle?.name ?? "The current cycle's";
+  const reason = report.last_error ?? "Report generation kept failing.";
+  for (const a of admins ?? []) {
+    await admin.from("notifications").insert({
+      recipient_id: a.id,
+      type: "report_generation_failed",
+      message: `${cycleName} school-wide report failed to generate after several attempts.`,
+      link: "/admin",
+    });
+    if (a.email) {
+      await sendEmail({
+        to: a.email,
+        subject: `${school?.name ?? "Your school"}'s report needs attention`,
+        html: `<p>Hi ${escapeHtml(a.name)},</p><p>The <a href="${appUrl("/admin")}">${escapeHtml(
+          cycleName
+        )} school-wide report</a> failed to generate after several automatic retries and needs to be retried manually.</p><p>Last error: ${escapeHtml(
+          reason
+        )}</p>`,
+      });
+    }
+  }
+
+  await admin.from("school_reports").update({ alerted_at: new Date().toISOString() }).eq("id", report.id);
 }

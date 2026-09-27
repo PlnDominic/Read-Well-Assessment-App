@@ -228,6 +228,10 @@ export interface Database {
           generated_at: string;
           pdf_path: string | null;
           status: ReportStatus;
+          attempted_at: string | null;
+          retry_count: number;
+          last_error: string | null;
+          alerted_at: string | null;
         },
         {
           id?: string;
@@ -236,6 +240,10 @@ export interface Database {
           overall_label: string;
           pdf_path?: string | null;
           status?: ReportStatus;
+          attempted_at?: string | null;
+          retry_count?: number;
+          last_error?: string | null;
+          alerted_at?: string | null;
         }
       >;
       school_reports: Table<
@@ -246,6 +254,10 @@ export interface Database {
           generated_at: string;
           pdf_path: string | null;
           status: ReportStatus;
+          attempted_at: string | null;
+          retry_count: number;
+          last_error: string | null;
+          alerted_at: string | null;
         },
         {
           id?: string;
@@ -253,6 +265,10 @@ export interface Database {
           cycle_id: string;
           pdf_path?: string | null;
           status?: ReportStatus;
+          attempted_at?: string | null;
+          retry_count?: number;
+          last_error?: string | null;
+          alerted_at?: string | null;
         }
       >;
       notifications: Table<

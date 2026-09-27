@@ -40,6 +40,7 @@ export default async function AdminDashboardPage() {
   let skillDistribution: { name: string; pct: number }[] = [];
   let classroomBreakdown: ReturnType<typeof aggregateClassroomBreakdown> = [];
   let reportStatus: string | null = null;
+  let reportLastError: string | null = null;
 
   if (cycle) {
     const { data: sessions } = await supabase
@@ -113,10 +114,11 @@ export default async function AdminDashboardPage() {
 
     const { data: report } = await supabase
       .from("school_reports")
-      .select("status")
+      .select("status, last_error")
       .eq("cycle_id", cycle.id)
       .maybeSingle();
     reportStatus = report?.status ?? null;
+    reportLastError = report?.last_error ?? null;
 
     after(async () => {
       const admin = createAdminClient();
@@ -191,6 +193,12 @@ export default async function AdminDashboardPage() {
             )}
           </div>
         </div>
+
+        {reportStatus === "failed" && reportLastError && (
+          <p role="status" className="text-[var(--color-orange-dark)] text-xs font-bold m-0 mb-6 -mt-4">
+            PDF generation error: {reportLastError}
+          </p>
+        )}
 
         <div className="grid gap-4 mb-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
           <StatCard label="Students Assessed" value={`${studentsAssessed} / ${studentsTotal ?? 0}`} />
