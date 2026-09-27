@@ -18,6 +18,17 @@ export function AppShell({
 }) {
   return (
     <div className="min-h-screen bg-[var(--color-bg)] flex flex-col items-center px-4 pt-6 pb-15">
+      {/* Skip link (WCAG 2.4.1 Bypass Blocks): a keyboard user landing on
+          any staff page otherwise has to tab through the top bar's three
+          buttons and, on admin pages, AdminNav's seven tabs before
+          reaching this page's own content. Hidden until it receives focus
+          (the first Tab press), same convention as most sites' skip links. */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:bg-[var(--color-orange)] focus:text-white focus:font-bold focus:text-sm focus:px-4 focus:py-2.5 focus:rounded-full"
+      >
+        Skip to main content
+      </a>
       {showTopBar && (
         <div className="w-full max-w-[1100px] flex justify-between items-center flex-wrap gap-2.5 bg-[var(--color-surface)] rounded-[20px] shadow-[0_4px_16px_rgba(0,0,0,0.05)] px-5 py-3.5 mb-6">
           <div className="flex items-center gap-3">
@@ -47,7 +58,9 @@ export function AppShell({
         </div>
       )}
       {showTopBar && <StaffOfflineBanner />}
-      {children}
+      <main id="main-content" className="w-full flex flex-col items-center">
+        {children}
+      </main>
     </div>
   );
 }

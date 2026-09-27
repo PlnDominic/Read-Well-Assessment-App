@@ -65,6 +65,7 @@ export function JoinForm() {
         <input
           type="text"
           name="code"
+          aria-label="Your code"
           maxLength={6}
           autoComplete="off"
           autoCapitalize="characters"

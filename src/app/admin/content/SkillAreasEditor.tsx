@@ -23,6 +23,7 @@ export function SkillAreasEditor({ skillAreas }: { skillAreas: SkillArea[] }) {
             </code>
             <input
               name="name"
+              aria-label={`Display name for ${sa.key}`}
               defaultValue={sa.name}
               required
               className="flex-1 border-2 border-[var(--color-neutral-border)] rounded-lg px-3 py-1.5 text-sm"

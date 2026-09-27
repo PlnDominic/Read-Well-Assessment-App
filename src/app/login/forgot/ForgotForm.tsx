@@ -33,6 +33,7 @@ export function ForgotForm() {
         <input
           type="email"
           name="email"
+          aria-label="Email address"
           required
           placeholder="you@school.edu"
           className="border-2 border-[var(--color-neutral-border)] rounded-xl px-4 py-3 text-base focus:outline-none focus:border-[var(--color-orange)]"

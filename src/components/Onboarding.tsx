@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 export interface OnboardingSlide {
   icon: ReactNode;
@@ -19,6 +19,34 @@ export interface OnboardingSlide {
 export function Onboarding({ slides, storageKey }: { slides: OnboardingSlide[]; storageKey: string }) {
   const [step, setStep] = useState(0);
   const [show, setShow] = useState(false);
+  const skipButtonRef = useRef<HTMLButtonElement>(null);
+  const nextButtonRef = useRef<HTMLButtonElement>(null);
+
+  // A screen-reader/keyboard user opening this dialog should land inside
+  // it, not stay wherever focus was on the underlying page (WCAG 2.4.3
+  // Focus Order / the expected behavior of aria-modal="true").
+  useEffect(() => {
+    if (show) skipButtonRef.current?.focus();
+  }, [show]);
+
+  // A minimal focus trap: this dialog has exactly two focusable elements
+  // (Skip, Next/Get Started), so wrapping Tab between them is enough to
+  // keep focus from escaping into the page underneath, which aria-modal
+  // alone doesn't enforce in every browser/screen-reader combination.
+  function trapFocus(e: React.KeyboardEvent) {
+    if (e.key === "Escape") {
+      finish();
+      return;
+    }
+    if (e.key !== "Tab") return;
+    if (e.shiftKey && document.activeElement === skipButtonRef.current) {
+      e.preventDefault();
+      nextButtonRef.current?.focus();
+    } else if (!e.shiftKey && document.activeElement === nextButtonRef.current) {
+      e.preventDefault();
+      skipButtonRef.current?.focus();
+    }
+  }
 
   useEffect(() => {
     const checkSeen = () => {
@@ -54,10 +82,12 @@ export function Onboarding({ slides, storageKey }: { slides: OnboardingSlide[]; 
       role="dialog"
       aria-modal="true"
       aria-label="Welcome to Read Well"
+      onKeyDown={trapFocus}
       className="fixed inset-0 z-[90] flex flex-col bg-[var(--color-bg)] px-6 pt-6 pb-8"
     >
       <div className="flex justify-end">
         <button
+          ref={skipButtonRef}
           type="button"
           onClick={finish}
           className="text-sm font-bold text-[var(--color-muted)] hover:text-[var(--color-ink)] px-3 py-2"
@@ -93,6 +123,7 @@ export function Onboarding({ slides, storageKey }: { slides: OnboardingSlide[]; 
       </div>
 
       <button
+        ref={nextButtonRef}
         type="button"
         onClick={() => (isLast ? finish() : setStep((s) => s + 1))}
         className="w-full max-w-[420px] mx-auto bg-[var(--color-orange)] text-white rounded-full font-heading font-bold text-lg py-4 shadow-[0_10px_24px_rgba(201,123,95,0.35)] transition-transform hover:-translate-y-0.5"

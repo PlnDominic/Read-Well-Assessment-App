@@ -81,6 +81,7 @@ export function ResetPasswordForm() {
         <input
           type="password"
           name="password"
+          aria-label="New password"
           required
           minLength={8}
           placeholder="New password"
@@ -90,6 +91,7 @@ export function ResetPasswordForm() {
         <input
           type="password"
           name="confirm"
+          aria-label="Confirm new password"
           required
           minLength={8}
           placeholder="Confirm new password"

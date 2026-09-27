@@ -171,6 +171,7 @@ export default async function AdminContentPage({
           <div className="flex flex-wrap gap-3">
             <select
               name="skillAreaId"
+              aria-label="Skill area"
               required
               className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3.5 py-2.5 text-sm"
               defaultValue=""
@@ -186,12 +187,14 @@ export default async function AdminContentPage({
             </select>
             <input
               name="programReference"
+              aria-label="Program reference (optional)"
               placeholder="Program reference (optional)"
               className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3.5 py-2.5 text-sm flex-1 min-w-[200px]"
             />
           </div>
           <textarea
             name="text"
+            aria-label="Recommendation text"
             required
             placeholder="Recommendation text"
             rows={2}

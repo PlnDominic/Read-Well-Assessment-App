@@ -188,11 +188,13 @@ export function AssessmentItemsEditor({
                     <input
                       type="radio"
                       name={`correct-${item.id}`}
+                      aria-label={`Mark "${opt.text || `option ${oi + 1}`}" as the correct answer`}
                       checked={opt.isCorrect}
                       onChange={() => setCorrectOption(i, oi)}
                     />
                     <input
                       value={opt.text}
+                      aria-label={`Option ${oi + 1} text`}
                       onChange={(e) => updateOption(i, oi, { text: e.target.value })}
                       className="flex-1 border-2 border-[var(--color-neutral-border)] rounded-xl px-3 py-2 text-sm"
                     />

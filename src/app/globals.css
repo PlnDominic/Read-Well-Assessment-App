@@ -12,9 +12,15 @@
    which can't read CSS custom properties -- keep the two in sync. */
 :root {
   --color-orange: #ea580c;
-  /* ~4.9:1 against white -- see the muted/body comments below for the same
-     "just past AA" contrast-tuning approach applied throughout this file. */
-  --color-orange-dark: #c2410c;
+  /* 5.7:1 against white, 4.7:1 against --color-orange-tint -- both matter,
+     since orange-dark text sits on white cards *and* directly on
+     orange-tint pills/badges/banners throughout the app (e.g. the "Needs
+     Support" label, role badges, offline/error banners). The original
+     #c2410c only cleared AA (4.5:1) against white (5.2:1) and fell short
+     against its own tint (4.3:1); darkened slightly to clear both. See the
+     muted/body comments below for the same "just past AA" tuning approach
+     applied throughout this file. */
+  --color-orange-dark: #b83d0b;
   --color-orange-mid: #d9540b;
   --color-orange-tint: #fce7da;
   --color-orange-tint-border: #f0be97;

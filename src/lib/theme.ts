@@ -5,9 +5,9 @@
 // surface.
 export const colors = {
   orange: "#EA580C",
-  // ~4.9:1 against white -- see the muted/body comments below for the same
-  // "just past AA" contrast-tuning approach applied throughout this file.
-  orangeDark: "#C2410C",
+  // 5.7:1 against white, 4.7:1 against orangeTint -- see the matching
+  // comment on --color-orange-dark in globals.css, which this mirrors.
+  orangeDark: "#B83D0B",
   orangeMid: "#D9540B",
   orangeTint: "#FCE7DA",
   orangeTintBorder: "#F0BE97",

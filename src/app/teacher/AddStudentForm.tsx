@@ -22,6 +22,7 @@ export function AddStudentForm() {
         </label>
         <select
           name="grade"
+          aria-label="Grade"
           defaultValue={1}
           className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3.5 py-2.5 text-sm"
         >
