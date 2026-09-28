@@ -26,6 +26,26 @@ Storage), matching the TRD's recommended stack.
 
 A few things the PRD/TRD left open that needed a concrete decision to ship:
 
+- **Brand palette: orange/black/white, not the BRD/PRD's sage
+  green/cream/terracotta.** Both docs specify sage green (primary), cream
+  (background), and an unconfirmed accent submitted as "seraquota" and
+  interpreted as terracotta pending confirmation (BRD §7.1/§10, PRD §5.1/§9)
+  — that confirmation never came. Rather than leave the UI half-built
+  against a placeholder color nobody signed off on, this was shipped as
+  orange/black/white (`src/app/globals.css`'s `:root`, mirrored in
+  `src/lib/theme.ts` for PDF/SVG rendering) and applied consistently across
+  student/staff screens and generated PDFs, matching every other
+  requirement in both documents except the specific hue. This is recorded
+  here as the flagged, undone decision it actually is, not silently carried
+  forward: swapping back to sage/cream/terracotta once real values are
+  confirmed mostly means changing the hex values in those two files (and
+  re-checking WCAG AA contrast against the new colors — see "Accessibility"
+  below for the current palette's numbers), since every screen reads colors
+  through those shared tokens rather than hardcoding hex directly —
+  except `themeColor` in `src/app/layout.tsx` and `theme_color` in
+  `src/app/manifest.ts` (the browser-chrome/PWA-install accent color),
+  which CSS custom properties can't reach and would need updating by hand
+  too.
 - **Students never authenticate.** Per TRD §6 ("kiosk-style, teacher-initiated"),
   a kiosk code (`session_code`, 6 random characters excluding 0/O/1/I) is
   created automatically the moment a student is added to the roster; see
@@ -76,6 +96,30 @@ A few things the PRD/TRD left open that needed a concrete decision to ship:
   kept in `responses.auto_is_correct`
   (`supabase/migrations/0012_response_review.sql`), and each review is
   written to the audit log. Reading specialists stay read-only.
+- **Teachers (and administrators) can override a student's grade-matched
+  assessment**, answering PRD open question 3 ("Should teachers be able to
+  override/reassign a student's grade-level assessment, and under what
+  conditions?") in the affirmative, gated the way PRD §4.1's acceptance
+  criterion asks: "blocked or requires explicit override with a warning."
+  `GradeOverrideControl.tsx` on the teacher roster shows a confirm dialog
+  naming exactly what's about to happen (e.g. "starts Amara's next
+  assessment with Grade 2 content instead of the automatically matched
+  Grade 1 content") before calling `overrideAssessmentGrade`
+  (`src/app/teacher/actions.ts`), which re-validates server-side via
+  `validateGradeOverride`/`overrideStudentGrade` in `src/lib/kiosk.ts` and
+  logs an `assessment.grade_override` audit_log row. Only available before
+  a session starts (`status = 'not_started'`), since overriding one already
+  in progress would discard answers already recorded against the original
+  assessment's items. A session whose content grade ends up differing from
+  the student's own enrolled grade shows that plainly on both the report
+  page and the PDF ("Assessed with Grade X content (grade override)")
+  rather than silently using the mismatched grade's `recommendation_rules`
+  — the teacher report page previously did use the student's enrolled
+  grade for that lookup regardless of which assessment the session
+  actually used, a latent bug this override feature would otherwise have
+  turned into an observable one; fixed alongside it to use the session's
+  actual `assessments.grade_level` (`contentGradeLevel`, matching what the
+  PDF generator already did in `lib/reports.ts`).
 - **Overall report label.** "On Track" vs. "Needs Support" wasn't specified
   as a formula anywhere. `computeOverallLabel` in `src/lib/scoring.ts` uses
   "2+ flagged skill areas → Needs Support", chosen because it reproduces the
