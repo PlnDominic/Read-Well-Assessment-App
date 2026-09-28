@@ -4,7 +4,8 @@ import { randomUUID } from "crypto";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { createSessionForStudent } from "@/lib/kiosk";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { createSessionForStudent, overrideStudentGrade } from "@/lib/kiosk";
 
 export interface AddStudentState {
   error: string | null;
@@ -146,4 +147,51 @@ export async function cancelSession(formData: FormData) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/teacher");
+}
+
+/**
+ * Explicit grade override (PRD §4.1: assigning a mismatched-grade
+ * assessment "is blocked or requires explicit override with a warning").
+ * The warning itself is the confirm dialog in GradeOverrideControl.tsx;
+ * this is what runs once staff have confirmed it. Available to teachers
+ * (their own students) and administrators (any student in their school),
+ * same roles RLS already allows to create/cancel a session at all.
+ */
+export async function overrideAssessmentGrade(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  if (!profile || (profile.role !== "teacher" && profile.role !== "administrator")) {
+    throw new Error("Only a teacher or administrator can override a student's assessment grade");
+  }
+
+  const studentId = String(formData.get("studentId") ?? "");
+  const requestedGrade = Number(formData.get("gradeLevel"));
+  if (!studentId || !Number.isInteger(requestedGrade)) throw new Error("Missing student or grade");
+
+  // RLS-scoped read: can_access_student() limits a teacher to their own
+  // students and an administrator to their own school.
+  const { data: student, error: studentError } = await supabase
+    .from("students")
+    .select("grade, school_id")
+    .eq("id", studentId)
+    .single();
+  if (studentError || !student) throw new Error("Student not found or not accessible");
+
+  const admin = createAdminClient();
+  const result = await overrideStudentGrade(supabase, admin, {
+    studentId,
+    schoolId: student.school_id,
+    currentGrade: student.grade,
+    requestedGrade,
+    createdBy: user.id,
+  });
+  if (!result.ok) throw new Error(result.error);
+
+  revalidatePath("/teacher");
+  revalidatePath("/admin/students");
 }

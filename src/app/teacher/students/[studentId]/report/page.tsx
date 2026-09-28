@@ -82,10 +82,16 @@ export default async function StudentReportPage({
 
   const { data: assessment } = await supabase
     .from("assessments")
-    .select("items")
+    .select("items, grade_level")
     .eq("id", session.assessment_id)
     .single();
   const items = (assessment?.items ?? []) as AssessmentItem[];
+  // The assessment this specific session actually used, not the student's
+  // own enrolled grade -- these differ after a grade override
+  // (GradeOverrideControl.tsx / overrideStudentGrade in lib/kiosk.ts), and
+  // recommendation_rules is keyed by the content's grade, not the
+  // student's. Matches contentGradeLevel in lib/reports.ts's PDF path.
+  const contentGradeLevel = assessment?.grade_level ?? student.grade;
 
   const { data: responses } = await supabase
     .from("responses")
@@ -114,7 +120,7 @@ export default async function StudentReportPage({
         .from("recommendation_rules")
         .select("recommendation_text, skill_areas(name)")
         .in("skill_area_id", flaggedIds)
-        .eq("grade_level", student.grade)
+        .eq("grade_level", contentGradeLevel)
     : { data: [] };
 
   const { data: report } = await supabase
@@ -176,6 +182,11 @@ export default async function StudentReportPage({
               <p className="text-[var(--color-muted)] text-sm m-0">
                 Grade {student.grade} · Assessed {assessedDate}
               </p>
+              {contentGradeLevel !== student.grade && (
+                <p className="text-[var(--color-orange-dark)] text-xs font-bold m-0 mt-1">
+                  Assessed with Grade {contentGradeLevel} content (grade override)
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-2.5">
               {/* On Track is solid black/white rather than orange: orange is

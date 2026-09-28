@@ -4,8 +4,9 @@ import { AppShell } from "@/components/AppShell";
 import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
 import { ROLE_AVATAR } from "@/lib/avatars";
 import { createClient } from "@/lib/supabase/server";
-import { cancelSession, startOrResumeAssessment } from "./actions";
+import { cancelSession, overrideAssessmentGrade, startOrResumeAssessment } from "./actions";
 import { AddStudentForm } from "./AddStudentForm";
+import { GradeOverrideControl } from "./GradeOverrideControl";
 
 const STATUS_STYLE: Record<
   string,
@@ -198,6 +199,17 @@ export default async function TeacherRosterPage() {
                             Cancel
                           </ConfirmSubmitButton>
                         </form>
+                      )}
+                      {/* Only before the assessment starts: overriding one
+                          already in progress would discard answers already
+                          recorded against the original assessment's items. */}
+                      {profile.role === "teacher" && status === "not_started" && (
+                        <GradeOverrideControl
+                          studentId={s.id}
+                          studentName={s.name}
+                          currentGrade={s.grade}
+                          action={overrideAssessmentGrade}
+                        />
                       )}
                     </>
                   )}

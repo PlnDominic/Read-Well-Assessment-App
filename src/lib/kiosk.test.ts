@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { evaluateResponse, generateSessionCode, normalizeSessionCode, normalizeSpokenText } from "./kiosk";
+import {
+  evaluateResponse,
+  generateSessionCode,
+  normalizeSessionCode,
+  normalizeSpokenText,
+  validateGradeOverride,
+} from "./kiosk";
 import type { AssessmentItem } from "./database.types";
 
 describe("evaluateResponse", () => {
@@ -85,5 +91,33 @@ describe("generateSessionCode", () => {
     for (let i = 0; i < 50; i++) {
       expect(generateSessionCode()).not.toMatch(/[01OI]/);
     }
+  });
+});
+
+describe("validateGradeOverride", () => {
+  it("rejects overriding to the student's own grade", () => {
+    const result = validateGradeOverride(1, 1, null);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/already enrolled in Grade 1/);
+  });
+
+  it("rejects overriding a completed session", () => {
+    const result = validateGradeOverride(1, 2, "completed");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/already completed/);
+  });
+
+  it("rejects overriding an in-progress session", () => {
+    const result = validateGradeOverride(1, 2, "in_progress");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/in-progress/);
+  });
+
+  it("allows overriding when there's no session yet", () => {
+    expect(validateGradeOverride(1, 2, null)).toEqual({ ok: true });
+  });
+
+  it("allows overriding a not-started session", () => {
+    expect(validateGradeOverride(1, 2, "not_started")).toEqual({ ok: true });
   });
 });

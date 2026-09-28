@@ -36,6 +36,10 @@ const styles = StyleSheet.create({
 export interface StudentReportPageProps {
   studentName: string;
   grade: number;
+  /** The grade level of the assessment this session actually used, only
+   * passed when it differs from `grade` (a grade override -- see
+   * GradeOverrideControl.tsx / overrideStudentGrade in lib/kiosk.ts). */
+  contentGrade?: number;
   assessedDate: string;
   overallLabel: string;
   skills: { name: string; score: number; flagged: boolean }[];
@@ -51,6 +55,7 @@ export interface StudentReportPageProps {
 export function StudentReportPage({
   studentName,
   grade,
+  contentGrade,
   assessedDate,
   overallLabel,
   skills,
@@ -63,6 +68,11 @@ export function StudentReportPage({
         <View>
           <Text style={styles.name}>{studentName}</Text>
           <Text style={styles.meta}>Grade {grade} · Assessed {assessedDate}</Text>
+          {contentGrade !== undefined && contentGrade !== grade && (
+            <Text style={[styles.meta, { color: colors.orangeDark, fontWeight: 700 }]}>
+              Assessed with Grade {contentGrade} content (grade override)
+            </Text>
+          )}
         </View>
         {/* On Track is solid black/white, not orange -- see the matching
             comment in the web report page: orange is the only accent

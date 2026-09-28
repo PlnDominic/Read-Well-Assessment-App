@@ -41,6 +41,7 @@ export async function buildStudentReportPageData(
   return {
     studentName: params.studentName,
     grade: params.displayGrade,
+    contentGrade: params.contentGradeLevel,
     assessedDate: new Date(params.completedAt ?? Date.now()).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
