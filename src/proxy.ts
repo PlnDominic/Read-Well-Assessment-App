@@ -7,6 +7,27 @@ import { NextResponse, type NextRequest } from "next/server";
 // login page's HTML instead of JSON.
 const PUBLIC_PATHS = ["/login", "/student", "/offline", "/sw.js", "/api/kiosk", "/api/cron"];
 
+/**
+ * A `NextResponse.redirect()` is a brand-new response object; it does not
+ * inherit whatever `response` picked up from the Supabase client's
+ * `setAll` (a just-refreshed session cookie, rotated every time an access
+ * token is renewed). Returning the redirect as-is would silently drop
+ * that refreshed cookie: the browser keeps presenting its old, now
+ * already-rotated refresh token on the next request, which needs
+ * refreshing again, which redirects again, which drops the cookie again
+ * -- an infinite redirect loop ("Load cannot follow more than 20
+ * redirections"). Every redirect below must go through this so a session
+ * refresh that happens to land on a request that also redirects still
+ * reaches the browser.
+ */
+function redirectWithRefreshedCookies(url: URL, response: NextResponse) {
+  const redirectResponse = NextResponse.redirect(url);
+  for (const cookie of response.cookies.getAll()) {
+    redirectResponse.cookies.set(cookie);
+  }
+  return redirectResponse;
+}
+
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
@@ -39,13 +60,13 @@ export async function proxy(request: NextRequest) {
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    return NextResponse.redirect(url);
+    return redirectWithRefreshedCookies(url, response);
   }
 
   if (user && pathname === "/login") {
     const url = request.nextUrl.clone();
     url.pathname = "/";
-    return NextResponse.redirect(url);
+    return redirectWithRefreshedCookies(url, response);
   }
 
   if (user && !isPublic) {
@@ -60,7 +81,7 @@ export async function proxy(request: NextRequest) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
       url.searchParams.set("deactivated", "1");
-      return NextResponse.redirect(url);
+      return redirectWithRefreshedCookies(url, response);
     }
 
     if (pathname.startsWith("/admin") || pathname.startsWith("/specialist")) {
@@ -68,7 +89,7 @@ export async function proxy(request: NextRequest) {
       if (profile?.role !== requiredRole) {
         const url = request.nextUrl.clone();
         url.pathname = "/";
-        return NextResponse.redirect(url);
+        return redirectWithRefreshedCookies(url, response);
       }
     }
   }
