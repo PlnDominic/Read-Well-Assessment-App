@@ -81,7 +81,16 @@ export type CreateSessionResult =
  */
 export async function createSessionForStudent(
   supabase: SupabaseClient<Database>,
-  params: { studentId: string; schoolId: string; grade: number; createdBy: string }
+  params: {
+    studentId: string;
+    schoolId: string;
+    grade: number;
+    createdBy: string;
+    /** Marks an explicit grade override, which the database's grade-match
+     * guard (migration 0014) otherwise rejects. Only overrideStudentGrade
+     * sets this. */
+    gradeOverride?: boolean;
+  }
 ): Promise<CreateSessionResult> {
   const { data: cycle } = await supabase
     .from("assessment_cycles")
@@ -117,6 +126,7 @@ export async function createSessionForStudent(
       cycle_id: cycle.id,
       session_code: sessionCode,
       created_by: params.createdBy,
+      ...(params.gradeOverride ? { grade_override: true } : {}),
     });
     if (!error) return { ok: true, id, sessionCode };
     if (!error.message.includes("session_code")) throw error;
@@ -212,6 +222,7 @@ export async function overrideStudentGrade(
     schoolId: params.schoolId,
     grade: params.requestedGrade,
     createdBy: params.createdBy,
+    gradeOverride: true,
   });
   if (!result.ok) {
     return {

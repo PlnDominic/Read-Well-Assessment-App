@@ -191,16 +191,22 @@ You need a Supabase project (local via the CLI, or hosted at supabase.com).
 
 **Option A: hosted (production or any real deployment):**
 1. Create a project at [supabase.com](https://supabase.com).
-2. In the SQL editor, run every migration in `supabase/migrations/` **in
-   order** (`0001_init.sql` through the highest-numbered file present).
-3. Run `supabase/bootstrap.sql` to create your **real** first school and
-   administrator (it walks you through creating the account in
-   Authentication → Add user first, then linking it up).
+2. In the SQL editor, run `supabase/setup.sql`. It's every migration in
+   `supabase/migrations/` folded into one file, plus the private `reports`
+   storage bucket and starter Grade 1 content, and it's safe to run on a
+   new project, a partly migrated one, or again on an up-to-date one. The
+   `sql` CI job (`supabase/test/check-sql.sh`) checks all three on every
+   push. When you add a migration, add the same change to `setup.sql`.
+3. In Authentication → Users → Add user, create your administrator's login,
+   then fill in the three values at the top of `supabase/bootstrap.sql`
+   and run it to create your **real** first school and administrator.
    **Do not run `supabase/seed.sql` here**: that file creates two demo
    login accounts with a password published in this public repo
    (`readwell-demo`); it's only safe against a local, throwaway database.
 4. Copy `.env.example` to `.env.local` and fill in your project's URL, anon
-   key, and service role key (Project Settings → API).
+   key, and service role key (Project Settings → API). On Vercel, set the
+   same three in Project Settings → Environment Variables and redeploy; all
+   three must come from the same Supabase project.
 
 **Option B: local (Supabase CLI):**
 ```bash

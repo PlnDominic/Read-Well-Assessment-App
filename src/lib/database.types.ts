@@ -165,6 +165,7 @@ export interface Database {
           completed_at: string | null;
           created_by: string;
           created_at: string;
+          grade_override: boolean;
         },
         {
           id?: string;
@@ -177,6 +178,7 @@ export interface Database {
           started_at?: string | null;
           completed_at?: string | null;
           created_by: string;
+          grade_override?: boolean;
         }
       >;
       responses: Table<

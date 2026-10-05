@@ -1,45 +1,50 @@
 -- Production bootstrap: creates your REAL first school and administrator.
--- Run this once against a hosted Supabase project, after the migrations in
--- supabase/migrations/. Do NOT run supabase/seed.sql there (that file
--- creates fake demo accounts with a password published in the public
--- repo; see its header comment).
+-- Run once, after supabase/setup.sql, in the Supabase project your app
+-- uses. Do NOT run supabase/seed.sql there (it creates demo accounts with a
+-- password published in this public repo).
 --
 -- Every account after this first one (teachers, specialists, more admins)
--- should be created from inside the running app itself, at /admin/staff;
--- that flow already creates the Supabase Auth user and the profiles row
--- together, correctly, via the service-role client. This script exists
--- only because *someone* has to create the very first administrator
--- before there's anyone signed in to use that screen.
+-- is created from inside the app at /admin/staff.
 --
 -- Steps:
---   1. In the Supabase Dashboard: Authentication → Users → "Add user".
---      Enter the real administrator's email and a real password (or use
---      "Send invite" if you've configured an email provider). Copy the
---      new user's UUID once it's created.
---   2. Fill in the placeholders below (search for "REPLACE_"). For an
---      address you don't have yet, replace the whole quoted placeholder
---      with the bare word `null` (no quotes).
---   3. Run this whole script once in the SQL Editor.
+--   1. Supabase Dashboard -> Authentication -> Users -> "Add user" ->
+--      "Create new user". Enter the administrator's real email and a
+--      password, and tick "Auto Confirm User".
+--   2. Change the three values on the "values" lines below.
+--   3. Run this whole script in the SQL Editor.
+--
+-- Safe to re-run: if that account already has a profile, it's left alone.
 
-begin;
+do $$
+declare
+  admin_email text := 'REPLACE_WITH_ADMIN_EMAIL';
+  admin_name  text := 'REPLACE_WITH_ADMIN_NAME';
+  school_name text := 'REPLACE_WITH_SCHOOL_NAME';
+  auth_user_id uuid;
+  new_school_id uuid;
+begin
+  if admin_email like 'REPLACE_%' or admin_name like 'REPLACE_%' or school_name like 'REPLACE_%' then
+    raise exception 'Fill in admin_email, admin_name and school_name at the top of this script first.';
+  end if;
 
-with new_school as (
-  insert into public.schools (name, address)
-  values ('REPLACE_WITH_REAL_SCHOOL_NAME', 'REPLACE_WITH_REAL_SCHOOL_ADDRESS_OR_null')
-  returning id
-)
-insert into public.profiles (id, school_id, name, email, role)
-select
-  'REPLACE_WITH_AUTH_USER_UUID_FROM_STEP_1',
-  new_school.id,
-  'REPLACE_WITH_REAL_ADMIN_NAME',
-  'REPLACE_WITH_REAL_ADMIN_EMAIL',
-  'administrator'
-from new_school;
+  select id into auth_user_id from auth.users where lower(email) = lower(admin_email);
+  if auth_user_id is null then
+    raise exception 'No login account for %. Create it first: Authentication -> Users -> Add user.', admin_email;
+  end if;
 
-commit;
+  if exists (select 1 from public.profiles where id = auth_user_id) then
+    raise notice 'A profile for % already exists; nothing to do.', admin_email;
+    return;
+  end if;
 
--- After this, log into the app with that email/password, then use
--- /admin/staff to invite real teachers and reading specialists, and
--- /admin/students (or a teacher's own roster page) to add real students,
--- no further SQL needed for any of that.
+  select id into new_school_id from public.schools where name = school_name limit 1;
+  if new_school_id is null then
+    insert into public.schools (name) values (school_name) returning id into new_school_id;
+  end if;
+
+  insert into public.profiles (id, school_id, name, email, role)
+  values (auth_user_id, new_school_id, admin_name, admin_email, 'administrator');
+
+  raise notice 'Created administrator % for %.', admin_email, school_name;
+end
+$$;
