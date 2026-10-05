@@ -6,6 +6,17 @@
 
 begin;
 
+-- Stop early, with a clear message, if this is pasted into a database that
+-- never had migrations 0001-0009 (most often: the wrong Supabase project).
+do $$
+begin
+  if to_regprocedure('public.can_access_student(uuid)') is null
+     or to_regclass('public.students') is null then
+    raise exception 'This database is missing the base Read Well schema (migrations 0001-0009). Check you are in the Supabase project your app uses: Project Settings -> API -> Project URL must match NEXT_PUBLIC_SUPABASE_URL.';
+  end if;
+end
+$$;
+
 -- 0010: soft delete for students
 alter table public.students add column if not exists deleted_at timestamptz;
 
