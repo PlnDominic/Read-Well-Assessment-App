@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { NO_PROFILE_LOGIN } from "@/lib/staffRouting";
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
@@ -52,7 +53,7 @@ export default async function TeacherRosterPage() {
   if (!user) redirect("/login");
 
   const { data: profile } = await supabase.from("profiles").select("name, school_id, role").eq("id", user.id).single();
-  if (!profile) redirect("/login");
+  if (!profile) redirect(NO_PROFILE_LOGIN);
 
   const { data: students } = await supabase
     .from("students")

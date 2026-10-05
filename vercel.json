@@ -7,10 +7,6 @@
     {
       "path": "/api/cron/cycle-scheduler",
       "schedule": "0 12 * * *"
-    },
-    {
-      "path": "/api/cron/retry-failed-reports",
-      "schedule": "*/15 * * * *"
     }
   ]
 }

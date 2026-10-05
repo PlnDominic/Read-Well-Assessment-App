@@ -151,9 +151,11 @@ A few things the PRD/TRD left open that needed a concrete decision to ship:
   the "Retry PDF" button; there was also no way to tell a generation had
   silently stalled (e.g. the serverless function running `after()` was
   killed mid-render, leaving `status` stuck at `'pending'` forever with no
-  error recorded). `src/app/api/cron/retry-failed-reports/route.ts`, run
-  every 15 minutes (`vercel.json`; sub-daily cron schedules need a paid
-  Vercel plan), applies the pure policy in `src/lib/reportRetry.ts`:
+  error recorded). `retryFailedReports` (`src/lib/retryFailedReports.ts`),
+  run once a day by the existing `cycle-scheduler` cron (Vercel's Hobby
+  plan rejects every deployment whose `vercel.json` has a cron running more
+  than daily; `src/lib/vercelConfig.test.ts` now fails CI on that), applies
+  the pure policy in `src/lib/reportRetry.ts`:
   automatically retry a failed or stalled report up to
   `MAX_AUTOMATIC_RETRIES` (3) times, then email and in-app-notify the
   school's administrators once (`alertStudentReportFailure`/
@@ -371,9 +373,10 @@ report page and the admin dashboard, respectively. It re-runs
 shows the outcome immediately, and the specific error is shown next to the
 button (`last_error`) so a human doesn't have to dig through logs.
 
-**Automatic:** `/api/cron/retry-failed-reports` (`vercel.json`, every 15
-minutes) also retries on its own, so most transient failures are fixed
-before anyone notices. It applies the pure policy in
+**Automatic:** the daily `cycle-scheduler` cron also runs
+`retryFailedReports` (`src/lib/retryFailedReports.ts`; also callable on
+demand at `/api/cron/retry-failed-reports` with the `CRON_SECRET`), so
+transient failures get fixed without anyone clicking anything. It applies the pure policy in
 `src/lib/reportRetry.ts`'s `decideReportRetry` to every `failed` or
 stalled-`pending` report (`attempted_at` unset/stale for more than 15
 minutes means a previous attempt died mid-render without ever reaching a

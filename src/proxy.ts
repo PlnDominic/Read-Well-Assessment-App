@@ -63,16 +63,15 @@ export async function proxy(request: NextRequest) {
     return redirectWithRefreshedCookies(url, response);
   }
 
-  if (user && pathname === "/login") {
-    const url = request.nextUrl.clone();
-    url.pathname = "/";
-    return redirectWithRefreshedCookies(url, response);
-  }
-
+  // Deliberately nothing else here for signed-in users: deciding where a
+  // signed-in user belongs (role gating, sending them away from /login)
+  // happens only in the pages, through src/lib/staffRouting.ts. Doing it in
+  // both places, with different queries, is what produced the infinite
+  // redirect loop. Pages and RLS already enforce access on their own.
   if (user && !isPublic) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role, is_active")
+      .select("is_active")
       .eq("id", user.id)
       .single();
 
@@ -82,15 +81,6 @@ export async function proxy(request: NextRequest) {
       url.pathname = "/login";
       url.searchParams.set("deactivated", "1");
       return redirectWithRefreshedCookies(url, response);
-    }
-
-    if (pathname.startsWith("/admin") || pathname.startsWith("/specialist")) {
-      const requiredRole = pathname.startsWith("/admin") ? "administrator" : "reading_specialist";
-      if (profile?.role !== requiredRole) {
-        const url = request.nextUrl.clone();
-        url.pathname = "/";
-        return redirectWithRefreshedCookies(url, response);
-      }
     }
   }
 

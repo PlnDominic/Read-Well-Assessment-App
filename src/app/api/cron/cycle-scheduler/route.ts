@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { activateDueCycle } from "@/lib/cycles";
 import { appUrl, escapeHtml, sendEmail } from "@/lib/email";
+import { retryFailedReports } from "@/lib/retryFailedReports";
 
 // How many days before a cycle's end date its reminder email goes out.
 // Fixed rather than a per-school setting, same tradeoff as
@@ -127,5 +128,16 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, activatedCount, remindersSent });
+  // Also the daily run of the automatic report retry (lib/retryFailedReports.ts);
+  // it has no cron of its own because Vercel's Hobby plan only allows daily
+  // crons. A failure here is reported, not allowed to fail the cycle work above.
+  let reportRetry: Awaited<ReturnType<typeof retryFailedReports>> | { error: string };
+  try {
+    reportRetry = await retryFailedReports();
+  } catch (err) {
+    console.error("retryFailedReports failed", err);
+    reportRetry = { error: err instanceof Error ? err.message : String(err) };
+  }
+
+  return NextResponse.json({ ok: true, activatedCount, remindersSent, reportRetry });
 }

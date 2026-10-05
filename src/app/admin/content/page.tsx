@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { pathForUnauthorizedProfile } from "@/lib/staffRouting";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { FLAGGED_SCORE_THRESHOLD } from "@/lib/theme";
@@ -31,7 +32,7 @@ export default async function AdminContentPage({
   if (!user) redirect("/login");
 
   const { data: profile } = await supabase.from("profiles").select("role, school_id").eq("id", user.id).single();
-  if (!profile || profile.role !== "administrator") redirect("/");
+  if (!profile || profile.role !== "administrator") redirect(pathForUnauthorizedProfile(profile));
 
   const { data: skillAreas } = await supabase.from("skill_areas").select("id, key, name").order("name");
 

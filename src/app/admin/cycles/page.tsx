@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { pathForUnauthorizedProfile } from "@/lib/staffRouting";
 import { createClient } from "@/lib/supabase/server";
 import { activateDueCycle } from "@/lib/cycles";
 import { startNewCycle } from "./actions";
@@ -11,7 +12,7 @@ export default async function AdminCyclesPage() {
   if (!user) redirect("/login");
 
   const { data: profile } = await supabase.from("profiles").select("role, school_id").eq("id", user.id).single();
-  if (!profile || profile.role !== "administrator") redirect("/");
+  if (!profile || profile.role !== "administrator") redirect(pathForUnauthorizedProfile(profile));
 
   // Self-heals a scheduled cycle whose start date has arrived even if the
   // scheduler cron hasn't run yet (e.g. CRON_SECRET not configured, or a

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { pathForUnauthorizedProfile } from "@/lib/staffRouting";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -30,7 +31,7 @@ export default async function AdminAuditPage({
   if (!user) redirect("/login");
 
   const { data: profile } = await supabase.from("profiles").select("role, school_id").eq("id", user.id).single();
-  if (!profile || profile.role !== "administrator") redirect("/");
+  if (!profile || profile.role !== "administrator") redirect(pathForUnauthorizedProfile(profile));
 
   // audit_log has no client-facing RLS policy by design (written/read via
   // service role only); this is the one place that reads it, gated by the

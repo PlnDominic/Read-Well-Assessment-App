@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { pathForUnauthorizedProfile } from "@/lib/staffRouting";
 import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -20,7 +21,7 @@ export default async function AdminDashboardPage() {
   if (!user) redirect("/login");
 
   const { data: profile } = await supabase.from("profiles").select("role, school_id").eq("id", user.id).single();
-  if (!profile || profile.role !== "administrator") redirect("/");
+  if (!profile || profile.role !== "administrator") redirect(pathForUnauthorizedProfile(profile));
 
   const { data: school } = await supabase.from("schools").select("name").eq("id", profile.school_id).single();
   const { data: cycle } = await supabase

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { pathForUnauthorizedProfile } from "@/lib/staffRouting";
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { ROLE_AVATAR } from "@/lib/avatars";
@@ -21,7 +22,7 @@ export default async function SpecialistPage() {
   if (!user) redirect("/login");
 
   const { data: profile } = await supabase.from("profiles").select("name, school_id, role").eq("id", user.id).single();
-  if (!profile || profile.role !== "reading_specialist") redirect("/");
+  if (!profile || profile.role !== "reading_specialist") redirect(pathForUnauthorizedProfile(profile));
 
   // RLS (can_access_student) already scopes this to the specialist's
   // assigned students; no need to join specialist_assignments explicitly.
