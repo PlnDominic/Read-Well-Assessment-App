@@ -52,15 +52,25 @@ export default async function AdminDashboardPage() {
     type SessionRow = {
       id: string;
       student_id: string;
-      students: { grade: number; teacher_id: string; profiles: { name: string } };
+      students: { grade: number; teacher_id: string; profiles: { name: string } | null } | null;
     };
     const sessionRows = (sessions ?? []) as unknown as SessionRow[];
 
     const sessionIds = sessionRows.map((s) => s.id);
     studentsAssessed = new Set(sessionRows.map((s) => s.student_id)).size;
     gradeLevel = sessionRows[0]?.students?.grade ?? 1;
+    // students/profiles are typed above as possibly null defensively: an
+    // embedded to-one relation PostgREST can't resolve (RLS, or a student
+    // whose teacher account was since removed) comes back null rather
+    // than throwing, and previously this crashed the whole page (a
+    // top-level-request render failure in the App Router looks like a
+    // blank page in production, with no on-screen error). Sessions that
+    // can't be attributed to a teacher just don't contribute to the
+    // classroom breakdown below rather than taking the page down.
     const teacherBySessionId = new Map(
-      sessionRows.map((s) => [s.id, { teacherId: s.students.teacher_id, teacherName: s.students.profiles.name }])
+      sessionRows
+        .filter((s) => s.students?.profiles)
+        .map((s) => [s.id, { teacherId: s.students!.teacher_id, teacherName: s.students!.profiles!.name }])
     );
 
     if (sessionIds.length > 0) {

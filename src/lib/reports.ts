@@ -201,15 +201,19 @@ export async function generateSchoolReport(schoolId: string, cycleId: string): P
   type SessionRow = {
     id: string;
     student_id: string;
-    students: { grade: number; teacher_id: string; profiles: { name: string } };
+    students: { grade: number; teacher_id: string; profiles: { name: string } | null } | null;
   };
   const sessionRows = sessions as unknown as SessionRow[];
 
   const sessionIds = sessionRows.map((s) => s.id);
   const studentsAssessed = new Set(sessionRows.map((s) => s.student_id)).size;
   const gradeLevel: number = sessionRows[0]?.students?.grade ?? 1;
+  // See the matching comment in admin/page.tsx: profiles is typed nullable
+  // defensively rather than assumed to always resolve.
   const teacherBySessionId = new Map(
-    sessionRows.map((s) => [s.id, { teacherId: s.students.teacher_id, teacherName: s.students.profiles.name }])
+    sessionRows
+      .filter((s) => s.students?.profiles)
+      .map((s) => [s.id, { teacherId: s.students!.teacher_id, teacherName: s.students!.profiles!.name }])
   );
 
   let avgOverallScore = 0;
