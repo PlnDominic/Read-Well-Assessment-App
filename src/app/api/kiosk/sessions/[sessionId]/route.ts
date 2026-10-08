@@ -35,11 +35,25 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ ses
   });
 }
 
+// Every answer the runner sends is a string: a chosen option's text, a
+// read-aloud transcript, or "attempted". The cap is far above any real
+// transcript; it only stops this unauthenticated endpoint from storing
+// arbitrarily large payloads in responses.answer.
+const MAX_ANSWER_LENGTH = 5000;
+
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ sessionId: string }> }) {
   const { sessionId } = await params;
-  const body = (await req.json()) as { itemId?: string; answer?: unknown };
-  if (!body.itemId || body.answer === undefined) {
+  let body: { itemId?: unknown; answer?: unknown };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+  if (typeof body?.itemId !== "string" || !body.itemId || typeof body.answer !== "string") {
     return NextResponse.json({ error: "itemId and answer are required" }, { status: 400 });
+  }
+  if (body.answer.length > MAX_ANSWER_LENGTH) {
+    return NextResponse.json({ error: "Answer is too long" }, { status: 400 });
   }
 
   const admin = createAdminClient();

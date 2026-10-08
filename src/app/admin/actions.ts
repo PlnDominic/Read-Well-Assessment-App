@@ -12,7 +12,11 @@ export async function retrySchoolReport(formData: FormData) {
   if (!cycleId) throw new Error("Missing cycle id");
 
   const admin = createAdminClient();
-  await admin.from("school_reports").update({ status: "pending" }).eq("cycle_id", cycleId);
+  await admin
+    .from("school_reports")
+    .update({ status: "pending" })
+    .eq("school_id", profile.school_id)
+    .eq("cycle_id", cycleId);
 
   try {
     await generateSchoolReport(profile.school_id, cycleId);

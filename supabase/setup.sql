@@ -7,7 +7,7 @@
 -- Safe to run on a brand-new project, on a project that ran only some of
 -- the migrations, and again on one that already ran all of this: every
 -- statement checks before it creates or changes anything. It is the
--- migrations in supabase/migrations/ (0001-0014) folded together, plus the
+-- migrations in supabase/migrations/ (0001-0015) folded together, plus the
 -- reports storage bucket and starter Grade 1 content. It creates no login
 -- accounts; run supabase/bootstrap.sql afterwards for your first admin.
 
@@ -302,7 +302,7 @@ create trigger assessment_sessions_grade_match
   for each row execute function public.check_session_grade_match();
 
 -- ===========================================================================
--- Row Level Security (0002, 0004, 0007, 0009, 0010, 0011)
+-- Row Level Security (0002, 0004, 0007, 0009, 0010, 0011, 0015)
 -- ===========================================================================
 
 alter table public.schools enable row level security;
@@ -422,8 +422,14 @@ create policy assessment_sessions_insert_staff on public.assessment_sessions
 drop policy if exists assessment_sessions_update_scoped on public.assessment_sessions;
 create policy assessment_sessions_update_scoped on public.assessment_sessions
   for update to authenticated
-  using (public.can_access_student(student_id))
-  with check (public.can_access_student(student_id));
+  using (
+    public.current_profile_role() in ('teacher', 'administrator')
+    and public.can_access_student(student_id)
+  )
+  with check (
+    public.current_profile_role() in ('teacher', 'administrator')
+    and public.can_access_student(student_id)
+  );
 
 drop policy if exists assessment_sessions_delete_staff on public.assessment_sessions;
 create policy assessment_sessions_delete_staff on public.assessment_sessions

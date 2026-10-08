@@ -40,7 +40,7 @@ export default async function AdminStudentsPage() {
     .from("specialist_assignments")
     .select("student_id, specialist_id");
 
-  const deletedStudents = await listDeletedStudents(profile.school_id);
+  const deletedStudents = await listDeletedStudents();
 
   const specialistById = new Map((specialists ?? []).map((s) => [s.id, s.name]));
   const specialistIdsByStudent = new Map<string, string[]>();

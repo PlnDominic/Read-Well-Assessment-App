@@ -13,6 +13,16 @@ function generateTempPassword(): string {
   return pw;
 }
 
+/** The auth-admin calls below (ban, unban, set password) act on any user in
+ * the whole Supabase project, not just this school, so each one has to
+ * confirm the target is in the caller's school before it runs. A
+ * school-scoped profiles update afterwards is too late: it matches no rows,
+ * but the auth change has already happened. */
+async function isStaffInSchool(admin: ReturnType<typeof createAdminClient>, id: string, schoolId: string) {
+  const { data: target } = await admin.from("profiles").select("school_id").eq("id", id).maybeSingle();
+  return target?.school_id === schoolId;
+}
+
 export interface InviteStaffState {
   error: string | null;
   result: { email: string; tempPassword: string } | null;
@@ -101,6 +111,8 @@ export async function deactivateStaff(formData: FormData) {
   if (id === profile.id) throw new Error("You can't deactivate your own account");
 
   const admin = createAdminClient();
+  if (!(await isStaffInSchool(admin, id, profile.school_id))) throw new Error("Staff member not found");
+
   const { error: banError } = await admin.auth.admin.updateUserById(id, { ban_duration: "87600h" });
   if (banError) throw new Error(banError.message);
 
@@ -121,6 +133,8 @@ export async function reactivateStaff(formData: FormData) {
   if (!id) throw new Error("Missing staff id");
 
   const admin = createAdminClient();
+  if (!(await isStaffInSchool(admin, id, profile.school_id))) throw new Error("Staff member not found");
+
   const { error: unbanError } = await admin.auth.admin.updateUserById(id, { ban_duration: "none" });
   if (unbanError) throw new Error(unbanError.message);
 
@@ -150,10 +164,7 @@ export async function resetStaffPassword(
   if (!id || !email) return { error: "Missing staff id", result: null };
 
   const admin = createAdminClient();
-
-  // Confirm the target belongs to the caller's school before touching auth.
-  const { data: target } = await admin.from("profiles").select("school_id").eq("id", id).single();
-  if (!target || target.school_id !== profile.school_id) {
+  if (!(await isStaffInSchool(admin, id, profile.school_id))) {
     return { error: "Staff member not found", result: null };
   }
 

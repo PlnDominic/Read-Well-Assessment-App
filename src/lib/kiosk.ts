@@ -1,5 +1,5 @@
 import "server-only";
-import { randomUUID } from "crypto";
+import { randomInt, randomUUID } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import type { AssessmentItem, Database } from "@/lib/database.types";
@@ -51,11 +51,14 @@ export function normalizeSessionCode(raw: string): string {
   return raw.trim().toUpperCase();
 }
 
+/** The code is the only thing standing between an unauthenticated caller
+ * and a student's assessment, so it comes from the CSPRNG (randomInt), not
+ * Math.random, whose output is predictable from earlier output. */
 export function generateSessionCode(): string {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O/1/I
   let code = "";
   for (let i = 0; i < 6; i++) {
-    code += alphabet[Math.floor(Math.random() * alphabet.length)];
+    code += alphabet[randomInt(alphabet.length)];
   }
   return code;
 }

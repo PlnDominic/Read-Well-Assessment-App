@@ -104,13 +104,18 @@ export async function deleteStudent(formData: FormData) {
  * Listing deleted students (for the "Deleted students" panel) needs the
  * service-role client: the select policy filters out deleted_at rows, by
  * design, for every other read in the app.
+ *
+ * Exported from a "use server" file, so this is also a callable Server
+ * Action endpoint, not just a helper for the page: it has to gate itself
+ * and take the school from the caller's own profile, never a parameter.
  */
-export async function listDeletedStudents(schoolId: string) {
+export async function listDeletedStudents() {
+  const { profile } = await requireAdmin();
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("students")
     .select("id, name, grade, deleted_at")
-    .eq("school_id", schoolId)
+    .eq("school_id", profile.school_id)
     .not("deleted_at", "is", null)
     .order("deleted_at", { ascending: false });
   if (error) throw new Error(error.message);
