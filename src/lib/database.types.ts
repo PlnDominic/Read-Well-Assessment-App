@@ -18,7 +18,13 @@ export interface AssessmentItemOption {
 export interface AssessmentItem {
   id: string;
   skillAreaKey: string;
-  type: "choice" | "mic";
+  /**
+   * "choice" and "mic" are answered by the student on the kiosk.
+   * "assessor" items are scored by a trained adult on the assessor screen
+   * (ReadWell Level 1, src/lib/readwell/); an assessment is one or the
+   * other, never a mix (see isAssessorLed in src/lib/readwell/form.ts).
+   */
+  type: "choice" | "mic" | "assessor";
   prompt: string;
   passage?: string;
   options?: AssessmentItemOption[];
@@ -29,6 +35,26 @@ export interface AssessmentItem {
    * expectedText configured falls back to "any attempt counts."
    */
   expectedText?: string;
+
+  // --- assessor items only ---
+  /** The guide's part number (1-13); the part's script and rules live in the form definition. */
+  part?: number;
+  /** Row on a letter/word grid, or rung on the sound ladder. */
+  row?: number;
+  /** What counts as correct, as the guide words it. */
+  accept?: string;
+  /** Secondary text shown with the prompt: the pictures in a vocabulary row, a heart word's set, a dictation sentence. */
+  detail?: string;
+  /** Shown before this item, e.g. "Now turn to page 4 yourself." */
+  instruction?: string;
+  /** Highest score for the item; 1 unless stated (the name task scores 0-2). */
+  maxScore?: number;
+  /** false for items recorded but not scored (reading attitude, the story reading record). */
+  scored?: boolean;
+  /** Story questions: the story line the question comes from (asked only if the child read it). */
+  fromLine?: number;
+  /** Unscored items answered by picking one of these (reading attitude). */
+  responseChoices?: { label: string; value: string | number }[];
 }
 
 type Table<Row, Insert, Update = Partial<Insert>> = {

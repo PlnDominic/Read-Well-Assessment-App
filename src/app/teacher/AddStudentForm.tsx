@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { addStudentToOwnRoster, type AddStudentState } from "./actions";
+import { GRADE_OPTIONS, gradeLabel } from "@/lib/grades";
 
 const initialState: AddStudentState = { error: null, result: null };
 
@@ -26,9 +27,9 @@ export function AddStudentForm() {
           defaultValue={1}
           className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3.5 py-2.5 text-sm"
         >
-          {Array.from({ length: 12 }, (_, i) => i + 1).map((g) => (
+          {GRADE_OPTIONS.map((g) => (
             <option key={g} value={g}>
-              Grade {g}
+              {gradeLabel(g)}
             </option>
           ))}
         </select>

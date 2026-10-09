@@ -5,17 +5,22 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/authz";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createSessionForStudent } from "@/lib/kiosk";
+import { gradeLabel, isValidGrade, parseGrade } from "@/lib/grades";
 
 export interface AddStudentState {
   error: string | null;
   result: { name: string; sessionCode: string | null; note: string | null } | null;
 }
 
+// KG 1 (ReadWell Level 1) has no kiosk code to hand out.
+const ASSESSOR_LED_NOTE =
+  "Given one to one by a teacher: use Start Assessment on the class roster to open the assessor screen.";
+
 const NO_SESSION_NOTES: Record<"no_cycle" | "no_assessment", (grade: number) => string> = {
   no_cycle: () =>
     "No active assessment cycle yet. Start one on the Cycles tab first, then use Start Assessment on the Teacher roster once that's done.",
   no_assessment: (grade) =>
-    `No active assessment configured for grade ${grade} yet. Set one up on the Content tab first, then use Start Assessment on the Teacher roster once that's done.`,
+    `No active assessment configured for ${gradeLabel(grade)} yet. Set one up on the Content tab first, then use Start Assessment on the Teacher roster once that's done.`,
 };
 
 export async function addStudent(
@@ -28,6 +33,7 @@ export async function addStudent(
   const grade = Number(formData.get("grade") ?? 1);
   const teacherId = String(formData.get("teacherId") ?? "");
   if (!name || !teacherId) return { error: "Name and teacher are required", result: null };
+  if (!isValidGrade(grade)) return { error: "Pick a grade from the list", result: null };
 
   // Generating the id ourselves (rather than chaining .select() to read it
   // back via RETURNING) sidesteps a Postgres RLS quirk verified on this
@@ -52,8 +58,8 @@ export async function addStudent(
     error: null,
     result: {
       name,
-      sessionCode: session.ok ? session.sessionCode : null,
-      note: session.ok ? null : NO_SESSION_NOTES[session.reason](grade),
+      sessionCode: session.ok && !session.assessorLed ? session.sessionCode : null,
+      note: !session.ok ? NO_SESSION_NOTES[session.reason](grade) : session.assessorLed ? ASSESSOR_LED_NOTE : null,
     },
   };
 }
@@ -66,6 +72,7 @@ export async function updateStudent(formData: FormData) {
   const grade = Number(formData.get("grade") ?? 1);
   const teacherId = String(formData.get("teacherId") ?? "");
   if (!id || !name || !teacherId) throw new Error("Name and teacher are required");
+  if (!isValidGrade(grade)) throw new Error("Pick a grade from the list");
 
   const { error } = await supabase
     .from("students")
@@ -194,9 +201,9 @@ export async function importStudentsCsv(
       rowErrors.push(`Row ${rowNum}: expected "name,grade,teacher_email"`);
       return;
     }
-    const grade = Number(gradeRaw);
-    if (!Number.isInteger(grade) || grade < 1) {
-      rowErrors.push(`Row ${rowNum}: invalid grade "${gradeRaw}"`);
+    const grade = parseGrade(gradeRaw);
+    if (grade === null) {
+      rowErrors.push(`Row ${rowNum}: invalid grade "${gradeRaw}" (use KG1, KG2 or 1-12)`);
       return;
     }
     const teacherId = teacherIdByEmail.get(teacherEmail.toLowerCase());

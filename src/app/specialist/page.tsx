@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { ROLE_AVATAR } from "@/lib/avatars";
 import { createClient } from "@/lib/supabase/server";
+import { gradeLabel } from "@/lib/grades";
 
 // completed is solid black/white rather than the orange used everywhere
 // else: orange is reserved for "needs attention" states, so a finished
@@ -81,7 +82,7 @@ export default async function SpecialistPage() {
                   </div>
                   <div>
                     <div className="font-extrabold text-[var(--color-ink)] text-base">{s.name}</div>
-                    <div className="text-[13px] text-[var(--color-muted-light)]">Grade {s.grade}</div>
+                    <div className="text-[13px] text-[var(--color-muted-light)]">{gradeLabel(s.grade)}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-4 flex-wrap">

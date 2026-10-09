@@ -1,5 +1,6 @@
 import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
 import { colors } from "@/lib/theme";
+import { gradeLabel } from "@/lib/grades";
 
 const styles = StyleSheet.create({
   page: { backgroundColor: colors.white, padding: 40, fontSize: 11, color: colors.ink },
@@ -84,7 +85,7 @@ export function SchoolReportPdf({
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>GRADE LEVEL</Text>
-            <Text style={styles.statValue}>Grade {gradeLevel}</Text>
+            <Text style={styles.statValue}>{gradeLabel(gradeLevel)}</Text>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>AVG. OVERALL SCORE</Text>

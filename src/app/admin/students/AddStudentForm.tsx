@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { addStudent, type AddStudentState } from "./actions";
+import { GRADE_OPTIONS, gradeLabel } from "@/lib/grades";
 
 const initialState: AddStudentState = { error: null, result: null };
 
@@ -15,17 +16,20 @@ export function AddStudentForm({ teachers }: { teachers: { id: string; name: str
           <span className="font-bold text-[var(--color-muted)] text-xs uppercase">Name</span>
           <input name="name" required className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3.5 py-2.5" />
         </label>
-        <label className="flex flex-col gap-1.5 text-sm w-24">
+        <label className="flex flex-col gap-1.5 text-sm w-28">
           <span className="font-bold text-[var(--color-muted)] text-xs uppercase">Grade</span>
-          <input
+          <select
             name="grade"
-            type="number"
             defaultValue={1}
-            min={1}
-            max={12}
             required
             className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3.5 py-2.5"
-          />
+          >
+            {GRADE_OPTIONS.map((g) => (
+              <option key={g} value={g}>
+                {gradeLabel(g)}
+              </option>
+            ))}
+          </select>
         </label>
         <label className="flex flex-col gap-1.5 text-sm flex-1 min-w-[180px]">
           <span className="font-bold text-[var(--color-muted)] text-xs uppercase">Teacher</span>

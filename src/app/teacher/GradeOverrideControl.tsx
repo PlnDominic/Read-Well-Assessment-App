@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { GRADE_OPTIONS, gradeLabel } from "@/lib/grades";
 
 /**
  * The explicit-override half of PRD §4.1's "blocked or requires explicit
@@ -51,7 +52,7 @@ export function GradeOverrideControl({
           e.preventDefault();
           setError(null);
           // The explicit warning PRD §4.1 requires before an override takes effect.
-          const warning = `This starts ${studentName}'s next assessment with Grade ${grade} content instead of the automatically matched Grade ${currentGrade} content, bypassing the normal grade-matching safeguard. Continue?`;
+          const warning = `This starts ${studentName}'s next assessment with ${gradeLabel(grade)} content instead of the automatically matched ${gradeLabel(currentGrade)} content, bypassing the normal grade-matching safeguard. Continue?`;
           if (!window.confirm(warning)) return;
 
           const fd = new FormData();
@@ -73,9 +74,9 @@ export function GradeOverrideControl({
           aria-label={`Override grade for ${studentName}`}
           className="border-2 border-[var(--color-neutral-border)] rounded-lg px-2 py-1 text-xs"
         >
-          {Array.from({ length: 12 }, (_, i) => i + 1).map((g) => (
+          {GRADE_OPTIONS.map((g) => (
             <option key={g} value={g}>
-              Grade {g}
+              {gradeLabel(g)}
             </option>
           ))}
         </select>

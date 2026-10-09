@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { aggregateClassroomBreakdown, computeWeightedAverage } from "@/lib/scoring";
 import { retrySchoolReport } from "./actions";
+import { gradeLabel } from "@/lib/grades";
 
 type ResultRow = {
   session_id: string;
@@ -149,7 +150,7 @@ export default async function AdminDashboardPage() {
           topFlagged.length > 1 ? "s" : ""
         } this cycle. Consider prioritizing intervention resources for ${
           topFlagged.length > 1 ? "these skill areas" : "this skill area"
-        } across Grade ${gradeLevel} classrooms.`
+        } across ${gradeLabel(gradeLevel)} classrooms.`
       : "No skill areas are broadly flagged this cycle.";
 
   return (
@@ -213,7 +214,7 @@ export default async function AdminDashboardPage() {
 
         <div className="grid gap-4 mb-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
           <StatCard label="Students Assessed" value={`${studentsAssessed} / ${studentsTotal ?? 0}`} />
-          <StatCard label="Grade Level" value={`Grade ${gradeLevel}`} />
+          <StatCard label="Grade Level" value={gradeLabel(gradeLevel)} />
           <StatCard label="Avg. Overall Score" value={`${avgOverallScore}%`} valueColor="var(--color-orange)" />
         </div>
 

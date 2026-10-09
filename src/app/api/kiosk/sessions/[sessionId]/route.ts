@@ -7,11 +7,14 @@ import { evaluateResponse, loadSessionForKiosk } from "@/lib/kiosk";
  * for why these use the service-role client instead of RLS).
  */
 
+const ASSESSOR_LED_ERROR = "This assessment is given by a teacher on the assessor screen.";
+
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ sessionId: string }> }) {
   const { sessionId } = await params;
   const admin = createAdminClient();
   const state = await loadSessionForKiosk(admin, sessionId);
   if (!state) return NextResponse.json({ error: "Session not found" }, { status: 404 });
+  if (state.assessorLed) return NextResponse.json({ error: ASSESSOR_LED_ERROR }, { status: 409 });
 
   const answersByItemId = Object.fromEntries(state.responses.map((r) => [r.item_id, r.answer]));
 
@@ -59,6 +62,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ se
   const admin = createAdminClient();
   const state = await loadSessionForKiosk(admin, sessionId);
   if (!state) return NextResponse.json({ error: "Session not found" }, { status: 404 });
+  // Assessor-led items are scored by a signed-in adult, never from this
+  // unauthenticated endpoint.
+  if (state.assessorLed) return NextResponse.json({ error: ASSESSOR_LED_ERROR }, { status: 409 });
   if (state.session.status === "completed") {
     return NextResponse.json({ error: "This assessment has already been completed" }, { status: 409 });
   }

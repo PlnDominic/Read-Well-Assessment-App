@@ -3,6 +3,8 @@ import { randomInt, randomUUID } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import type { AssessmentItem, Database } from "@/lib/database.types";
+import { gradeLabel } from "@/lib/grades";
+import { isAssessorLed } from "@/lib/readwell/form";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
@@ -64,7 +66,8 @@ export function generateSessionCode(): string {
 }
 
 export type CreateSessionResult =
-  | { ok: true; id: string; sessionCode: string }
+  /** assessorLed: the form is given on the assessor screen (KG 1), so the code isn't for the student. */
+  | { ok: true; id: string; sessionCode: string; assessorLed: boolean }
   | { ok: false; reason: "no_cycle" | "no_assessment" };
 
 /**
@@ -105,13 +108,14 @@ export async function createSessionForStudent(
 
   const { data: assessment } = await supabase
     .from("assessments")
-    .select("id")
+    .select("id, firstType:items->0->>type")
     .eq("grade_level", params.grade)
     .eq("is_active", true)
     .order("version", { ascending: false })
     .limit(1)
     .maybeSingle();
   if (!assessment) return { ok: false, reason: "no_assessment" };
+  const assessorLed = (assessment as unknown as { firstType: string | null }).firstType === "assessor";
 
   for (let attempt = 0; attempt < 5; attempt++) {
     const id = randomUUID();
@@ -131,7 +135,7 @@ export async function createSessionForStudent(
       created_by: params.createdBy,
       ...(params.gradeOverride ? { grade_override: true } : {}),
     });
-    if (!error) return { ok: true, id, sessionCode };
+    if (!error) return { ok: true, id, sessionCode, assessorLed };
     if (!error.message.includes("session_code")) throw error;
   }
   throw new Error("Could not allocate a session code. Try again.");
@@ -155,7 +159,7 @@ export function validateGradeOverride(
   if (requestedGrade === currentGrade) {
     return {
       ok: false,
-      error: `This student is already enrolled in Grade ${currentGrade}. Pick a different grade to override.`,
+      error: `This student is already enrolled in ${gradeLabel(currentGrade)}. Pick a different grade to override.`,
     };
   }
   if (existingSessionStatus === "completed") {
@@ -233,7 +237,7 @@ export async function overrideStudentGrade(
       error:
         result.reason === "no_cycle"
           ? "No active assessment cycle for this school."
-          : `No active assessment configured for Grade ${params.requestedGrade}.`,
+          : `No active assessment configured for ${gradeLabel(params.requestedGrade)}.`,
     };
   }
 
@@ -274,10 +278,13 @@ export async function loadSessionForKiosk(admin: AdminClient, sessionId: string)
     .eq("id", session.student_id)
     .single();
 
+  const items = assessment.items as AssessmentItem[];
   return {
     session,
-    items: assessment.items as AssessmentItem[],
+    items,
     responses: responses ?? [],
     studentName: student?.name ?? "Student",
+    /** Given on the assessor screen by a signed-in adult; the kiosk refuses these. */
+    assessorLed: isAssessorLed(items),
   };
 }

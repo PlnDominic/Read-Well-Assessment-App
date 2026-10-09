@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { cancelSession, overrideAssessmentGrade, startOrResumeAssessment } from "./actions";
 import { AddStudentForm } from "./AddStudentForm";
 import { GradeOverrideControl } from "./GradeOverrideControl";
+import { gradeLabel } from "@/lib/grades";
 
 const STATUS_STYLE: Record<
   string,
@@ -71,16 +72,34 @@ export default async function TeacherRosterPage() {
   const { data: sessions } = cycle && studentIds.length > 0
     ? await supabase
         .from("assessment_sessions")
-        .select("id, student_id, status, session_code, created_at")
+        .select("id, student_id, status, session_code, created_at, assessment_id")
         .in("student_id", studentIds)
         .eq("cycle_id", cycle.id)
         .order("created_at", { ascending: false })
     : { data: [] };
 
-  const latestSessionByStudent = new Map<string, { id: string; status: string; sessionCode: string }>();
+  // Assessor-led forms (KG 1) are given by the teacher on the assessor
+  // screen, so their sessions have no code for a student to type. Only the
+  // first item's type is read, not the whole item bank.
+  const assessmentIds = [...new Set((sessions ?? []).map((s) => s.assessment_id))];
+  const { data: assessmentKinds } = assessmentIds.length
+    ? await supabase.from("assessments").select("id, firstType:items->0->>type").in("id", assessmentIds)
+    : { data: [] };
+  const assessorLedIds = new Set(
+    ((assessmentKinds ?? []) as unknown as { id: string; firstType: string | null }[])
+      .filter((a) => a.firstType === "assessor")
+      .map((a) => a.id)
+  );
+
+  const latestSessionByStudent = new Map<string, { id: string; status: string; sessionCode: string; assessorLed: boolean }>();
   for (const s of sessions ?? []) {
     if (!latestSessionByStudent.has(s.student_id)) {
-      latestSessionByStudent.set(s.student_id, { id: s.id, status: s.status, sessionCode: s.session_code });
+      latestSessionByStudent.set(s.student_id, {
+        id: s.id,
+        status: s.status,
+        sessionCode: s.session_code,
+        assessorLed: assessorLedIds.has(s.assessment_id),
+      });
     }
   }
   const hasCompletedReport = [...latestSessionByStudent.values()].some((s) => s.status === "completed");
@@ -102,7 +121,11 @@ export default async function TeacherRosterPage() {
           )}
         </div>
         <p className="text-[var(--color-muted)] text-[15px] m-0 mb-6">
-          Grade 1 · {cycle?.name ?? "No active assessment cycle"}
+          {[...new Set((students ?? []).map((s) => s.grade))]
+            .sort((a, b) => a - b)
+            .map(gradeLabel)
+            .concat(cycle?.name ?? "No active assessment cycle")
+            .join(" · ")}
         </p>
 
         {profile.role === "teacher" && (
@@ -135,7 +158,7 @@ export default async function TeacherRosterPage() {
                   </div>
                   <div>
                     <div className="font-extrabold text-[var(--color-ink)] text-base">{s.name}</div>
-                    <div className="text-[13px] text-[var(--color-muted-light)]">Grade {s.grade}</div>
+                    <div className="text-[13px] text-[var(--color-muted-light)]">{gradeLabel(s.grade)}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-4 flex-wrap">
@@ -145,7 +168,7 @@ export default async function TeacherRosterPage() {
                   >
                     {style.label}
                   </span>
-                  {status !== "completed" && latest && (
+                  {status !== "completed" && latest && !latest.assessorLed && (
                     <span
                       className="text-xs font-bold text-[var(--color-muted)]"
                       title="Enter this at /student/join on the student's device"

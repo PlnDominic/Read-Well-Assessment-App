@@ -6,17 +6,24 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createSessionForStudent, overrideStudentGrade } from "@/lib/kiosk";
+import { gradeLabel, isValidGrade } from "@/lib/grades";
+import { isAssessorLed } from "@/lib/readwell/form";
+import type { AssessmentItem } from "@/lib/database.types";
 
 export interface AddStudentState {
   error: string | null;
   result: { name: string; sessionCode: string | null; note: string | null } | null;
 }
 
+// KG 1 (ReadWell Level 1) has no kiosk code to hand out.
+const ASSESSOR_LED_NOTE =
+  "Given one to one by a teacher: use Start Assessment on the class roster to open the assessor screen.";
+
 const NO_SESSION_NOTES: Record<"no_cycle" | "no_assessment", (grade: number) => string> = {
   no_cycle: () =>
     "No active assessment cycle yet. An administrator needs to start one at /admin/cycles. Come back and click \"Start Assessment\" once that's done.",
   no_assessment: (grade) =>
-    `No active assessment configured for grade ${grade} yet. An administrator needs to set one up at /admin/content. Come back and click "Start Assessment" once that's done.`,
+    `No active assessment configured for ${gradeLabel(grade)} yet. An administrator needs to set one up at /admin/content. Come back and click "Start Assessment" once that's done.`,
 };
 
 /**
@@ -43,6 +50,7 @@ export async function addStudentToOwnRoster(
   const name = String(formData.get("name") ?? "").trim();
   const grade = Number(formData.get("grade") ?? 1);
   if (!name) return { error: "Name is required", result: null };
+  if (!isValidGrade(grade)) return { error: "Pick a grade from the list", result: null };
 
   // Generating the id ourselves (rather than chaining .select() to read it
   // back via RETURNING) sidesteps a Postgres RLS quirk verified on this
@@ -67,8 +75,8 @@ export async function addStudentToOwnRoster(
     error: null,
     result: {
       name,
-      sessionCode: session.ok ? session.sessionCode : null,
-      note: session.ok ? null : NO_SESSION_NOTES[session.reason](grade),
+      sessionCode: session.ok && !session.assessorLed ? session.sessionCode : null,
+      note: !session.ok ? NO_SESSION_NOTES[session.reason](grade) : session.assessorLed ? ASSESSOR_LED_NOTE : null,
     },
   };
 }
@@ -108,7 +116,7 @@ export async function startOrResumeAssessment(studentId: string) {
     .neq("status", "completed")
     .maybeSingle();
 
-  if (existing) redirect(`/student/session/${existing.id}`);
+  if (existing) redirect(await sessionPath(supabase, existing.id));
 
   const session = await createSessionForStudent(supabase, {
     studentId,
@@ -120,11 +128,22 @@ export async function startOrResumeAssessment(studentId: string) {
     throw new Error(
       session.reason === "no_cycle"
         ? "No active assessment cycle for this school"
-        : `No active assessment configured for grade ${student.grade}`
+        : `No active assessment configured for ${gradeLabel(student.grade)}`
     );
   }
 
-  redirect(`/student/session/${session.id}`);
+  redirect(await sessionPath(supabase, session.id));
+}
+
+/**
+ * Where staff go to run a session: the assessor screen for assessor-led
+ * forms (ReadWell Level 1, KG 1), where the adult scores each item, or
+ * the student kiosk for everything else.
+ */
+async function sessionPath(supabase: Awaited<ReturnType<typeof createClient>>, sessionId: string): Promise<string> {
+  const { data } = await supabase.from("assessment_sessions").select("assessments(items)").eq("id", sessionId).single();
+  const items = (data as unknown as { assessments: { items: AssessmentItem[] } | null } | null)?.assessments?.items ?? [];
+  return isAssessorLed(items) ? `/teacher/assess/${sessionId}` : `/student/session/${sessionId}`;
 }
 
 /**
@@ -171,7 +190,7 @@ export async function overrideAssessmentGrade(formData: FormData) {
 
   const studentId = String(formData.get("studentId") ?? "");
   const requestedGrade = Number(formData.get("gradeLevel"));
-  if (!studentId || !Number.isInteger(requestedGrade)) throw new Error("Missing student or grade");
+  if (!studentId || !isValidGrade(requestedGrade)) throw new Error("Missing student or grade");
 
   // RLS-scoped read: can_access_student() limits a teacher to their own
   // students and an administrator to their own school.

@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizeSessionCode } from "@/lib/kiosk";
 import { clientIp, isRateLimited } from "@/lib/rateLimit";
+import { isAssessorLed } from "@/lib/readwell/form";
+import type { AssessmentItem } from "@/lib/database.types";
 
 // This is the app's only unauthenticated lookup by a short, guessable code
 // (6 chars from a 32-char alphabet); without a limit here a script could
@@ -29,7 +31,7 @@ export async function redeemSessionCode(
   const admin = createAdminClient();
   const { data: session, error } = await admin
     .from("assessment_sessions")
-    .select("id, status")
+    .select("id, status, assessments(items)")
     .eq("session_code", code)
     .single();
 
@@ -38,6 +40,10 @@ export async function redeemSessionCode(
   }
   if (session.status === "completed") {
     return { error: "This assessment is already finished. Tell your teacher!" };
+  }
+  const items = (session as unknown as { assessments: { items: AssessmentItem[] } | null }).assessments?.items ?? [];
+  if (isAssessorLed(items)) {
+    return { error: "Your teacher will do this one with you. Ask your teacher!" };
   }
 
   redirect(`/student/session/${session.id}`);

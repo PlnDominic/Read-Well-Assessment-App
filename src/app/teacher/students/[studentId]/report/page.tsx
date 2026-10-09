@@ -10,6 +10,12 @@ import { FLAGGED_SCORE_THRESHOLD } from "@/lib/theme";
 import { isScoreChangedByReview } from "@/lib/review";
 import { retryStudentReport, reviewSpokenAnswer } from "./actions";
 import type { AssessmentItem } from "@/lib/database.types";
+import { isAssessorLed } from "@/lib/readwell/form";
+import { formForItems } from "@/lib/readwell/forms";
+import { computeFlow } from "@/lib/readwell/flow";
+import { scoreForm } from "@/lib/readwell/score";
+import { ItemMarks, StoryAndAttitude, StrandTable, WritingScores } from "./Level1Report";
+import { gradeLabel } from "@/lib/grades";
 
 type ResultRow = { score: number; flagged_as_difficulty: boolean; skill_areas: { id: string; name: string } };
 type HistorySessionRow = {
@@ -99,6 +105,13 @@ export default async function StudentReportPage({
     .eq("session_id", sessionId);
   const responseByItemId = new Map((responses ?? []).map((r) => [r.item_id, r]));
 
+  // Assessor-led forms (ReadWell Level 1, KG 1) report strand by strand
+  // with the guide's bands instead of percent bars and per-question review.
+  const form = isAssessorLed(items) ? formForItems(items) : null;
+  const answers = Object.fromEntries((responses ?? []).map((r) => [r.item_id, r.answer]));
+  const flows = form ? computeFlow(form, answers) : [];
+  const formSummary = form ? scoreForm(form, answers, flows) : null;
+
   // Reading specialists see this page too (via /specialist) but are
   // read-only; see reviewSpokenAnswer in ./actions.ts.
   const canReview = profile?.role === "teacher" || profile?.role === "administrator";
@@ -160,8 +173,8 @@ export default async function StudentReportPage({
     });
   });
 
-  const overallLabel = computeOverallLabel(flaggedIds.length);
-  const isOnTrack = overallLabel === "On Track";
+  const overallLabel = formSummary?.supportLevel ?? computeOverallLabel(flaggedIds.length);
+  const isOnTrack = overallLabel === "On Track" || overallLabel === "On track for Level 1";
   const assessedDate = session.completed_at
     ? new Date(session.completed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
     : "N/A";
@@ -180,11 +193,11 @@ export default async function StudentReportPage({
                 {student.name}
               </h1>
               <p className="text-[var(--color-muted)] text-sm m-0">
-                Grade {student.grade} · Assessed {assessedDate}
+                {gradeLabel(student.grade)} · Assessed {assessedDate}
               </p>
               {contentGradeLevel !== student.grade && (
                 <p className="text-[var(--color-orange-dark)] text-xs font-bold m-0 mt-1">
-                  Assessed with Grade {contentGradeLevel} content (grade override)
+                  Assessed with {gradeLabel(contentGradeLevel)} content (grade override)
                 </p>
               )}
             </div>
@@ -236,36 +249,42 @@ export default async function StudentReportPage({
             </p>
           )}
 
-          <div className="font-heading font-bold text-sm text-[var(--color-ink)] mb-3.5">
-            Skill Area Breakdown
-          </div>
-          <div className="flex flex-col gap-3.5">
-            {rows.map((sk) => {
-              const flagged = sk.flagged_as_difficulty;
-              return (
-                <div key={sk.skill_areas.id}>
-                  <div className="flex justify-between text-sm mb-1.5">
-                    <span className="font-bold text-[var(--color-ink-soft)]">{sk.skill_areas.name}</span>
-                    <span
-                      className="font-bold"
-                      style={{ color: flagged ? "var(--color-orange-dark)" : "var(--color-ink)" }}
-                    >
-                      {sk.score}%
-                    </span>
-                  </div>
-                  <div className="h-3 bg-[var(--color-neutral-divider)] rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${sk.score}%`,
-                        background: flagged ? "var(--color-orange)" : "var(--color-ink)",
-                      }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          {formSummary ? (
+            <StrandTable summary={formSummary} />
+          ) : (
+            <>
+              <div className="font-heading font-bold text-sm text-[var(--color-ink)] mb-3.5">
+                Skill Area Breakdown
+              </div>
+              <div className="flex flex-col gap-3.5">
+                {rows.map((sk) => {
+                  const flagged = sk.flagged_as_difficulty;
+                  return (
+                    <div key={sk.skill_areas.id}>
+                      <div className="flex justify-between text-sm mb-1.5">
+                        <span className="font-bold text-[var(--color-ink-soft)]">{sk.skill_areas.name}</span>
+                        <span
+                          className="font-bold"
+                          style={{ color: flagged ? "var(--color-orange-dark)" : "var(--color-ink)" }}
+                        >
+                          {sk.score}%
+                        </span>
+                      </div>
+                      <div className="h-3 bg-[var(--color-neutral-divider)] rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${sk.score}%`,
+                            background: flagged ? "var(--color-orange)" : "var(--color-ink)",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
 
         {history.length > 1 && (
@@ -311,141 +330,153 @@ export default async function StudentReportPage({
           </div>
         )}
 
-        <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-5">
-          <div className="font-heading font-bold text-sm text-[var(--color-ink)] mb-4">
-            Question-by-Question
-          </div>
-          {canReview && unreviewedWrongMicCount > 0 && (
-            <p
-              role="status"
-              className="bg-[var(--color-orange-tint)] border border-[var(--color-orange-tint-border)] text-[var(--color-ink-soft)] text-sm rounded-xl px-4.5 py-3 m-0 mb-3"
-            >
-              {unreviewedWrongMicCount === 1
-                ? "1 read-aloud answer was automatically marked incorrect."
-                : `${unreviewedWrongMicCount} read-aloud answers were automatically marked incorrect.`}{" "}
-              Speech recognition can mishear early readers. If you heard the student read it correctly, mark it
-              correct below and the report will update.
-            </p>
-          )}
-          <div className="flex flex-col gap-3">
-            {items.map((item, i) => {
-              const response = responseByItemId.get(item.id);
-              const isCorrect = response?.is_correct === true;
-              const isReviewable = canReview && item.type === "mic" && response !== undefined;
-              const isReviewed = response?.reviewed_at != null;
-              const reviewChangedScore = response ? isScoreChangedByReview(response) : false;
-              return (
-                <div
-                  key={item.id}
-                  className="flex items-start gap-3.5 bg-[var(--color-neutral)] rounded-xl px-4.5 py-3.5"
-                >
-                  <span
-                    className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold mt-0.5"
-                    style={{
-                      background: isCorrect ? "var(--color-ink)" : "var(--color-orange)",
-                      color: isCorrect ? "var(--color-surface)" : "white",
-                    }}
-                  >
-                    {isCorrect ? "✓" : "✕"}
-                  </span>
-                  <div>
-                    <div className="text-[var(--color-muted)] text-xs font-bold uppercase mb-0.5">
-                      Question {i + 1}
-                    </div>
-                    <div className="text-[var(--color-ink-soft)] text-sm mb-1">{item.prompt}</div>
-                    <div className="text-[var(--color-body)] text-sm">
-                      Answer: {response ? formatAnswer(item, response.answer) : "Not answered"}
-                    </div>
-                    {isReviewed && (
-                      <div className="text-[var(--color-muted)] text-xs font-bold mt-1">
-                        {reviewChangedScore
-                          ? `Marked ${isCorrect ? "correct" : "incorrect"} by teacher (automatically scored ${
-                              isCorrect ? "incorrect" : "correct"
-                            })`
-                          : "Automatic score confirmed by teacher"}
-                      </div>
-                    )}
-                    {isReviewable && (
-                      <form action={reviewSpokenAnswer} className="flex flex-wrap gap-2 mt-2.5">
-                        <input type="hidden" name="sessionId" value={sessionId} />
-                        <input type="hidden" name="itemId" value={item.id} />
-                        {isCorrect ? (
-                          <button
-                            type="submit"
-                            name="verdict"
-                            value="incorrect"
-                            aria-label={`Mark question ${i + 1} incorrect`}
-                            className="bg-[var(--color-surface)] border border-[var(--color-neutral-border-strong)] text-[var(--color-ink-soft)] font-bold text-xs px-3 py-1.5 rounded-full cursor-pointer"
-                          >
-                            Mark incorrect
-                          </button>
-                        ) : (
-                          <button
-                            type="submit"
-                            name="verdict"
-                            value="correct"
-                            aria-label={`Mark question ${i + 1} correct`}
-                            className="bg-[var(--color-ink)] border-none text-[var(--color-surface)] font-bold text-xs px-3 py-1.5 rounded-full cursor-pointer"
-                          >
-                            Mark correct
-                          </button>
-                        )}
-                        {!isReviewed && (
-                          <button
-                            type="submit"
-                            name="verdict"
-                            value={isCorrect ? "correct" : "incorrect"}
-                            aria-label={`Confirm the automatic score for question ${i + 1}`}
-                            className="bg-transparent border border-[var(--color-neutral-border-strong)] text-[var(--color-muted)] font-bold text-xs px-3 py-1.5 rounded-full cursor-pointer"
-                          >
-                            Looks right
-                          </button>
-                        )}
-                        {reviewChangedScore && (
-                          <button
-                            type="submit"
-                            name="verdict"
-                            value="reset"
-                            aria-label={`Reset question ${i + 1} to the automatic score`}
-                            className="bg-transparent border-none text-[var(--color-orange-dark)] font-bold text-xs px-1 py-1.5 cursor-pointer underline"
-                          >
-                            Undo
-                          </button>
-                        )}
-                      </form>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5">
-          <div className="font-heading font-bold text-sm text-[var(--color-ink)] mb-4">
-            Program-Aligned Recommendations
-          </div>
-          <div className="flex flex-col gap-3.5">
-            {(recRows ?? []).length === 0 ? (
-              <p className="text-[var(--color-body)] text-sm m-0">
-                No flagged areas this cycle. Continue with grade-level independent reading.
+        {form && formSummary ? (
+          <>
+            <StoryAndAttitude summary={formSummary} />
+            <WritingScores form={form} answers={answers} sessionId={sessionId} canEdit={canReview} />
+            <ItemMarks form={form} answers={answers} flows={flows} />
+          </>
+        ) : (
+          <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-5">
+            <div className="font-heading font-bold text-sm text-[var(--color-ink)] mb-4">
+              Question-by-Question
+            </div>
+            {canReview && unreviewedWrongMicCount > 0 && (
+              <p
+                role="status"
+                className="bg-[var(--color-orange-tint)] border border-[var(--color-orange-tint-border)] text-[var(--color-ink-soft)] text-sm rounded-xl px-4.5 py-3 m-0 mb-3"
+              >
+                {unreviewedWrongMicCount === 1
+                  ? "1 read-aloud answer was automatically marked incorrect."
+                  : `${unreviewedWrongMicCount} read-aloud answers were automatically marked incorrect.`}{" "}
+                Speech recognition can mishear early readers. If you heard the student read it correctly, mark it
+                correct below and the report will update.
               </p>
-            ) : (
-              (recRows ?? []).map((rec, i) => (
-                <div
-                  key={i}
-                  className="flex gap-3.5 bg-[var(--color-orange-tint)] border-l-4 border-[var(--color-orange)] rounded-[10px] px-4.5 py-3.5"
-                >
-                  <div className="flex-1">
-                    {/* @ts-expect-error -- joined relation shape isn't modeled in database.types.ts */}
-                    <div className="font-extrabold text-[var(--color-ink)] text-sm mb-1">{rec.skill_areas?.name}</div>
-                    <div className="text-[var(--color-body)] text-sm leading-relaxed">{rec.recommendation_text}</div>
-                  </div>
-                </div>
-              ))
             )}
+            <div className="flex flex-col gap-3">
+              {items.map((item, i) => {
+                const response = responseByItemId.get(item.id);
+                const isCorrect = response?.is_correct === true;
+                const isReviewable = canReview && item.type === "mic" && response !== undefined;
+                const isReviewed = response?.reviewed_at != null;
+                const reviewChangedScore = response ? isScoreChangedByReview(response) : false;
+                return (
+                  <div
+                    key={item.id}
+                    className="flex items-start gap-3.5 bg-[var(--color-neutral)] rounded-xl px-4.5 py-3.5"
+                  >
+                    <span
+                      className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold mt-0.5"
+                      style={{
+                        background: isCorrect ? "var(--color-ink)" : "var(--color-orange)",
+                        color: isCorrect ? "var(--color-surface)" : "white",
+                      }}
+                    >
+                      {isCorrect ? "✓" : "✕"}
+                    </span>
+                    <div>
+                      <div className="text-[var(--color-muted)] text-xs font-bold uppercase mb-0.5">
+                        Question {i + 1}
+                      </div>
+                      <div className="text-[var(--color-ink-soft)] text-sm mb-1">{item.prompt}</div>
+                      <div className="text-[var(--color-body)] text-sm">
+                        Answer: {response ? formatAnswer(item, response.answer) : "Not answered"}
+                      </div>
+                      {isReviewed && (
+                        <div className="text-[var(--color-muted)] text-xs font-bold mt-1">
+                          {reviewChangedScore
+                            ? `Marked ${isCorrect ? "correct" : "incorrect"} by teacher (automatically scored ${
+                                isCorrect ? "incorrect" : "correct"
+                              })`
+                            : "Automatic score confirmed by teacher"}
+                        </div>
+                      )}
+                      {isReviewable && (
+                        <form action={reviewSpokenAnswer} className="flex flex-wrap gap-2 mt-2.5">
+                          <input type="hidden" name="sessionId" value={sessionId} />
+                          <input type="hidden" name="itemId" value={item.id} />
+                          {isCorrect ? (
+                            <button
+                              type="submit"
+                              name="verdict"
+                              value="incorrect"
+                              aria-label={`Mark question ${i + 1} incorrect`}
+                              className="bg-[var(--color-surface)] border border-[var(--color-neutral-border-strong)] text-[var(--color-ink-soft)] font-bold text-xs px-3 py-1.5 rounded-full cursor-pointer"
+                            >
+                              Mark incorrect
+                            </button>
+                          ) : (
+                            <button
+                              type="submit"
+                              name="verdict"
+                              value="correct"
+                              aria-label={`Mark question ${i + 1} correct`}
+                              className="bg-[var(--color-ink)] border-none text-[var(--color-surface)] font-bold text-xs px-3 py-1.5 rounded-full cursor-pointer"
+                            >
+                              Mark correct
+                            </button>
+                          )}
+                          {!isReviewed && (
+                            <button
+                              type="submit"
+                              name="verdict"
+                              value={isCorrect ? "correct" : "incorrect"}
+                              aria-label={`Confirm the automatic score for question ${i + 1}`}
+                              className="bg-transparent border border-[var(--color-neutral-border-strong)] text-[var(--color-muted)] font-bold text-xs px-3 py-1.5 rounded-full cursor-pointer"
+                            >
+                              Looks right
+                            </button>
+                          )}
+                          {reviewChangedScore && (
+                            <button
+                              type="submit"
+                              name="verdict"
+                              value="reset"
+                              aria-label={`Reset question ${i + 1} to the automatic score`}
+                              className="bg-transparent border-none text-[var(--color-orange-dark)] font-bold text-xs px-1 py-1.5 cursor-pointer underline"
+                            >
+                              Undo
+                            </button>
+                          )}
+                        </form>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* KG 1 has no recommendation rules yet; "no flagged areas" would be
+            wrong for a child with Emerging strands, so it's left out. */}
+        {!(formSummary && (recRows ?? []).length === 0) && (
+          <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5">
+            <div className="font-heading font-bold text-sm text-[var(--color-ink)] mb-4">
+              Program-Aligned Recommendations
+            </div>
+            <div className="flex flex-col gap-3.5">
+              {(recRows ?? []).length === 0 ? (
+                <p className="text-[var(--color-body)] text-sm m-0">
+                  No flagged areas this cycle. Continue with grade-level independent reading.
+                </p>
+              ) : (
+                (recRows ?? []).map((rec, i) => (
+                  <div
+                    key={i}
+                    className="flex gap-3.5 bg-[var(--color-orange-tint)] border-l-4 border-[var(--color-orange)] rounded-[10px] px-4.5 py-3.5"
+                  >
+                    <div className="flex-1">
+                      {/* @ts-expect-error -- joined relation shape isn't modeled in database.types.ts */}
+                      <div className="font-extrabold text-[var(--color-ink)] text-sm mb-1">{rec.skill_areas?.name}</div>
+                      <div className="text-[var(--color-body)] text-sm leading-relaxed">{rec.recommendation_text}</div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </AppShell>
   );

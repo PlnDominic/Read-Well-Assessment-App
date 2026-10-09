@@ -7,6 +7,11 @@ import { aggregateClassroomBreakdown, computeOverallLabel, computeWeightedAverag
 import { StudentReportPdf, type StudentReportPageProps } from "@/lib/pdf/StudentReportPdf";
 import { SchoolReportPdf } from "@/lib/pdf/SchoolReportPdf";
 import { appUrl, escapeHtml, sendEmail } from "@/lib/email";
+import type { AssessmentItem } from "@/lib/database.types";
+import { isAssessorLed } from "@/lib/readwell/form";
+import { formForItems } from "@/lib/readwell/forms";
+import { scoreForm, type FormSummary } from "@/lib/readwell/score";
+import { gradeLabel } from "@/lib/grades";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
@@ -36,7 +41,10 @@ export async function buildStudentReportPageData(
   const flaggedSkillAreaIds = rows.filter((r) => r.flagged_as_difficulty).map((r) => r.skill_areas.id);
 
   const recs = await getRecommendations(admin, flaggedSkillAreaIds, params.contentGradeLevel);
-  const overallLabel = computeOverallLabel(flaggedSkillAreaIds.length);
+  const formSummary = await assessorFormSummary(admin, params.sessionId);
+  // Assessor-led forms report the guide's three-step support level; its
+  // first step lines up with "On Track" (0-1 Emerging foundation strands).
+  const overallLabel = formSummary?.supportLevel ?? computeOverallLabel(flaggedSkillAreaIds.length);
 
   return {
     studentName: params.studentName,
@@ -54,7 +62,22 @@ export async function buildStudentReportPageData(
       text: r.text,
       programReference: r.programReference,
     })),
+    ...(formSummary ? { formSummary } : {}),
   };
+}
+
+/** The strand-by-strand summary for an assessor-led session (ReadWell Level 1); null for kiosk sessions. */
+export async function assessorFormSummary(admin: AdminClient, sessionId: string): Promise<FormSummary | null> {
+  const { data: session } = await admin
+    .from("assessment_sessions")
+    .select("assessments(items)")
+    .eq("id", sessionId)
+    .single();
+  const items = (session as unknown as { assessments: { items: AssessmentItem[] } | null } | null)?.assessments?.items ?? [];
+  const form = isAssessorLed(items) ? formForItems(items) : null;
+  if (!form) return null;
+  const { data: responses } = await admin.from("responses").select("item_id, answer").eq("session_id", sessionId);
+  return scoreForm(form, Object.fromEntries((responses ?? []).map((r) => [r.item_id, r.answer])));
 }
 
 /**
@@ -285,7 +308,7 @@ export async function generateSchoolReport(schoolId: string, cycleId: string): P
           topFlagged.length > 1 ? "s" : ""
         } this cycle. Consider prioritizing intervention resources for ${
           topFlagged.length > 1 ? "these skill areas" : "this skill area"
-        } across Grade ${gradeLevel} classrooms.`
+        } across ${gradeLabel(gradeLevel)} classrooms.`
       : "No skill areas are broadly flagged this cycle.";
 
   const pdfBuffer = await renderToBuffer(

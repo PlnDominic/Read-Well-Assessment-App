@@ -3,7 +3,9 @@
 A Grade 1 reading assessment app: students take a grade-matched assessment on
 a shared/kiosk device, and the app auto-generates a per-student report
 (skill-area breakdown + program-aligned recommendations) and a school-wide
-report for administrators, both exportable as PDF.
+report for administrators, both exportable as PDF. KG 1 uses the ReadWell
+Level 1 Baseline Assessment instead, given one to one by a trained assessor
+on a tablet or phone (see [KG 1](#kg-1-readwell-level-1-baseline-assessor-led)).
 
 This implements the design handed off from Claude Design (see
 [`design-handoff/`](./design-handoff)) as a full application, per the
@@ -177,6 +179,74 @@ A few things the PRD/TRD left open that needed a concrete decision to ship:
   all and shouldn't depend on an image fetch that might not have been cached
   yet.
 
+## KG 1: ReadWell Level 1 baseline (assessor-led)
+
+KG 1 students take the **ReadWell Level 1 Baseline Assessment, Form A**
+(thirteen parts, ten strands of early literacy), built from the assessor
+guide. Unlike the Grade 1 kiosk, the child never touches the device: a
+trained adult sits beside the child, who reads from the printed Learner
+Stimulus Book, and the adult taps right or wrong for each item. The device
+replaces the score sheet and the stopwatch, not the assessor.
+
+- **Grades.** KG 1 is stored as grade `-1` and KG 2 as `0`, so kindergarten
+  sorts below Grade 1 (`src/lib/grades.ts`). Every grade picker offers
+  KG 1 and KG 2, and the roster CSV import accepts `KG1`/`KG2`.
+- **Giving it.** On the class roster, Start Assessment for a KG 1 student
+  opens the assessor screen (`/teacher/assess/[sessionId]`) rather than the
+  kiosk; there's no session code to type. The screen shows each part's
+  script word for word (bold lines to say, plain lines to do), the practice
+  item, notes and accept rules. Grids are tap once for right, twice for
+  wrong. The story reading part has the built-in 2-minute timer, tap-to-slash
+  errors and the bracket for the last word read. The app applies the stop
+  rules and **Gates A to E** for you, says which gate applied and why, and
+  skips straight to the right part. Marks are kept on the device until the
+  server has them, so a dropped connection or a reload mid-session loses
+  nothing; Pause returns to the class and Resume picks up where you left
+  off. Teachers and administrators can give it; reading specialists can't.
+- **Part 13 (writing)** is given to a small group on paper, as the guide
+  says. Score each child's writing sheet afterwards on their report page;
+  saving re-scores the session and regenerates the reports.
+- **The item bank** is `src/lib/readwell/level1FormA.ts`: the guide's
+  wording, item codes (`L1A.LS.07` is Level 1, Form A, letter sounds,
+  item 7) and band tables. It's seeded into `assessments` (grade `-1`) by
+  `supabase/migrations/0016_readwell_level1_kg1.sql` and `setup.sql`, and
+  `src/lib/readwell/seedSql.test.ts` fails if either SQL copy drifts from
+  the code. "Paper is the master": change the guide first, then this file,
+  then the SQL. The admin Content page shows the form read-only, since the
+  free-form editor would break the item codes.
+- **Scoring** (`src/lib/readwell/score.ts`) reports each strand on its own
+  as a raw score and a band (Emerging / Developing / Secure / Advanced,
+  the guide's table, which equals its 30/70/95 percent rule; provisional
+  until the pilot). At baseline only the six foundation strands are banded;
+  word reading, heart words, story questions and writing are raw scores.
+  The support level counts Emerging foundation strands: 0-1 on track for
+  Level 1, 2-4 needs support, 5-6 needs urgent support. Story reading is
+  also reported as words correct out of 40 and words correct per minute.
+  Skipped parts show as NA. Each scored strand is also written to `results`
+  (percent of the strand's maximum, flagged when Emerging), so the admin
+  dashboard, school report and CSV export work unchanged.
+- **The gate engine** (`src/lib/readwell/flow.ts`) is one pure function of
+  the marks so far, used by both the assessor screen and scoring, so they
+  can't disagree. `flow.test.ts` walks each gate through the guide's cases.
+- **Security.** The assessor API (`/api/assess/sessions/...`) needs a
+  signed-in teacher or administrator who can already see the student
+  through RLS; only then does it write, with the service role, after
+  checking every mark against its item (score range, allowed answers, a
+  well-formed story record). The unauthenticated kiosk routes and code
+  entry refuse assessor-led sessions.
+
+**Still to come, from the guide's own list:**
+- **Part 4, sound awareness**, is scripted in the separate *Sound Awareness
+  Subtest: Form A*, which isn't in the app yet. Its 45 item codes
+  (SA1.1 to SA9.5) are there for the assessor to mark while reading the
+  ladder from the paper script, but its rung rules aren't, so sound
+  awareness has a raw score and no band, and the support level counts the
+  other five foundation strands until those rules are added.
+- **Form B** (post programme, where every strand is banded), a **child
+  view** of the letters and words on the device, the digital-led (child
+  taps) mode, and KG 1 recommendation rules (add them on the Content page
+  under KG 1).
+
 ## Getting started
 
 ### 1. Install dependencies
@@ -193,7 +263,8 @@ You need a Supabase project (local via the CLI, or hosted at supabase.com).
 1. Create a project at [supabase.com](https://supabase.com).
 2. In the SQL editor, run `supabase/setup.sql`. It's every migration in
    `supabase/migrations/` folded into one file, plus the private `reports`
-   storage bucket and starter Grade 1 content, and it's safe to run on a
+   storage bucket, starter Grade 1 content and the KG 1 ReadWell Level 1
+   form, and it's safe to run on a
    new project, a partly migrated one, or again on an up-to-date one. The
    `sql` CI job (`supabase/test/check-sql.sh`) checks all three on every
    push. When you add a migration, add the same change to `setup.sql`.
@@ -512,10 +583,12 @@ src/app/                 Routes (App Router)
   student/join/          Kiosk session-code entry (unauthenticated)
   student/session/[id]/  The assessment itself (unauthenticated, service-role backed)
   teacher/                Roster + per-student report (RLS-scoped to the signed-in teacher/specialist)
+  teacher/assess/[id]/    Assessor screen for assessor-led forms (KG 1, ReadWell Level 1)
   specialist/             Read-only roster of a specialist's assigned students
   admin/                  Dashboard, students, staff, content, cycles, settings (administrator only)
   notifications/          Bell-icon inbox (RLS-scoped to the signed-in user)
   api/kiosk/              Session start/autosave/complete (service-role)
+  api/assess/             Assessor screen save/complete (signed-in teacher/admin, RLS-checked)
   api/reports/            Signed PDF download + audit log
   api/cron/               Data-retention purge (Vercel Cron, CRON_SECRET-gated)
 src/lib/
@@ -524,6 +597,8 @@ src/lib/
   recommendations.ts      Recommendation Engine (TRD §4.3)
   reports.ts + pdf/       Report Generation Service (TRD §4.4)
   kiosk.ts                Student-session helpers (response evaluation, codes)
+  readwell/               ReadWell Level 1 item bank, gate rules, strand scoring (KG 1)
+  grades.ts               KG 1 / KG 2 / Grade n labels and parsing
 supabase/
   migrations/             Schema + RLS + storage bucket
   seed.sql                Demo data (LOCAL DEV ONLY, never run against a hosted project)
@@ -533,7 +608,7 @@ design-handoff/           Original Claude Design bundle (BRD/PRD/TRD, chat trans
 
 ## What's out of scope (matches the PRD)
 
-Grades other than 1, parent/guardian access, SIS integration, district-level
+Grades other than KG 1 and 1, parent/guardian access, SIS integration, district-level
 rollup reporting, and native mobile apps are explicitly out of scope for this
 release per the PRD; the data model (e.g. `students.grade`,
 `assessments.grade_level`) is shaped to extend to more grades later without a

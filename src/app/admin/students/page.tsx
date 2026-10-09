@@ -12,6 +12,7 @@ import {
 } from "./actions";
 import { AddStudentForm } from "./AddStudentForm";
 import { ImportCsvForm } from "./ImportCsvForm";
+import { GRADE_OPTIONS, gradeLabel } from "@/lib/grades";
 
 export default async function AdminStudentsPage() {
   const supabase = await createClient();
@@ -87,9 +88,9 @@ export default async function AdminStudentsPage() {
                   defaultValue={s.grade}
                   className="border-2 border-[var(--color-neutral-border)] rounded-lg px-2 py-1 text-sm w-20"
                 >
-                  {Array.from({ length: 12 }, (_, i) => i + 1).map((g) => (
+                  {GRADE_OPTIONS.map((g) => (
                     <option key={g} value={g}>
-                      Grade {g}
+                      {gradeLabel(g)}
                     </option>
                   ))}
                 </select>
@@ -184,7 +185,7 @@ export default async function AdminStudentsPage() {
               <div>
                 <div className="font-extrabold text-[var(--color-ink)] text-base">{s.name}</div>
                 <div className="text-[13px] text-[var(--color-muted-light)]">
-                  Grade {s.grade} · Deleted {new Date(s.deleted_at!).toLocaleDateString()}
+                  {gradeLabel(s.grade)} · Deleted {new Date(s.deleted_at!).toLocaleDateString()}
                 </div>
               </div>
               <form action={restoreStudent}>

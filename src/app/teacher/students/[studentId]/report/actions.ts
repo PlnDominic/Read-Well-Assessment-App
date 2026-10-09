@@ -8,6 +8,8 @@ import { generateSchoolReport, generateStudentReport, markSchoolReportFailed, ma
 import { scoreSession } from "@/lib/scoring";
 import { applyReview, parseReviewVerdict } from "@/lib/review";
 import type { AssessmentItem } from "@/lib/database.types";
+import { loadAssessorSession, requireAssessor, saveMarks } from "@/lib/readwell/assessorSession";
+import { rescoreAndRegenerate } from "@/lib/sessions";
 
 /**
  * Manual retry for a failed/stuck PDF (TRD §7: "catch failed report
@@ -143,5 +145,44 @@ export async function reviewSpokenAnswer(formData: FormData) {
 
   revalidatePath("/teacher", "layout");
   revalidatePath("/specialist");
+  revalidatePath("/admin");
+}
+
+/**
+ * Scores from the Part 13 writing sheet (ReadWell Level 1), typed in after
+ * the group writing task. Only the student's teacher or a school
+ * administrator, the same people who can give the assessment; the
+ * session read is RLS-scoped, so it also confirms they can see this
+ * student. Re-scores the session and re-renders its reports.
+ */
+export async function saveWritingScores(formData: FormData) {
+  const assessor = await requireAssessor();
+  if (!assessor) throw new Error("Only the student's teacher or an administrator can enter writing scores");
+
+  const sessionId = String(formData.get("sessionId") ?? "");
+  const session = sessionId ? await loadAssessorSession(assessor.supabase, sessionId) : null;
+  if (!session) throw new Error("Session not found or not accessible");
+  if (session.status !== "completed") throw new Error("Finish the one-to-one assessment before entering writing scores");
+
+  const marks: Record<string, number | null> = {};
+  for (const item of session.form.items.filter((i) => i.part === 13)) {
+    const raw = String(formData.get(item.id) ?? "");
+    marks[item.id] = raw === "" ? null : Number(raw);
+  }
+
+  const admin = createAdminClient();
+  const error = await saveMarks(admin, session, marks, [13]);
+  if (error) throw new Error(error);
+
+  await admin.from("audit_log").insert({
+    actor_id: assessor.profile.id,
+    action: "writing.scores_entered",
+    resource_type: "student_report",
+    resource_id: sessionId,
+  });
+
+  await rescoreAndRegenerate(admin, sessionId);
+
+  revalidatePath("/teacher", "layout");
   revalidatePath("/admin");
 }

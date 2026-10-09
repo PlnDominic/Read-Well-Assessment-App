@@ -1,5 +1,7 @@
 import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
 import { colors } from "@/lib/theme";
+import { gradeLabel } from "@/lib/grades";
+import type { FormSummary } from "@/lib/readwell/score";
 
 const styles = StyleSheet.create({
   page: { backgroundColor: colors.white, padding: 40, fontSize: 11, color: colors.ink },
@@ -44,6 +46,8 @@ export interface StudentReportPageProps {
   overallLabel: string;
   skills: { name: string; score: number; flagged: boolean }[];
   recommendations: { skillName: string; text: string; programReference?: string | null }[];
+  /** Present for assessor-led forms (ReadWell Level 1): strands with raw scores and bands replace the percent bars. */
+  formSummary?: FormSummary;
 }
 
 /**
@@ -60,17 +64,18 @@ export function StudentReportPage({
   overallLabel,
   skills,
   recommendations,
+  formSummary,
 }: StudentReportPageProps) {
-  const isOnTrack = overallLabel === "On Track";
+  const isOnTrack = overallLabel === "On Track" || overallLabel === "On track for Level 1";
   return (
     <Page size="A4" style={styles.page}>
       <View style={styles.headerRow}>
         <View>
           <Text style={styles.name}>{studentName}</Text>
-          <Text style={styles.meta}>Grade {grade} · Assessed {assessedDate}</Text>
+          <Text style={styles.meta}>{gradeLabel(grade)} · Assessed {assessedDate}</Text>
           {contentGrade !== undefined && contentGrade !== grade && (
             <Text style={[styles.meta, { color: colors.orangeDark, fontWeight: 700 }]}>
-              Assessed with Grade {contentGrade} content (grade override)
+              Assessed with {gradeLabel(contentGrade)} content (grade override)
             </Text>
           )}
         </View>
@@ -90,40 +95,114 @@ export function StudentReportPage({
         </Text>
       </View>
 
-      <Text style={styles.sectionTitle}>Skill Area Breakdown</Text>
-      {skills.map((sk) => (
-        <View style={styles.skillRow} key={sk.name}>
-          <View style={styles.skillLabelRow}>
-            <Text style={styles.skillName}>{sk.name}</Text>
-            <Text style={{ fontWeight: 700, color: sk.flagged ? colors.orangeDark : colors.ink }}>
-              {sk.score}%
-            </Text>
-          </View>
-          <View style={styles.barTrack}>
-            <View
-              style={[
-                styles.barFill,
-                { width: `${sk.score}%`, backgroundColor: sk.flagged ? colors.orange : colors.ink },
-              ]}
-            />
-          </View>
-        </View>
-      ))}
-
-      <Text style={styles.sectionTitle}>Program-Aligned Recommendations</Text>
-      {recommendations.length === 0 ? (
-        <Text style={styles.recText}>No flagged areas this cycle. Continue with grade-level independent reading.</Text>
+      {formSummary ? (
+        <FormSummarySection summary={formSummary} />
       ) : (
-        recommendations.map((rec, i) => (
-          <View style={styles.recCard} key={`${rec.skillName}-${i}`}>
-            <Text style={styles.recSkill}>{rec.skillName}</Text>
-            <Text style={styles.recText}>{rec.text}</Text>
-          </View>
-        ))
+        <>
+          <Text style={styles.sectionTitle}>Skill Area Breakdown</Text>
+          {skills.map((sk) => (
+            <View style={styles.skillRow} key={sk.name}>
+              <View style={styles.skillLabelRow}>
+                <Text style={styles.skillName}>{sk.name}</Text>
+                <Text style={{ fontWeight: 700, color: sk.flagged ? colors.orangeDark : colors.ink }}>
+                  {sk.score}%
+                </Text>
+              </View>
+              <View style={styles.barTrack}>
+                <View
+                  style={[
+                    styles.barFill,
+                    { width: `${sk.score}%`, backgroundColor: sk.flagged ? colors.orange : colors.ink },
+                  ]}
+                />
+              </View>
+            </View>
+          ))}
+        </>
+      )}
+
+      {/* KG 1 has no recommendation rules yet, and "no flagged areas" would be
+          wrong for a child with Emerging strands, so the section is left out
+          until there's something to show. */}
+      {!(formSummary && recommendations.length === 0) && (
+        <>
+          <Text style={styles.sectionTitle}>Program-Aligned Recommendations</Text>
+          {recommendations.length === 0 ? (
+            <Text style={styles.recText}>No flagged areas this cycle. Continue with grade-level independent reading.</Text>
+          ) : (
+            recommendations.map((rec, i) => (
+              <View style={styles.recCard} key={`${rec.skillName}-${i}`}>
+                <Text style={styles.recSkill}>{rec.skillName}</Text>
+                <Text style={styles.recText}>{rec.text}</Text>
+              </View>
+            ))
+          )}
+        </>
       )}
 
       <Text style={styles.footer}>Read Well Assessment App · Generated {new Date().toLocaleDateString()}</Text>
     </Page>
+  );
+}
+
+const table = StyleSheet.create({
+  row: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: colors.neutralBorder, paddingVertical: 5 },
+  head: { fontWeight: 700, color: colors.muted, fontSize: 9 },
+  strand: { width: "38%" },
+  score: { width: "17%" },
+  band: { width: "45%" },
+  note: { color: colors.muted, fontSize: 9 },
+});
+
+/** The guide's report: each strand on its own, never one total, so it shows exactly where the child is stuck. */
+function FormSummarySection({ summary }: { summary: FormSummary }) {
+  return (
+    <View>
+      <Text style={styles.sectionTitle}>Strands</Text>
+      <View style={table.row}>
+        <Text style={[table.strand, table.head]}>STRAND</Text>
+        <Text style={[table.score, table.head]}>SCORE</Text>
+        <Text style={[table.band, table.head]}>BAND</Text>
+      </View>
+      {summary.strands.map((s) => (
+        <View style={table.row} key={s.key} wrap={false}>
+          <Text style={[table.strand, { fontWeight: 700 }]}>{s.name}</Text>
+          <Text style={table.score}>
+            {s.status === "na" ? "NA" : s.status === "notEntered" ? "Not entered" : `${s.raw} / ${s.max}`}
+          </Text>
+          <Text style={[table.band, s.band === "Emerging" ? { color: colors.orangeDark, fontWeight: 700 } : {}]}>
+            {s.band ?? (s.status === "na" ? s.parts.find((p) => p.note)?.note ?? "Skipped by a gate rule" : s.bandNote ?? "")}
+          </Text>
+        </View>
+      ))}
+
+      <Text style={styles.sectionTitle}>Story reading</Text>
+      <Text style={styles.recText}>
+        {summary.storyReading
+          ? `${summary.storyReading.wordsCorrect} words correct out of ${summary.storyReading.outOf}` +
+            (summary.storyReading.wcpm !== null
+              ? `, ${summary.storyReading.wcpm} words correct per minute (${summary.storyReading.seconds} seconds).`
+              : ".")
+          : "Not given (skipped by a gate rule)."}
+      </Text>
+
+      <Text style={styles.sectionTitle}>Reading attitude (not scored)</Text>
+      {summary.attitude.map((a) => (
+        <Text style={[styles.recText, { marginBottom: 3 }]} key={a.itemId}>
+          {a.prompt} {a.answer ?? "No answer"}
+        </Text>
+      ))}
+
+      <Text style={[table.note, { marginTop: 14 }]}>
+        Support level counts how many foundation strands are Emerging ({summary.emergingFoundation} of{" "}
+        {summary.bandedFoundation} banded). Cut points are provisional until the pilot.
+      </Text>
+      {summary.rulesApplied.map((r) => (
+        <Text style={table.note} key={r}>
+          {r}
+        </Text>
+      ))}
+    </View>
   );
 }
 

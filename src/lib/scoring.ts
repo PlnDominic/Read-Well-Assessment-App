@@ -2,6 +2,9 @@ import "server-only";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import { FLAGGED_SCORE_THRESHOLD } from "@/lib/theme";
 import type { AssessmentItem } from "@/lib/database.types";
+import { isAssessorLed, type FormDef } from "@/lib/readwell/form";
+import { formForItems } from "@/lib/readwell/forms";
+import { scoreForm, strandResultRows } from "@/lib/readwell/score";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
@@ -40,7 +43,7 @@ export async function scoreSession(admin: AdminClient, sessionId: string): Promi
 
   const { data: responses, error: responsesError } = await admin
     .from("responses")
-    .select("item_id, is_correct")
+    .select("item_id, is_correct, answer")
     .eq("session_id", sessionId);
   if (responsesError) throw responsesError;
 
@@ -49,6 +52,10 @@ export async function scoreSession(admin: AdminClient, sessionId: string): Promi
     .select("id, key");
   if (skillAreasError) throw skillAreasError;
   const skillAreaIdByKey = new Map(skillAreas.map((s) => [s.key, s.id]));
+
+  const items = assessment.items as AssessmentItem[];
+  const form = isAssessorLed(items) ? formForItems(items) : null;
+  if (form) return scoreAssessorSession(admin, sessionId, form, responses, skillAreaIdByKey);
 
   const { data: student } = await admin.from("students").select("school_id").eq("id", session.student_id).single();
   const { data: weightRows } = student
@@ -60,7 +67,6 @@ export async function scoreSession(admin: AdminClient, sessionId: string): Promi
       .map((w) => [w.skill_area_id, w.flagged_threshold])
   );
 
-  const items = assessment.items as AssessmentItem[];
   const correctByItemId = new Map(responses.map((r) => [r.item_id, r.is_correct === true]));
 
   const results = aggregateSkillScores(items, correctByItemId, skillAreaIdByKey, thresholdBySkillAreaId);
@@ -76,6 +82,39 @@ export async function scoreSession(admin: AdminClient, sessionId: string): Promi
   );
   if (upsertError) throw upsertError;
 
+  return results;
+}
+
+/**
+ * Assessor-led forms (ReadWell Level 1) score by strand with the guide's
+ * own rules instead of percent-correct per skill area: gates decide which
+ * items count, and a strand is flagged when it's Emerging (see
+ * lib/readwell/score.ts). One results row per strand with a score, so the
+ * dashboard, school report and CSV export work unchanged; strands a gate
+ * skipped (NA) or not yet entered (writing) get no row, and any row left
+ * from an earlier scoring is removed.
+ */
+async function scoreAssessorSession(
+  admin: AdminClient,
+  sessionId: string,
+  form: FormDef,
+  responses: { item_id: string; answer: unknown }[],
+  skillAreaIdByKey: Map<string, string>
+): Promise<SkillScore[]> {
+  const answers = Object.fromEntries(responses.map((r) => [r.item_id, r.answer]));
+  const results: SkillScore[] = strandResultRows(scoreForm(form, answers)).flatMap((r) => {
+    const skillAreaId = skillAreaIdByKey.get(r.key);
+    return skillAreaId ? [{ skillAreaId, skillAreaKey: r.key, score: r.score, flagged: r.flagged }] : [];
+  });
+
+  const { error: deleteError } = await admin.from("results").delete().eq("session_id", sessionId);
+  if (deleteError) throw deleteError;
+  if (results.length > 0) {
+    const { error: insertError } = await admin.from("results").insert(
+      results.map((r) => ({ session_id: sessionId, skill_area_id: r.skillAreaId, score: r.score, flagged_as_difficulty: r.flagged }))
+    );
+    if (insertError) throw insertError;
+  }
   return results;
 }
 

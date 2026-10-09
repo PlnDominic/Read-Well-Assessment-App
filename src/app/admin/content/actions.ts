@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/authz";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { AssessmentItem } from "@/lib/database.types";
+import { isAssessorLed } from "@/lib/readwell/form";
 
 function validateItems(items: AssessmentItem[]) {
   if (items.length === 0) throw new Error("At least one item is required");
@@ -14,6 +15,7 @@ function validateItems(items: AssessmentItem[]) {
     ids.add(item.id);
     if (!item.prompt.trim()) throw new Error(`Item ${item.id} needs a prompt`);
     if (!item.skillAreaKey) throw new Error(`Item ${item.id} needs a skill area`);
+    if (item.type !== "choice" && item.type !== "mic") throw new Error(`Item ${item.id} has an unknown type`);
     if (item.type === "choice") {
       if (!item.options || item.options.length < 2) {
         throw new Error(`Item ${item.id} needs at least 2 options`);
@@ -41,10 +43,15 @@ export async function saveAssessmentItems(gradeLevel: number, items: AssessmentI
   const admin = createAdminClient();
   const { data: current } = await admin
     .from("assessments")
-    .select("id, version")
+    .select("id, version, items")
     .eq("grade_level", gradeLevel)
     .eq("is_active", true)
     .maybeSingle();
+  // An assessor-led form (ReadWell Level 1) is managed from its guide and
+  // item bank, never replaced from this editor; see AssessorFormSummary.
+  if (current && isAssessorLed(current.items)) {
+    throw new Error("This grade uses an assessor-led form, which isn't edited here");
+  }
 
   const nextVersion = (current?.version ?? 0) + 1;
   const { error: insertError } = await admin.from("assessments").insert({

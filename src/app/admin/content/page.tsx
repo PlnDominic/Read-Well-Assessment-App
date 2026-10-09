@@ -7,8 +7,11 @@ import { AssessmentItemsEditor } from "./AssessmentItemsEditor";
 import { SkillAreasEditor } from "./SkillAreasEditor";
 import { SkillWeightsEditor } from "./SkillWeightsEditor";
 import { addRecommendationRule, deleteRecommendationRule } from "./actions";
+import { KG1, KG2, gradeLabel } from "@/lib/grades";
+import { isAssessorLed } from "@/lib/readwell/form";
+import { formForItems } from "@/lib/readwell/forms";
 
-const GRADE_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8];
+const GRADE_OPTIONS = [KG1, KG2, 1, 2, 3, 4, 5, 6, 7, 8];
 
 type RuleRow = {
   id: string;
@@ -23,7 +26,7 @@ export default async function AdminContentPage({
   searchParams: Promise<{ grade?: string }>;
 }) {
   const { grade: gradeParam } = await searchParams;
-  const GRADE_LEVEL = GRADE_OPTIONS.includes(Number(gradeParam)) ? Number(gradeParam) : 1;
+  const GRADE_LEVEL = gradeParam && GRADE_OPTIONS.includes(Number(gradeParam)) ? Number(gradeParam) : 1;
 
   const supabase = await createClient();
   const {
@@ -83,7 +86,7 @@ export default async function AdminContentPage({
               boxShadow: g === GRADE_LEVEL ? "0 4px 10px rgba(74,107,82,0.3)" : "none",
             }}
           >
-            Grade {g}
+            {gradeLabel(g)}
           </Link>
         ))}
       </div>
@@ -118,17 +121,21 @@ export default async function AdminContentPage({
       <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-6">
         <div className="flex items-center justify-between mb-4.5">
           <div className="font-heading font-bold text-sm text-[var(--color-ink)]">
-            Grade {GRADE_LEVEL} assessment items
+            {gradeLabel(GRADE_LEVEL)} assessment items
           </div>
           {assessment && (
             <span className="text-xs text-[var(--color-muted)]">Current version: {assessment.version}</span>
           )}
         </div>
-        <AssessmentItemsEditor
-          gradeLevel={GRADE_LEVEL}
-          initialItems={assessment?.items ?? []}
-          skillAreas={skillAreas ?? []}
-        />
+        {assessment && isAssessorLed(assessment.items) ? (
+          <AssessorFormSummary items={assessment.items} />
+        ) : (
+          <AssessmentItemsEditor
+            gradeLevel={GRADE_LEVEL}
+            initialItems={assessment?.items ?? []}
+            skillAreas={skillAreas ?? []}
+          />
+        )}
       </div>
 
       <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5">
@@ -209,6 +216,38 @@ export default async function AdminContentPage({
           </button>
         </form>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Assessor-led forms (ReadWell Level 1) aren't edited here: the guide is
+ * the master copy and its item codes never change, so the free-form item
+ * editor would break the link between paper and app results. Changes go
+ * through src/lib/readwell/ and the SQL that seeds it.
+ */
+function AssessorFormSummary({ items }: { items: Parameters<typeof formForItems>[0] }) {
+  const form = formForItems(items);
+  return (
+    <div className="text-sm text-[var(--color-body)]">
+      <p className="m-0 mb-3">
+        <strong>{form?.title ?? "Assessor-led assessment"}</strong>, given one to one by a trained assessor on the
+        assessor screen. {items.length} item codes across {form?.parts.length ?? "its"} parts.
+      </p>
+      <p className="m-0 mb-3 text-[var(--color-muted)]">
+        The assessor guide is the master copy, so this form isn&apos;t edited here: change the guide first, then
+        the item bank in the app&apos;s code, so paper and tablet results keep the same item codes.
+      </p>
+      {form && (
+        <ol className="m-0 pl-5 flex flex-col gap-1">
+          {form.parts.map((part) => (
+            <li key={part.number}>
+              {part.title} ({part.code}): {items.filter((i) => i.part === part.number).length} items
+              {part.groupOnPaper ? ", group task on paper" : ""}
+            </li>
+          ))}
+        </ol>
+      )}
     </div>
   );
 }
