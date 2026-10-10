@@ -19,12 +19,10 @@ export interface AssessmentItem {
   id: string;
   skillAreaKey: string;
   /**
-   * "choice" and "mic" are answered by the student on the kiosk.
-   * "assessor" items are scored by a trained adult on the assessor screen
-   * (ReadWell Level 1, src/lib/readwell/); an assessment is one or the
-   * other, never a mix (see isAssessorLed in src/lib/readwell/form.ts).
+   * "choice", "mic", and "text" are answered by the student on the kiosk.
+   * "assessor" items are scored by a trained adult on the assessor screen.
    */
-  type: "choice" | "mic" | "assessor";
+  type: "choice" | "mic" | "text" | "assessor";
   prompt: string;
   passage?: string;
   options?: AssessmentItemOption[];

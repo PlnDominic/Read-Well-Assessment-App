@@ -34,6 +34,11 @@ export function normalizeSpokenText(s: string): string {
  * false "wrong" is a worse failure mode here than a false "right".
  */
 export function evaluateResponse(item: AssessmentItem, answer: unknown): boolean {
+  if (item.type === "text") {
+    if (typeof answer !== "string" || answer.trim().length === 0) return false;
+    if (!item.expectedText) return true;
+    return normalizeSpokenText(answer) === normalizeSpokenText(item.expectedText);
+  }
   if (item.type === "mic") {
     if (typeof answer !== "string" || answer.length === 0) return false;
     if (answer === "attempted") return true;
@@ -255,7 +260,7 @@ export async function overrideStudentGrade(
 export async function loadSessionForKiosk(admin: AdminClient, sessionId: string) {
   const { data: session, error } = await admin
     .from("assessment_sessions")
-    .select("id, status, current_item_index, assessment_id, student_id, session_code")
+    .select("id, status, current_item_index, assessment_id, student_id, session_code, assessments(grade_level, version)")
     .eq("id", sessionId)
     .single();
   if (error || !session) return null;
@@ -278,9 +283,11 @@ export async function loadSessionForKiosk(admin: AdminClient, sessionId: string)
     .eq("id", session.student_id)
     .single();
 
+  const assessmentMeta = session.assessments as unknown as { grade_level: number; version: number } | null;
   const items = assessment.items as AssessmentItem[];
   return {
     session,
+    assessment: assessmentMeta ?? { grade_level: 0, version: 0 },
     items,
     responses: responses ?? [],
     studentName: student?.name ?? "Student",

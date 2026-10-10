@@ -2,17 +2,17 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { MicIcon, CheckIcon, SpeakerIcon } from "@/components/icons";
+import { CheckIcon, MicIcon, SpeakerIcon } from "@/components/icons";
 import { SunnyAvatar } from "@/components/SunnyAvatar";
-import { SKILL_AREA_TILE_COLOR, type SkillAreaKey } from "@/lib/theme";
 
 interface KioskItem {
   id: string;
   skillAreaKey: string;
-  type: "choice" | "mic";
+  type: "choice" | "mic" | "text";
   prompt: string;
   passage: string | null;
   options: string[] | null;
+  expectedText?: string;
 }
 
 interface KioskState {
@@ -20,605 +20,212 @@ interface KioskState {
   currentItemIndex: number;
   sessionCode?: string;
   studentName: string;
+  assessmentGrade?: number;
+  assessmentVersion?: number;
   items: KioskItem[];
   answersByItemId: Record<string, unknown>;
 }
 
-// --- localStorage helpers -----------------------------------------------
-// TRD §7 "Offline Handling": tolerate brief connectivity drops without
-// losing in-progress answers. Three things are cached per session so a
-// reload or a dead network mid-assessment doesn't strand the student:
-// unsent answers, the last-known server state (so the quiz can still
-// render if the very first load happens while offline), and whether a
-// "finish" attempt is still waiting to reach the server.
+const PARTS = [
+  { code: "LS", number: 1, title: "Letter sounds", subtitle: "Find the sounds hiding in letters", sitting: 1, color: "#0f766e" },
+  { code: "SV", number: 2, title: "Short vowel words", subtitle: "Read the little words", sitting: 1, color: "#0f766e" },
+  { code: "LC", number: 3, title: "Story listening", subtitle: "Listen like a story detective", sitting: 1, color: "#2563eb" },
+  { code: "VO", number: 4, title: "Vocabulary", subtitle: "Match words to pictures", sitting: 1, color: "#2563eb" },
+  { code: "CP", number: 5, title: "Print concepts", subtitle: "Explore how stories work", sitting: 1, color: "#2563eb" },
+  { code: "SA", number: 6, title: "Sound awareness", subtitle: "Climb the sound ladder", sitting: 1, color: "#7c3aed" },
+  { code: "BL", number: 7, title: "Blend sounds", subtitle: "Slide sounds together", sitting: 2, color: "#ea580c" },
+  { code: "RW", number: 8, title: "Real blend words", subtitle: "Read words with blends", sitting: 2, color: "#ea580c" },
+  { code: "NW", number: 9, title: "Made-up words", subtitle: "Be a word inventor", sitting: 2, color: "#ea580c" },
+  { code: "HW", number: 10, title: "Heart words", subtitle: "Words you know by heart", sitting: 2, color: "#db2777" },
+  { code: "ST", number: 11, title: "Story reading", subtitle: "Read a story aloud", sitting: 2, color: "#db2777" },
+  { code: "AT", number: 12, title: "Reading attitude", subtitle: "Tell us how reading feels", sitting: 2, color: "#db2777" },
+  { code: "WT", number: 13, title: "Writing", subtitle: "Show what you can write", sitting: 3, color: "#ca8a04" },
+] as const;
 
-function pendingKey(sessionId: string) {
-  return `rw:pending:${sessionId}`;
-}
-function readPending(sessionId: string): Record<string, unknown> {
-  try {
-    return JSON.parse(localStorage.getItem(pendingKey(sessionId)) ?? "{}");
-  } catch {
-    return {};
-  }
-}
-function writePending(sessionId: string, pending: Record<string, unknown>) {
-  try {
-    localStorage.setItem(pendingKey(sessionId), JSON.stringify(pending));
-  } catch {
-    // best-effort; localStorage may be unavailable (private browsing, quota)
-  }
-}
-
-function stateCacheKey(sessionId: string) {
-  return `rw:state:${sessionId}`;
-}
-function readCachedState(sessionId: string): KioskState | null {
-  try {
-    const raw = localStorage.getItem(stateCacheKey(sessionId));
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-function writeCachedState(sessionId: string, data: KioskState) {
-  try {
-    localStorage.setItem(stateCacheKey(sessionId), JSON.stringify(data));
-  } catch {
-    // best-effort
-  }
-}
-
-// Lets /student/join reopen this assessment from its code with no
-// connection (see JoinForm.tsx).
-function rememberCode(code: string | undefined, sessionId: string) {
-  if (!code) return;
-  try {
-    localStorage.setItem(`rw:code:${code}`, sessionId);
-  } catch {
-    // best-effort
-  }
-}
-
-// Answers given offline live in the pending queue until they sync, so the
-// server's copy (or an older cached copy) can be behind this device. Fold
-// them back in so a reload doesn't show answered questions as blank or
-// send the student back to an earlier question.
-function withLocalProgress(sessionId: string, data: KioskState): KioskState {
-  const pending = readPending(sessionId);
-  const cached = readCachedState(sessionId);
-  return {
-    ...data,
-    answersByItemId: { ...data.answersByItemId, ...pending },
-    currentItemIndex: Math.max(data.currentItemIndex, cached?.currentItemIndex ?? 0),
-  };
-}
-
-// --- Read-aloud (PRD/BRD: "minimal reliance on reading instructions
-// independently") -------------------------------------------------------
-// Uses the browser's built-in Web Speech *Synthesis* API (distinct from
-// the SpeechRecognition used for mic items above): no account/API key,
-// same reasoning as evaluateResponse's ASR choice in lib/kiosk.ts. Support
-// is broad (Chrome, Edge, Safari, Firefox all ship it) but not universal,
-// so every call site here is a no-op when it's missing rather than an
-// error the student would see.
-
-function itemSpokenText(item: KioskItem): string {
-  const parts = [item.passage, item.prompt].filter((p): p is string => !!p);
-  if (item.type === "choice" && item.options) {
-    parts.push(`Your choices are: ${item.options.join(", ")}.`);
-  }
-  return parts.join(". ");
-}
-
+function storageKey(prefix: string, id: string) { return `rw:${prefix}:${id}`; }
+function readJson<T>(key: string, fallback: T): T { try { return JSON.parse(localStorage.getItem(key) ?? "null") ?? fallback; } catch { return fallback; } }
+function writeJson(key: string, value: unknown) { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* best effort */ } }
+function partFor(item?: KioskItem) { return PARTS.find((part) => item?.id.toUpperCase().startsWith(part.code)) ?? PARTS[0]; }
 function speak(text: string) {
   if (typeof window === "undefined" || !window.speechSynthesis) return;
-  // Cancel whatever's still playing (e.g. the previous question) before
-  // starting the new one, rather than letting them queue up and overlap.
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = "en-US";
-  utterance.rate = 0.9; // a little slower than default, for early readers
+  utterance.rate = 0.86;
   window.speechSynthesis.speak(utterance);
 }
-
-function pendingCompleteKey(sessionId: string) {
-  return `rw:pendingComplete:${sessionId}`;
-}
-function readPendingComplete(sessionId: string): boolean {
-  try {
-    return localStorage.getItem(pendingCompleteKey(sessionId)) === "1";
-  } catch {
-    return false;
-  }
-}
-function writePendingComplete(sessionId: string, value: boolean) {
-  try {
-    if (value) localStorage.setItem(pendingCompleteKey(sessionId), "1");
-    else localStorage.removeItem(pendingCompleteKey(sessionId));
-  } catch {
-    // best-effort
-  }
-}
+function itemSpokenText(item: KioskItem) { return [item.passage, item.prompt].filter(Boolean).join(". "); }
 
 export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
   const router = useRouter();
   const [state, setState] = useState<KioskState | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [usingCachedState, setUsingCachedState] = useState(false);
-  const [isOnline, setIsOnline] = useState(true);
   const [started, setStarted] = useState(false);
   const [qIndex, setQIndex] = useState(0);
   const [recording, setRecording] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [completing, setCompleting] = useState(false);
-  const [pendingComplete, setPendingComplete] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
   const [speechSupported, setSpeechSupported] = useState(false);
+  const [storySeconds, setStorySeconds] = useState(0);
   const pendingRef = useRef<Record<string, unknown>>({});
+  const storyTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const pendingKey = storageKey("pending", sessionId);
+  const stateKey = storageKey("state", sessionId);
+  const pendingCompleteKey = storageKey("pendingComplete", sessionId);
 
   const applyState = useCallback((data: KioskState) => {
-    setState(data);
-    const hasAnyAnswer = Object.keys(data.answersByItemId).length > 0;
-    setStarted(data.status !== "not_started" || hasAnyAnswer);
-    setQIndex(Math.min(data.currentItemIndex, Math.max(data.items.length - 1, 0)));
-  }, []);
+    const pending = readJson<Record<string, unknown>>(pendingKey, {});
+    const cached = readJson<Partial<KioskState>>(stateKey, {});
+    const merged = { ...data, answersByItemId: { ...data.answersByItemId, ...pending }, currentItemIndex: Math.max(data.currentItemIndex, cached.currentItemIndex ?? 0) };
+    setState(merged);
+    setStarted(merged.status !== "not_started" || Object.keys(merged.answersByItemId).length > 0);
+    setQIndex(Math.min(merged.currentItemIndex, Math.max(merged.items.length - 1, 0)));
+    writeJson(stateKey, merged);
+  }, [pendingKey, stateKey]);
 
   const load = useCallback(async () => {
-    let res: Response;
     try {
-      res = await fetch(`/api/kiosk/sessions/${sessionId}`, { cache: "no-store" });
-    } catch {
-      // A thrown fetch (as opposed to a resolved !res.ok) means we're
-      // offline, not that the session doesn't exist. Fall back to
-      // whatever was last cached so the student isn't stuck on a spinner,
-      // and let the online-retry effect below keep trying quietly.
-      const cached = readCachedState(sessionId);
-      if (cached) {
-        setUsingCachedState(true);
-        applyState(withLocalProgress(sessionId, cached));
-      } else {
-        setError("This device is offline and this assessment hasn't been opened here before. Ask your teacher to reconnect it to the internet.");
-      }
-      return;
+      const response = await fetch(`/api/kiosk/sessions/${sessionId}`, { cache: "no-store" });
+      if (!response.ok) throw new Error("We couldn't find that assessment. Ask your teacher for a new code.");
+      applyState(await response.json() as KioskState);
+      setIsOnline(true);
+    } catch (err) {
+      const cached = readJson<KioskState | null>(stateKey, null);
+      if (cached) { applyState(cached); setIsOnline(false); }
+      else setError(err instanceof Error ? err.message : "This assessment could not be loaded.");
     }
-    if (!res.ok) {
-      setError("We couldn't find that assessment. Ask your teacher for a new code.");
-      return;
-    }
-    let data: KioskState;
-    try {
-      data = withLocalProgress(sessionId, await res.json());
-    } catch {
-      setError("Something went wrong loading this assessment. Ask your teacher for help.");
-      return;
-    }
-    rememberCode(data.sessionCode, sessionId);
-    writeCachedState(sessionId, data);
-    setUsingCachedState(false);
-    applyState(data);
-  }, [sessionId, applyState]);
+  }, [applyState, sessionId, stateKey]);
 
   useEffect(() => {
-    // Reading browser-only state (navigator.onLine, localStorage) on mount
-    // (not derivable during render/SSR) and kicking off the initial
-    // fetch (load() only sets state after its internal awaits resolve).
+    // Browser-only session bootstrapping happens after hydration.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsOnline(navigator.onLine);
-    setPendingComplete(readPendingComplete(sessionId));
     setSpeechSupported(typeof window.speechSynthesis !== "undefined");
-    pendingRef.current = readPending(sessionId);
+    pendingRef.current = readJson<Record<string, unknown>>(pendingKey, {});
     load();
-  }, [load, sessionId]);
+  }, [load, pendingKey]);
 
-  // Reads the current question aloud automatically as the student reaches
-  // it. Runs only once `started` is true, since "Let's Start!" is the user
-  // gesture some browsers (notably Safari/iOS) require before speech
-  // synthesis is allowed to play at all; the manual "Listen again" button
-  // below covers everything else (repeats, browsers that block this too).
+  const item = state?.items[qIndex];
+  const part = partFor(item);
+  const isLevel2 = state?.assessmentGrade === 2 || state?.assessmentVersion === 2 || state?.items.some((entry) => /^(LS|SV|LC|VO|CP|SA|BL|RW|NW|HW|ST|AT|WT)/i.test(entry.id));
+  const savedAnswer = item ? state?.answersByItemId[item.id] : undefined;
+  const savedString = typeof savedAnswer === "string" ? savedAnswer : "";
+  const partIndex = Math.max(0, PARTS.findIndex((candidate) => candidate.code === part.code));
+  const partProgress = isLevel2 ? Math.round(((partIndex + 1) / PARTS.length) * 100) : Math.round(((qIndex + 1) / (state?.items.length || 1)) * 100);
+  const isStory = item?.id.toUpperCase().startsWith("ST");
+
   useEffect(() => {
-    if (!speechSupported || !started || !state || state.status === "completed") return;
-    const item = state.items[qIndex];
-    if (!item) return;
-    speak(itemSpokenText(item));
-    return () => {
-      window.speechSynthesis?.cancel();
-    };
-    // Deliberately not depending on `state` itself: saveAnswer's setState
-    // keeps `prev.items` (and so `prev.items[qIndex]`) referentially the
-    // same on every answer save, so depending on `state?.items` here means
-    // only a real question change (or a fresh load()) retriggers this,
-    // not every answer autosave.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [speechSupported, started, qIndex, state?.items, state?.status]);
+    if (!started || !item || !isStory || state?.status === "completed") return;
+    // The timer resets when the learner reaches a new story item.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setStorySeconds(0);
+    storyTimerRef.current = setInterval(() => setStorySeconds((seconds) => seconds + 1), 1000);
+    return () => { if (storyTimerRef.current) clearInterval(storyTimerRef.current); };
+  }, [item, isStory, started, state?.status]);
 
-  // Stop any in-flight speech on unmount (navigating away mid-question).
   useEffect(() => {
-    return () => {
-      window.speechSynthesis?.cancel();
-    };
-  }, []);
+    if (started && item && speechSupported) speak(itemSpokenText(item));
+    return () => window.speechSynthesis?.cancel();
+  }, [item, started, speechSupported]);
 
-  const flushPending = useCallback(async (): Promise<boolean> => {
-    const pending = { ...pendingRef.current };
-    const entries = Object.entries(pending);
-    if (entries.length === 0) return true;
+  const flushPending = useCallback(async () => {
+    const entries = Object.entries(pendingRef.current);
+    if (!entries.length) return true;
     setSyncing(true);
-    let allOk = true;
+    let ok = true;
     for (const [itemId, answer] of entries) {
       try {
-        const res = await fetch(`/api/kiosk/sessions/${sessionId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ itemId, answer }),
-        });
-        if (res.ok) {
-          delete pendingRef.current[itemId];
-        } else {
-          allOk = false;
-        }
-      } catch {
-        allOk = false;
-      }
+        const response = await fetch(`/api/kiosk/sessions/${sessionId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ itemId, answer }) });
+        if (response.ok) delete pendingRef.current[itemId]; else ok = false;
+      } catch { ok = false; }
     }
-    writePending(sessionId, pendingRef.current);
+    writeJson(pendingKey, pendingRef.current);
     setSyncing(false);
-    return allOk;
-  }, [sessionId]);
+    return ok;
+  }, [pendingKey, sessionId]);
 
-  const attemptComplete = useCallback(async (): Promise<boolean> => {
-    const flushed = await flushPending();
-    if (!flushed) return false;
+  const complete = useCallback(async () => {
+    if (!(await flushPending())) return false;
     try {
-      const res = await fetch(`/api/kiosk/sessions/${sessionId}/complete`, { method: "POST" });
-      if (!res.ok) return false;
-    } catch {
-      return false;
-    }
-    writePendingComplete(sessionId, false);
-    setPendingComplete(false);
-    setState((prev) => {
-      if (!prev) return prev;
-      const next: KioskState = { ...prev, status: "completed" };
-      writeCachedState(sessionId, next);
-      return next;
-    });
-    return true;
-  }, [sessionId, flushPending]);
+      const response = await fetch(`/api/kiosk/sessions/${sessionId}/complete`, { method: "POST" });
+      if (!response.ok) return false;
+      setState((current) => current ? { ...current, status: "completed" } : current);
+      localStorage.removeItem(pendingCompleteKey);
+      return true;
+    } catch { return false; }
+  }, [flushPending, pendingCompleteKey, sessionId]);
 
   useEffect(() => {
-    const onOnline = () => {
-      setIsOnline(true);
-      if (usingCachedState) load();
-      flushPending();
-      if (readPendingComplete(sessionId)) attemptComplete();
-    };
-    const onOffline = () => setIsOnline(false);
-    window.addEventListener("online", onOnline);
-    window.addEventListener("offline", onOffline);
-    const interval = setInterval(() => {
-      if (Object.keys(pendingRef.current).length > 0) flushPending();
-    }, 6000);
-    return () => {
-      window.removeEventListener("online", onOnline);
-      window.removeEventListener("offline", onOffline);
-      clearInterval(interval);
-    };
-  }, [flushPending, attemptComplete, load, usingCachedState, sessionId]);
+    const online = () => { setIsOnline(true); flushPending(); if (localStorage.getItem(pendingCompleteKey)) complete(); };
+    const offline = () => setIsOnline(false);
+    window.addEventListener("online", online); window.addEventListener("offline", offline);
+    const interval = setInterval(flushPending, 6000);
+    return () => { window.removeEventListener("online", online); window.removeEventListener("offline", offline); clearInterval(interval); };
+  }, [complete, flushPending, pendingCompleteKey]);
 
-  function saveAnswer(itemId: string, answer: unknown) {
-    pendingRef.current[itemId] = answer;
-    writePending(sessionId, pendingRef.current);
-    setState((prev) => {
-      if (!prev) return prev;
-      const itemIndex = prev.items.findIndex((i) => i.id === itemId);
-      const next: KioskState = {
-        ...prev,
-        answersByItemId: { ...prev.answersByItemId, [itemId]: answer },
-        // Mirrors the server's own rule (PATCH /api/kiosk/sessions/:id).
-        currentItemIndex: Math.max(prev.currentItemIndex, itemIndex + 1),
-      };
-      // Keep the device's copy current so an offline reload resumes here.
-      writeCachedState(sessionId, next);
+  function saveAnswer(answer: unknown) {
+    if (!item) return;
+    pendingRef.current[item.id] = answer;
+    writeJson(pendingKey, pendingRef.current);
+    setState((current) => {
+      if (!current) return current;
+      const next = { ...current, answersByItemId: { ...current.answersByItemId, [item.id]: answer }, currentItemIndex: Math.max(current.currentItemIndex, qIndex + 1) };
+      writeJson(stateKey, next);
       return next;
     });
     flushPending();
   }
 
-  function selectOption(text: string) {
-    if (!state) return;
-    saveAnswer(state.items[qIndex].id, text);
-  }
-
-  function toggleMic(alreadyDone: boolean) {
-    if (alreadyDone || !state) return;
-    const itemId = state.items[qIndex].id;
+  function recordMic() {
+    if (savedString || recording) return;
     const Recognition = window.SpeechRecognition ?? window.webkitSpeechRecognition;
-    // Chrome/Edge only; Firefox and Safari don't implement SpeechRecognition.
-    // Fall back to the old "tap to mark attempted" flow there so the
-    // assessment still works, just without real transcript scoring.
-    if (!Recognition) {
-      setRecording(true);
-      setTimeout(() => {
-        setRecording(false);
-        saveAnswer(itemId, "attempted");
-      }, 1200);
-      return;
-    }
-
+    if (!Recognition) { setRecording(true); setTimeout(() => { setRecording(false); saveAnswer("attempted"); }, 1000); return; }
     const recognition = new Recognition();
-    recognition.lang = "en-US";
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-
+    recognition.lang = "en-US"; recognition.interimResults = false; recognition.maxAlternatives = 1;
     setRecording(true);
-    recognition.onresult = (event) => {
-      const transcript = event.results[0]?.[0]?.transcript ?? "attempted";
-      saveAnswer(itemId, transcript);
-    };
-    recognition.onerror = () => {
-      // Mic denied, no speech detected, etc.: still record an attempt so
-      // the student isn't stuck unable to proceed.
-      saveAnswer(itemId, "attempted");
-    };
-    recognition.onend = () => {
-      setRecording(false);
-    };
+    recognition.onresult = (event) => saveAnswer(event.results[0]?.[0]?.transcript ?? "attempted");
+    recognition.onerror = () => saveAnswer("attempted");
+    recognition.onend = () => setRecording(false);
     recognition.start();
   }
 
-  async function goNext() {
-    if (!state) return;
-    const isLast = qIndex >= state.items.length - 1;
-    if (!isLast) {
-      setQIndex((i) => i + 1);
-      return;
-    }
+  async function next() {
+    if (!state || !item) return;
+    if (qIndex < state.items.length - 1) { setQIndex((index) => index + 1); return; }
     setCompleting(true);
-    const ok = await attemptComplete();
+    const ok = await complete();
     setCompleting(false);
-    if (!ok) {
-      // Could be offline, or a one-off server hiccup; either way, don't
-      // dead-end. Remember the intent so a reload still shows the "almost
-      // done" screen, and the online-retry effect will keep trying.
-      writePendingComplete(sessionId, true);
-      setPendingComplete(true);
-    }
+    if (!ok) localStorage.setItem(pendingCompleteKey, "1");
   }
 
-  if (error) {
-    return (
-      <div className="w-full max-w-[480px] mt-[10vh] text-center">
-        <p className="text-[var(--color-orange-dark)] text-lg">{error}</p>
-      </div>
-    );
-  }
+  if (error) return <div className="rw-assessment-shell"><div className="rw-message-card"><SunnyAvatar size={92} /><h1>Let&apos;s try again</h1><p>{error}</p><button className="rw-primary" onClick={load}>Try again</button></div></div>;
+  if (!state) return <div className="rw-assessment-shell"><div className="rw-loading">Loading Sunny&apos;s reading quest…</div></div>;
+  if (state.status === "completed") return <div className="rw-assessment-shell"><div className="rw-message-card"><div className="rw-success-orb"><CheckIcon /></div><h1>Quest complete!</h1><p>You worked very hard today. Go tell your teacher you finished.</p><button className="rw-primary" onClick={() => router.push("/login")}>Finish</button></div></div>;
+  if (!item) return <div className="rw-assessment-shell"><div className="rw-message-card"><h1>Assessment ready</h1><p>Your teacher hasn&apos;t added the Level 2 questions yet.</p></div></div>;
 
-  if (pendingComplete) {
-    return (
-      <div className="w-full max-w-[480px] mt-[8vh] text-center">
-        <div className="relative flex justify-center mb-6.5">
-          <div
-            className="absolute inset-0 m-auto w-[170px] h-[170px] rounded-full blur-3xl opacity-70 pointer-events-none"
-            style={{ background: "var(--color-orange-tint)" }}
-            aria-hidden
-          />
-          <SunnyAvatar size={128} />
-        </div>
-        <h1 className="font-heading font-bold text-[32px] tracking-tight text-[var(--color-ink)] m-0 mb-2.5">
-          Almost done!
-        </h1>
-        <p className="text-[var(--color-body)] text-lg leading-relaxed m-0 mb-6">
-          {isOnline
-            ? "Finishing up…"
-            : "You're offline. Your answers are saved on this device, and we'll finish up as soon as you're back online."}
-        </p>
-        <button
-          onClick={async () => {
-            setCompleting(true);
-            const ok = await attemptComplete();
-            setCompleting(false);
-            if (!ok) writePendingComplete(sessionId, true);
-          }}
-          disabled={completing}
-          className="bg-[var(--color-orange)] text-white border-none rounded-full font-heading font-bold text-lg px-10 py-4 cursor-pointer shadow-[0_10px_24px_rgba(74,107,82,0.3)] transition-transform hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0"
-        >
-          {completing ? "Trying…" : "Try again"}
-        </button>
-      </div>
-    );
-  }
+  const canProceed = item && (item.type === "choice" ? !!savedString : item.type === "text" ? savedString.trim().length > 0 : !!savedString);
+  const firstInPart = qIndex === 0 || partFor(state.items[qIndex - 1]).code !== part.code;
+  const sittingLabel = part.sitting === 1 ? "First sitting" : part.sitting === 2 ? "Second sitting" : "Writing time";
 
-  if (!state) {
-    return <div className="mt-[20vh] text-[var(--color-body)] text-center">Loading…</div>;
-  }
+  if (!started) return <div className="rw-assessment-shell"><div className="rw-welcome-card"><SunnyAvatar size={138} /><div className="rw-eyebrow">{isLevel2 ? "LEVEL 2 · FORM A" : "READ WELL ASSESSMENT"}</div><h1>Ready for a reading quest?</h1><p>Hi, {state.studentName.split(" ")[0]}! We&apos;ll explore sounds, words, stories and writing together. There are no wrong answers — just try your best.</p><button className="rw-primary rw-start" onClick={() => { setStarted(true); if (item && speechSupported) speak(itemSpokenText(item)); }}>Let&apos;s start <span>→</span></button><div className="rw-quest-note">13 mini-missions · 2 short sittings · lots of high fives</div></div></div>;
 
-  if (state.status === "completed") {
-    return (
-      <div className="w-full max-w-[480px] mt-[8vh] text-center">
-        <div className="relative flex justify-center mb-7">
-          <div
-            className="absolute inset-0 m-auto w-[190px] h-[190px] rounded-full blur-3xl opacity-70 pointer-events-none"
-            style={{ background: "var(--color-orange-tint)" }}
-            aria-hidden
-          />
-          <div className="relative w-[150px] h-[150px] rounded-full bg-[var(--color-orange)] flex items-center justify-center shadow-[0_14px_30px_rgba(201,123,95,0.3)]">
-            <CheckIcon />
-          </div>
-        </div>
-        <h1 className="font-heading font-bold text-4xl tracking-tight text-[var(--color-ink)] m-0 mb-3">
-          You&apos;re all done!
-        </h1>
-        <p className="text-[var(--color-body)] text-lg leading-relaxed m-0 mb-10">
-          Great job today. Go tell your teacher you finished!
-        </p>
-        <button
-          onClick={() => router.push("/login")}
-          className="bg-[var(--color-orange)] text-white border-none rounded-full font-heading font-bold text-xl px-12 py-4.5 cursor-pointer shadow-[0_10px_24px_rgba(74,107,82,0.3)] transition-transform hover:-translate-y-0.5"
-        >
-          Finish
-        </button>
-      </div>
-    );
-  }
-
-  const offlineBanner = !isOnline && (
-    <div className="w-full max-w-[640px] mb-4 bg-[var(--color-orange-tint)] border border-[var(--color-orange-tint-border)] text-[var(--color-orange-dark)] text-sm font-bold rounded-xl px-4 py-2.5 text-center">
-      You&apos;re offline. Answers are saved on this device and will sync automatically when you&apos;re back online.
-    </div>
-  );
-
-  if (!started) {
-    return (
-      <div className="w-full max-w-[480px] mt-[6vh] text-center">
-        {offlineBanner}
-        <div className="relative flex justify-center mb-6.5">
-          <div
-            className="absolute inset-0 m-auto w-[190px] h-[190px] rounded-full blur-3xl opacity-70 pointer-events-none"
-            style={{ background: "var(--color-orange-tint)" }}
-            aria-hidden
-          />
-          <SunnyAvatar size={140} />
-        </div>
-        <h1 className="font-heading font-bold text-[34px] tracking-tight text-[var(--color-ink)] m-0 mb-2.5">
-          Hi! I&apos;m Sunny.
-        </h1>
-        <p className="text-[var(--color-body)] text-lg leading-relaxed m-0 mb-10">
-          Let&apos;s read some words together. There are no wrong answers. Just try your best!
-        </p>
-        <button
-          onClick={() => {
-            // Speaking synchronously inside this click (rather than only in
-            // the qIndex effect below) matters on Safari, which only allows
-            // the *first* speechSynthesis utterance in a page to start
-            // directly from a user gesture like this one; once that's
-            // happened, later programmatic calls (the effect, "Listen
-            // again") are allowed too.
-            if (state && speechSupported) speak(itemSpokenText(state.items[qIndex]));
-            setStarted(true);
-          }}
-          className="bg-[var(--color-orange)] text-white border-none rounded-full font-heading font-bold text-xl px-14 py-5 cursor-pointer shadow-[0_10px_24px_rgba(201,123,95,0.35)] transition-transform hover:-translate-y-0.5"
-        >
-          Let&apos;s Start!
-        </button>
-      </div>
-    );
-  }
-
-  const item = state.items[qIndex];
-  const skillLabel = item.skillAreaKey.replace(/([A-Z])/g, " $1").toUpperCase();
-  const tileColor = SKILL_AREA_TILE_COLOR[item.skillAreaKey as SkillAreaKey] ?? "var(--color-orange)";
-  const savedAnswer = state.answersByItemId[item.id];
-  const selectedOption = typeof savedAnswer === "string" ? savedAnswer : null;
-  const micDone = typeof savedAnswer === "string" && savedAnswer.length > 0;
-  const micStatus = recording ? "recording" : micDone ? "done" : "idle";
-  const canProceed = item.type === "choice" ? selectedOption !== null : micDone;
-  const progressPercent = Math.round((qIndex / state.items.length) * 100 + 10);
-  const isLast = qIndex >= state.items.length - 1;
-
-  return (
-    <div className="w-full max-w-[640px] mt-[2vh]">
-      {offlineBanner}
-      <div className="flex items-center gap-3.5 mb-7">
-        <div className="flex-1 h-3.5 bg-[var(--color-neutral-border)] rounded-full overflow-hidden">
-          <div
-            className="h-full bg-[var(--color-orange)] rounded-full transition-[width]"
-            style={{ width: `${progressPercent}%` }}
-          />
-        </div>
-        <span className="font-extrabold text-[var(--color-body)] text-[15px] whitespace-nowrap">
-          Question {qIndex + 1} of {state.items.length}
-        </span>
-        {syncing && <span className="text-xs text-[var(--color-muted)]">Saving…</span>}
-      </div>
-
-      <div className="bg-[var(--color-surface)] rounded-3xl px-7.5 py-9 shadow-[0_6px_20px_rgba(0,0,0,0.06)] text-center">
-        <div className="flex items-center justify-center gap-2.5 mb-4.5">
-          <div
-            className="inline-block text-white font-extrabold text-xs tracking-wide px-3.5 py-1.5 rounded-full"
-            style={{ background: tileColor }}
-          >
-            {skillLabel}
-          </div>
-          {speechSupported && (
-            <button
-              onClick={() => speak(itemSpokenText(item))}
-              aria-label="Listen to this question again"
-              className="w-9 h-9 rounded-full border-none flex items-center justify-center cursor-pointer bg-[var(--color-orange)] transition-transform hover:scale-105"
-            >
-              <SpeakerIcon size={18} />
-            </button>
-          )}
-        </div>
-
-        {item.passage && (
-          <div className="bg-[var(--color-neutral)] rounded-2xl px-5 py-4 mb-4.5 text-lg text-[var(--color-ink-soft)] leading-relaxed">
-            {item.passage}
-          </div>
-        )}
-
-        <p className="font-heading font-bold text-2xl text-[var(--color-ink)] m-0 mb-7 leading-snug">
-          {item.prompt}
-        </p>
-
-        {item.type === "mic" && (
-          <>
-            <button
-              onClick={() => toggleMic(micDone)}
-              aria-label={
-                micStatus === "done" ? "Reading recorded" : micStatus === "recording" ? "Listening" : "Tap to read aloud"
-              }
-              className="w-[120px] h-[120px] rounded-full border-none flex items-center justify-center mx-auto mb-3 cursor-pointer transition-transform"
-              style={{
-                background:
-                  micStatus === "done"
-                    ? "var(--color-ink)"
-                    : micStatus === "recording"
-                      ? "var(--color-orange-dark)"
-                      : "var(--color-orange)",
-              }}
-            >
-              <MicIcon />
-            </button>
-            <div className="text-[var(--color-body)] font-bold text-[15px]">
-              {micStatus === "done" ? "Great reading! ✓" : micStatus === "recording" ? "Listening…" : "Tap to read aloud"}
-            </div>
-          </>
-        )}
-
-        {item.type === "choice" && item.options && (
-          <div className="grid gap-3.5">
-            {item.options.map((text) => {
-              const isSelected = selectedOption === text;
-              return (
-                <button
-                  key={text}
-                  onClick={() => selectOption(text)}
-                  className="text-center font-heading font-bold text-lg py-5 rounded-2xl cursor-pointer border-[2.5px] transition-colors"
-                  style={{
-                    borderColor: isSelected ? "var(--color-orange)" : "var(--color-neutral-border)",
-                    background: isSelected ? "var(--color-orange-tint)" : "white",
-                    color: "var(--color-ink)",
-                  }}
-                >
-                  {text}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      <div className="flex justify-end mt-5.5">
-        {canProceed && (
-          <button
-            onClick={goNext}
-            disabled={completing}
-            className="bg-[var(--color-orange)] text-white border-none rounded-full font-heading font-bold text-lg px-9.5 py-3.5 cursor-pointer disabled:opacity-60"
-          >
-            {completing ? "Finishing…" : isLast ? "I'm Done!" : "Next"}
-          </button>
-        )}
-      </div>
-    </div>
-  );
+  return <div className="rw-assessment-shell">
+    {!isOnline && <div className="rw-offline-banner">You&apos;re offline — your answers are safe on this device.</div>}
+    <div className="rw-quest-header"><div><div className="rw-brand"><span className="rw-brand-dot">✦</span> Read Well</div><div className="rw-header-sub">{isLevel2 ? "Level 2 reading quest" : "Reading quest"}</div></div><div className="rw-header-score"><span className="rw-spark">✦</span> Mission {isLevel2 ? `${part.number} of 13` : `${qIndex + 1} of ${state.items.length}`}</div></div>
+    <div className="rw-progress-track"><div className="rw-progress-fill" style={{ width: `${partProgress}%` }} /></div>
+    <div className="rw-sitting-row"><span className="rw-sitting-pill">{sittingLabel}</span><span>{firstInPart ? "New mission" : "Keep going!"}</span>{syncing && <span className="rw-saving">Saving…</span>}</div>
+    <main className="rw-mission-card">
+      <div className="rw-mission-top"><div className="rw-part-badge" style={{ background: part.color }}>PART {part.number} · {part.code}</div>{speechSupported && <button className="rw-listen" onClick={() => speak(itemSpokenText(item))}><SpeakerIcon size={17} /> Listen</button>}</div>
+      {firstInPart && <div className="rw-part-intro"><strong>{part.title}</strong><span>{part.subtitle}</span></div>}
+      {item.passage && <div className="rw-passage">{item.passage}</div>}
+      <h1 className="rw-prompt">{item.prompt}</h1>
+      {isStory && <div className="rw-timer"><span className="rw-timer-dot" /> Story time {Math.floor(storySeconds / 60)}:{String(storySeconds % 60).padStart(2, "0")}</div>}
+      {item.type === "choice" && item.options && <div className="rw-options">{item.options.map((option) => <button key={option} className={`rw-option ${savedString === option ? "selected" : ""}`} onClick={() => saveAnswer(option)}><span className="rw-option-letter">{String.fromCharCode(65 + item.options!.indexOf(option))}</span>{option}{savedString === option && <span className="rw-check">✓</span>}</button>)}</div>}
+      {item.type === "text" && <textarea className="rw-writing-input" value={savedString} onChange={(event) => saveAnswer(event.target.value)} placeholder="Write your answer here…" rows={3} autoFocus />}
+      {item.type === "mic" && <div className="rw-mic-wrap"><button className={`rw-mic ${savedString ? "done" : recording ? "recording" : ""}`} onClick={recordMic} aria-label="Read aloud"><MicIcon /></button><strong>{savedString ? "Nice reading! ✓" : recording ? "Sunny is listening…" : "Tap to read aloud"}</strong><small>Take your time. You can try once.</small></div>}
+    </main>
+    <div className="rw-actions"><span className="rw-encouragement">{canProceed ? "Great work! Ready for the next one?" : "Take your time — you can do it."}</span>{canProceed && <button className="rw-primary" onClick={next} disabled={completing}>{completing ? "Finishing…" : qIndex === state.items.length - 1 ? "Finish quest ✓" : "Next mission →"}</button>}</div>
+  </div>;
 }

@@ -132,6 +132,7 @@ export function AssessmentItemsEditor({
               >
                 <option value="choice">Multiple choice</option>
                 <option value="mic">Read aloud (mic)</option>
+                <option value="text">Writing response</option>
               </select>
               <button
                 onClick={() => removeItem(i)}
@@ -160,7 +161,7 @@ export function AssessmentItemsEditor({
               />
             </label>
 
-            {item.type === "mic" && (
+            {(item.type === "mic" || item.type === "text") && (
               <label className="flex flex-col gap-1.5 text-sm mb-3">
                 <span className="font-bold text-[var(--color-muted)] text-xs uppercase">
                   Expected word/phrase (for scoring)

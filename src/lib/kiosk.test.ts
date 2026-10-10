@@ -32,6 +32,14 @@ describe("evaluateResponse", () => {
     expectedText: "jump",
   };
 
+  const writingItem: AssessmentItem = {
+    id: "wt1",
+    skillAreaKey: "phonics",
+    type: "text",
+    prompt: "Write the word flat.",
+    expectedText: "flat",
+  };
+
   it("marks the correct option as correct", () => {
     expect(evaluateResponse(choiceItem, "BALL")).toBe(true);
   });
@@ -64,6 +72,12 @@ describe("evaluateResponse", () => {
 
   it("marks a transcript not containing the expected word as incorrect", () => {
     expect(evaluateResponse(micItemWithExpectedText, "run")).toBe(false);
+  });
+
+  it("scores a Level 2 writing response against its expected text", () => {
+    expect(evaluateResponse(writingItem, "flat")).toBe(true);
+    expect(evaluateResponse(writingItem, "")).toBe(false);
+    expect(evaluateResponse(writingItem, "frog")).toBe(false);
   });
 });
 

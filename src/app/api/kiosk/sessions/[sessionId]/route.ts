@@ -25,6 +25,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ ses
     // so the same code can reopen this assessment on this device offline.
     sessionCode: state.session.session_code,
     studentName: state.studentName,
+    assessmentGrade: state.assessment.grade_level,
+    assessmentVersion: state.assessment.version,
     // Never send `isCorrect` on options to the client.
     items: state.items.map((item) => ({
       id: item.id,
@@ -33,6 +35,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ ses
       prompt: item.prompt,
       passage: item.passage ?? null,
       options: item.options?.map((o) => o.text) ?? null,
+      expectedText: item.expectedText,
     })),
     answersByItemId,
   });
