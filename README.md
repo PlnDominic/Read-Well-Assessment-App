@@ -162,22 +162,30 @@ their own device at `/student`
   Sunny with a trophy, a Reading Star badge and the missions stamped off.
 - **Stars reward effort.** A child earns one star for each question they
   answer, whatever they answer.
-- **Right and wrong, with one practice retry.** When a child picks an
-  answer to a choice question, the option shakes pink with a ✕ if it was
-  wrong (Sunny scratches his head, then cheers them on to try again) or turns
-  green with a ✓ if it was right. After a wrong answer they get one more
-  try; if that's wrong too, the right answer is shown and they move on.
-  **Only the first answer is recorded and scored** (the kiosk route keeps
-  it and ignores later ones), so a retry is practice and tapping until
+- **Right and wrong, with one practice retry, and a per-form switch.** When
+  a child picks an answer to a choice question, the option shakes pink with
+  a ✕ if it was wrong (Sunny scratches his head, then cheers them on to try
+  again) or turns green with a ✓ if it was right. After a wrong answer they
+  get one more try; if that's wrong too, the right answer is shown and they
+  move on. **Only the first answer is recorded and scored** (the kiosk route
+  keeps it and ignores later ones), so a retry is practice and tapping until
   it turns green can't raise the score. The server says whether an answer
   was right in its reply, so there's no right/wrong without a connection:
   offline, the game stays neutral and takes the latest pick. Reading-attitude
   questions ("How do you feel about reading?") never show a mark
   (`itemGivesFeedback` in `src/lib/kiosk.ts`), and read-aloud and writing
   items don't either, since speech recognition is too noisy to call a read
-  wrong. The ReadWell guide says never to correct a child on a scored
-  item, so use the adult-given Level 1 Form A when a strictly by-the-guide
-  baseline is needed.
+  wrong.
+  The ReadWell guide says never to correct a child on a scored item, so
+  each game form has a **Tell children right from wrong** switch
+  (`assessments.show_feedback`, 0019) in its editor on the admin Content
+  page; it's on by default. Off: the game says nothing about right or wrong
+  (the answer endpoint stops sending `isCorrect` at all), the child can
+  change their pick until they move on, and the last pick is scored, as it
+  was before feedback existed. The switch is saved with the form's
+  version (saving makes a new one), so every session's assessment records
+  which way it was given. The route's rules are tested in
+  `src/app/api/kiosk/sessions/[sessionId]/route.test.ts`.
 - **Animated Sunny** (`src/components/AnimatedSunny.tsx`). Sunny peeks over
   the top of the question card and changes mood with the moment: thinking
   while a question is open, reading for a read-aloud item, listening while

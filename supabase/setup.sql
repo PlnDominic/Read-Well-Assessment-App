@@ -86,6 +86,8 @@ create table if not exists public.assessments (
   version integer not null default 1,
   -- 'assessor' or 'game' (0018); the checks are added further down.
   delivery text,
+  -- Game forms: tell the child right from wrong, with one practice retry (0019).
+  show_feedback boolean not null default true,
   items jsonb not null,
   is_active boolean not null default true,
   created_at timestamptz not null default now()
@@ -382,6 +384,13 @@ drop index if exists public.assessments_one_active_per_form;
 create unique index if not exists assessments_one_active_per_form_delivery
   on public.assessments (level, form, delivery)
   where is_active and form is not null;
+
+-- ===========================================================================
+-- Right-and-wrong feedback switch (0019): on by default, switched off per
+-- form version on the Content page.
+-- ===========================================================================
+
+alter table public.assessments add column if not exists show_feedback boolean not null default true;
 
 -- ===========================================================================
 -- Level-match guard (0006, 0014, 0017): a session's assessment must be for

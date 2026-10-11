@@ -52,7 +52,7 @@ export default async function AdminContentPage({
 
   const { data: levelAssessments } = await supabase
     .from("assessments")
-    .select("form, delivery, version, items")
+    .select("form, delivery, version, show_feedback, items")
     .eq("level", LEVEL)
     .eq("is_active", true)
     .not("form", "is", null);
@@ -155,10 +155,12 @@ export default async function AdminContentPage({
                     </div>
                     <details>
                       <summary className="cursor-pointer text-sm font-bold text-[var(--color-orange-dark)]">
-                        {game ? `${game.items.length} questions. Edit` : "Build it as a game"}
+                        {game
+                          ? `${game.items.length} questions · ${game.show_feedback ? "tells children right from wrong" : "no right-or-wrong feedback"}. Edit`
+                          : "Build it as a game"}
                       </summary>
                       <div className="mt-3">
-                        <AssessmentItemsEditor level={LEVEL} form={form} initialItems={game?.items ?? []} skillAreas={skillAreas ?? []} />
+                        <AssessmentItemsEditor level={LEVEL} form={form} initialItems={game?.items ?? []} initialShowFeedback={game?.show_feedback ?? true} skillAreas={skillAreas ?? []} />
                       </div>
                     </details>
                   </div>

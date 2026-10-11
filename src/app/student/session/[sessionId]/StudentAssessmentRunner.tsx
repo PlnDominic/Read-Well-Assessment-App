@@ -222,6 +222,8 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
   const storyTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const starsRef = useRef<HTMLSpanElement>(null);
   const finishCelebrated = useRef(false);
+  /** The item whose star sound is waiting on the server's verdict (see settleStar). */
+  const starPendingRef = useRef<string | null>(null);
 
   const pendingKey = storageKey("pending", sessionId);
   const stateKey = storageKey("state", sessionId);
@@ -340,6 +342,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
     setSyncing(true);
     let ok = true;
     for (const [itemId, answer] of entries) {
+      let gaveVerdict = false;
       try {
         const response = await fetch(`/api/kiosk/sessions/${sessionId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ itemId, answer }) });
         if (response.ok) {
@@ -347,11 +350,22 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
           // The server says whether a choice answer was right; the screen shows it only for the item in front of the child.
           const body = await response.json().catch(() => null) as { isCorrect?: unknown; feedback?: unknown } | null;
           if (body && typeof body.isCorrect === "boolean" && typeof answer === "string") {
+            gaveVerdict = body.feedback === true;
             setVerdicts((current) => ({ ...current, [itemId]: { answer, correct: body.isCorrect as boolean, feedback: body.feedback === true } }));
           }
         } else ok = false;
       } catch { ok = false; }
       setAwaitingId((current) => (current === itemId ? null : current));
+      // The star's sound and shower were held back for a verdict. When one
+      // came, its own sound plays; when none did (feedback switched off, a
+      // reading-attitude question, no connection), the star plays now.
+      if (starPendingRef.current === itemId) {
+        starPendingRef.current = null;
+        if (!gaveVerdict) {
+          playSound("star");
+          burst("star", originOf(starsRef.current));
+        }
+      }
     }
     writeJson(pendingKey, pendingRef.current);
     setSyncing(false);
@@ -393,7 +407,8 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
     // answer, a soft "oops" otherwise) unless there's no connection to get one.
     const waitsForVerdict = item.type === "choice" && isOnline;
     if (firstAnswer) {
-      if (!waitsForVerdict) {
+      if (waitsForVerdict) starPendingRef.current = item.id;
+      else {
         playSound("star");
         burst("star", originOf(starsRef.current));
       }

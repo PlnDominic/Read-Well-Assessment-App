@@ -27,14 +27,17 @@ export function AssessmentItemsEditor({
   level,
   form,
   initialItems,
+  initialShowFeedback,
   skillAreas,
 }: {
   level: number;
   form: AssessmentForm;
   initialItems: AssessmentItem[];
+  initialShowFeedback: boolean;
   skillAreas: SkillArea[];
 }) {
   const [items, setItems] = useState<AssessmentItem[]>(initialItems);
+  const [showFeedback, setShowFeedback] = useState(initialShowFeedback);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -95,7 +98,7 @@ export function AssessmentItemsEditor({
     setSaved(false);
     startTransition(async () => {
       try {
-        await saveAssessmentItems(level, form, items);
+        await saveAssessmentItems(level, form, items, showFeedback);
         setSaved(true);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not save");
@@ -105,6 +108,27 @@ export function AssessmentItemsEditor({
 
   return (
     <div>
+      <label className="flex items-start gap-3 bg-[var(--color-surface)] rounded-[16px] px-4 py-3.5 mb-5 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={showFeedback}
+          onChange={(e) => {
+            setSaved(false);
+            setShowFeedback(e.target.checked);
+          }}
+          className="mt-1 size-4 accent-[var(--color-orange)]"
+        />
+        <span className="text-sm text-[var(--color-body)]">
+          <span className="font-bold text-[var(--color-ink)]">Tell children right from wrong</span>
+          <br />
+          On: a wrong pick shakes and shows &ldquo;try again&rdquo;, a right pick turns green, and the child gets one
+          practice retry. Only their first answer is scored. Off: the game says nothing about right or wrong, and the
+          child&apos;s last pick before moving on is scored. Switch it off where the form has to be given strictly by
+          its guide (the ReadWell guide says never to correct a child on a scored item). Read-aloud, writing and
+          reading-attitude questions never show a mark either way.
+        </span>
+      </label>
+
       <div className="flex flex-col gap-5">
         {items.map((item, i) => (
           <div key={item.id} className="bg-[var(--color-neutral)] rounded-[20px] p-5">

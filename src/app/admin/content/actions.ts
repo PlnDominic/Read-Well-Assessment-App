@@ -36,15 +36,21 @@ function validateItems(items: AssessmentItem[]) {
  * Saves the game version of a form (choice, read-aloud and writing items
  * the child answers on their own device) for one level and form. A form
  * given by an adult from its ReadWell guide is a separate row (delivery
- * 'assessor', 0018) managed from its item bank, so this never touches it. assessments has no
- * client-facing write policy (see 0002_rls.sql) so this needs the service
- * role, gated by requireAdmin(). Saving creates a new version rather than
+ * 'assessor', 0018) managed from its item bank, so this never touches it.
+ *
+ * `showFeedback` is whether the game tells children right from wrong, with
+ * one practice retry (0019). It is saved with the version, like the items,
+ * so a session's assessment always records which way it was given.
+ *
+ * assessments has no client-facing write policy (see 0002_rls.sql) so this
+ * needs the service role, gated by requireAdmin(). Saving creates a new version rather than
  * mutating in place, so past sessions keep pointing at the exact content
  * they were assessed against (TRD §3: Assessment.version).
  */
-export async function saveAssessmentItems(level: number, form: string, items: AssessmentItem[]) {
+export async function saveAssessmentItems(level: number, form: string, items: AssessmentItem[], showFeedback: boolean = true) {
   await requireAdmin();
   if (!isValidLevel(level) || !isAssessmentForm(form)) throw new Error("Pick a level and form");
+  if (typeof showFeedback !== "boolean") throw new Error("Pick whether the game tells children right from wrong");
   validateItems(items);
 
   const admin = createAdminClient();
@@ -68,6 +74,7 @@ export async function saveAssessmentItems(level: number, form: string, items: As
     level,
     form,
     delivery: "game",
+    show_feedback: showFeedback,
     version: (versions?.[0]?.version ?? 0) + 1,
     items,
     is_active: true,

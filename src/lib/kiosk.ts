@@ -63,7 +63,9 @@ export function evaluateResponse(item: AssessmentItem, answer: unknown): boolean
  * choice item that has a wrong option, other than the reading-attitude
  * questions ("How do you feel about reading?"), which have no wrong answer
  * however they were authored. Only the child's first answer to such an item
- * is recorded and scored (the kiosk route); a retry is practice.
+ * is recorded and scored (the kiosk route); a retry is practice. A form can
+ * switch all of this off (assessments.show_feedback, 0019); the route
+ * checks that too.
  */
 export function itemGivesFeedback(item: AssessmentItem): boolean {
   if (item.type !== "choice" || !item.options?.some((o) => !o.isCorrect)) return false;
@@ -89,7 +91,7 @@ export function generateSessionCode(): string {
 export async function loadSessionForKiosk(admin: AdminClient, sessionId: string) {
   const { data: session, error } = await admin
     .from("assessment_sessions")
-    .select("id, status, current_item_index, assessment_id, student_id, session_code, assessments(level, form, version)")
+    .select("id, status, current_item_index, assessment_id, student_id, session_code, assessments(level, form, version, show_feedback)")
     .eq("id", sessionId)
     .single();
   if (error || !session) return null;
@@ -112,11 +114,11 @@ export async function loadSessionForKiosk(admin: AdminClient, sessionId: string)
     .eq("id", session.student_id)
     .single();
 
-  const assessmentMeta = session.assessments as unknown as { level: number; form: AssessmentForm | null; version: number } | null;
+  const assessmentMeta = session.assessments as unknown as { level: number; form: AssessmentForm | null; version: number; show_feedback: boolean } | null;
   const items = assessment.items as AssessmentItem[];
   return {
     session,
-    assessment: assessmentMeta ?? { level: 0, form: null, version: 0 },
+    assessment: assessmentMeta ?? { level: 0, form: null, version: 0, show_feedback: true },
     items,
     responses: responses ?? [],
     studentName: student?.name ?? "Student",

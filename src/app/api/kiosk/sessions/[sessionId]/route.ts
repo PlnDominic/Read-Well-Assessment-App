@@ -83,7 +83,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ se
   // so only the child's FIRST answer to it is recorded and scored: a retry
   // is practice, and changing an answer later can't improve the score.
   // Items with no wrong answer (reading attitude) just keep the latest.
-  const givesFeedback = itemGivesFeedback(item);
+  // The form can switch feedback off (show_feedback), and then nothing here
+  // tells the child anything about right and wrong, and the latest pick wins.
+  const givesFeedback = state.assessment.show_feedback && itemGivesFeedback(item);
   if (givesFeedback && state.responses.some((r) => r.item_id === item.id)) {
     // Nothing is written. A wrong retry also says which answer was right,
     // since the child has had their go and the score can't change now.
@@ -119,5 +121,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ se
     .eq("id", sessionId);
   if (sessionError) return NextResponse.json({ error: sessionError.message }, { status: 500 });
 
-  return NextResponse.json({ ok: true, isCorrect, feedback: givesFeedback, recorded: true, currentItemIndex: nextIndex });
+  // isCorrect only goes back when the child is meant to see it.
+  return NextResponse.json({
+    ok: true,
+    ...(givesFeedback ? { isCorrect } : {}),
+    feedback: givesFeedback,
+    recorded: true,
+    currentItemIndex: nextIndex,
+  });
 }

@@ -143,6 +143,8 @@ export interface Database {
           form: AssessmentForm | null;
           /** How it's given: by an adult on the assessor screen, or played by the child (0018). */
           delivery: Delivery;
+          /** Game forms: tell the child right from wrong, with one practice retry (0019). */
+          show_feedback: boolean;
           version: number;
           items: AssessmentItem[];
           is_active: boolean;
@@ -153,6 +155,7 @@ export interface Database {
           level: number;
           form?: AssessmentForm | null;
           delivery: Delivery;
+          show_feedback?: boolean;
           version?: number;
           items: AssessmentItem[];
           is_active?: boolean;
