@@ -128,7 +128,7 @@ async function scoreAssessorSession(
  *
  * thresholdBySkillAreaId lets a school override FLAGGED_SCORE_THRESHOLD for
  * a specific skill area (supabase/migrations/0011_school_skill_weights.sql,
- * admin/content's weighting UI); a skill area absent from the map uses the
+ * Admin → Content → Skills and scoring); a skill area absent from the map uses the
  * global default.
  */
 export function aggregateSkillScores(

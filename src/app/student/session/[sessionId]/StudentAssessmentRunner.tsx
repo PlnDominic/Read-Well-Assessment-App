@@ -8,6 +8,8 @@ import { burst, originOf, playSound, setSoundEnabled, soundEnabled } from "@/lib
 import { optionPicture, type OptionPicture } from "@/lib/optionPicture";
 import { REACTION_LINES, itemSpokenText } from "@/lib/spoken";
 import { canSpeak, sayAloud, stopSpeaking } from "@/lib/voice";
+import { MISSION_SIZE, partFor, partsFor, type Part } from "@/lib/gameParts";
+import { isWordCard, showAsTiles } from "@/lib/gameLayout";
 
 interface KioskItem {
   id: string;
@@ -32,52 +34,6 @@ interface KioskState {
   answersByItemId: Record<string, unknown>;
 }
 
-interface Part {
-  code: string;
-  number: number;
-  title: string;
-  subtitle: string;
-  /** The ReadWell sitting: 1, 2, or 3 for the writing. */
-  sitting: number;
-  color: string;
-}
-
-// Each level's parts, in order, by the item-code prefix its game items use.
-const LEVEL_PARTS: Record<number, Part[]> = {
-  1: [
-    { code: "LC", number: 1, title: "Story listening", subtitle: "Listen to Sunny's story", sitting: 1, color: "#2563eb" },
-    { code: "VO", number: 2, title: "Vocabulary", subtitle: "Find the picture", sitting: 1, color: "#2563eb" },
-    { code: "CP", number: 3, title: "Print concepts", subtitle: "Show how books work", sitting: 1, color: "#2563eb" },
-    { code: "SA", number: 4, title: "Sound awareness", subtitle: "Play with sounds", sitting: 1, color: "#7c3aed" },
-    { code: "LN", number: 5, title: "Letter names", subtitle: "Find the letters", sitting: 1, color: "#0f766e" },
-    { code: "LS", number: 6, title: "Letter sounds", subtitle: "Match sounds to letters", sitting: 1, color: "#0f766e" },
-    { code: "CV", number: 7, title: "CV blending", subtitle: "Slide two sounds together", sitting: 2, color: "#ea580c" },
-    { code: "RW", number: 8, title: "Real words", subtitle: "Read the little words", sitting: 2, color: "#ea580c" },
-    { code: "NW", number: 9, title: "Made up words", subtitle: "Be a word inventor", sitting: 2, color: "#ea580c" },
-    { code: "HW", number: 10, title: "Heart words", subtitle: "Words you know by heart", sitting: 2, color: "#db2777" },
-    { code: "ST", number: 11, title: "Story reading", subtitle: "Read a story aloud", sitting: 2, color: "#db2777" },
-    { code: "AT", number: 12, title: "Reading attitude", subtitle: "Tell Sunny how reading feels", sitting: 2, color: "#db2777" },
-    { code: "WT", number: 13, title: "Writing", subtitle: "Show what you can write", sitting: 3, color: "#ca8a04" },
-  ],
-  2: [
-    { code: "LS", number: 1, title: "Letter sounds", subtitle: "Find the sounds hiding in letters", sitting: 1, color: "#0f766e" },
-    { code: "SV", number: 2, title: "Short vowel words", subtitle: "Read the little words", sitting: 1, color: "#0f766e" },
-    { code: "LC", number: 3, title: "Story listening", subtitle: "Listen like a story detective", sitting: 1, color: "#2563eb" },
-    { code: "VO", number: 4, title: "Vocabulary", subtitle: "Match words to pictures", sitting: 1, color: "#2563eb" },
-    { code: "CP", number: 5, title: "Print concepts", subtitle: "Explore how stories work", sitting: 1, color: "#2563eb" },
-    { code: "SA", number: 6, title: "Sound awareness", subtitle: "Climb the sound ladder", sitting: 1, color: "#7c3aed" },
-    { code: "BL", number: 7, title: "Blend sounds", subtitle: "Slide sounds together", sitting: 2, color: "#ea580c" },
-    { code: "RW", number: 8, title: "Real blend words", subtitle: "Read words with blends", sitting: 2, color: "#ea580c" },
-    { code: "NW", number: 9, title: "Made-up words", subtitle: "Be a word inventor", sitting: 2, color: "#ea580c" },
-    { code: "HW", number: 10, title: "Heart words", subtitle: "Words you know by heart", sitting: 2, color: "#db2777" },
-    { code: "ST", number: 11, title: "Story reading", subtitle: "Read a story aloud", sitting: 2, color: "#db2777" },
-    { code: "AT", number: 12, title: "Reading attitude", subtitle: "Tell us how reading feels", sitting: 2, color: "#db2777" },
-    { code: "WT", number: 13, title: "Writing", subtitle: "Show what you can write", sitting: 3, color: "#ca8a04" },
-  ],
-};
-// Levels without their own list yet use Level 2's.
-function partsFor(level: number | undefined): Part[] { return LEVEL_PARTS[level ?? 2] ?? LEVEL_PARTS[2]; }
-
 /**
  * The game is split into missions: one per ReadWell part when the items
  * carry part codes (the Level 2 quest), otherwise every MISSION_SIZE
@@ -85,7 +41,6 @@ function partsFor(level: number | undefined): Part[] { return LEVEL_PARTS[level 
  * correctness: the child mustn't be able to tell right from wrong, or the
  * assessment stops measuring what they know.
  */
-const MISSION_SIZE = 5;
 const MISSION_COLORS = ["#0f766e", "#2563eb", "#7c3aed", "#ea580c", "#db2777", "#ca8a04"];
 const PRAISE = ["Nice work!", "Super!", "You did it!", "Awesome!", "Way to go!", "High five!", "You're a star!", "Brilliant!"];
 
@@ -123,7 +78,6 @@ interface Mission {
 function storageKey(prefix: string, id: string) { return `rw:${prefix}:${id}`; }
 function readJson<T>(key: string, fallback: T): T { try { return JSON.parse(localStorage.getItem(key) ?? "null") ?? fallback; } catch { return fallback; } }
 function writeJson(key: string, value: unknown) { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* best effort */ } }
-function partFor(parts: Part[], item?: KioskItem) { return parts.find((part) => item?.id.toUpperCase().startsWith(part.code)); }
 function isAnswered(answer: unknown) { return typeof answer === "string" ? answer.trim().length > 0 : answer !== undefined && answer !== null; }
 // What a read-aloud item records when the child skips it; scored as wrong (evaluateResponse in src/lib/kiosk.ts).
 const SKIPPED = "skipped";
@@ -551,9 +505,8 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
   }
 
   const canProceed = item.type === "choice" ? !!savedString : item.type === "text" ? savedString.trim().length > 0 : !!savedString;
-  // Pictures (and single letters or marks) show as big tiles a child can tap; anything wordier stays a list.
   const pictures = (item.options ?? []).map(optionPicture);
-  const tiles = pictures.length > 0 && pictures.every((p) => (p.src ? !p.label : p.label.length <= 3));
+  const tiles = showAsTiles(pictures);
   /** How each option looks: still open, picked, or (when the game gives feedback) right, wrong, revealed or out of play. */
   function optionState(option: string): "" | "selected" | "wrong" | "correct" | "reveal" | "dim" {
     if (!feedbackOn || !firstVerdict) return savedString === option ? "selected" : "";
@@ -564,8 +517,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
     if (phase === "gaveup") return tried ? "wrong" : "dim";
     return tried ? "wrong" : "";
   }
-  // A single word to read aloud shows big, like a flash card.
-  const wordCard = item.type === "mic" && !!item.passage && item.passage.length <= 14;
+  const wordCard = isWordCard(item);
   const firstInMission = qIndex === mission.start;
   const leftInMission = mission.end - (qIndex + 1);
   const lastQuestion = qIndex === state.items.length - 1;

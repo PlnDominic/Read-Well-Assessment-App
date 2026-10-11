@@ -1,29 +1,21 @@
 import { redirect } from "next/navigation";
-import { pathForUnauthorizedProfile } from "@/lib/staffRouting";
 import Link from "next/link";
+import { pathForUnauthorizedProfile } from "@/lib/staffRouting";
 import { createClient } from "@/lib/supabase/server";
-import { FLAGGED_SCORE_THRESHOLD } from "@/lib/theme";
-import { SkillAreasEditor } from "./SkillAreasEditor";
-import { SkillWeightsEditor } from "./SkillWeightsEditor";
-import { addRecommendationRule, deleteRecommendationRule } from "./actions";
-import { FORM_OPTIONS, LEVEL_OPTIONS, formLabel, levelLabel, type AssessmentForm } from "@/lib/levels";
+import type { AssessmentItem } from "@/lib/database.types";
+import { FORM_OPTIONS, formLabel, levelLabel, type AssessmentForm, type Delivery } from "@/lib/levels";
 import { formForItems } from "@/lib/readwell/forms";
-import { AssessmentItemsEditor } from "./AssessmentItemsEditor";
+import { groupByPart } from "@/lib/gameItems";
+import { MISSION_SIZE, partsFor } from "@/lib/gameParts";
+import { ContentHeader, LevelPicker, StatusPill, cardClass, levelFromParam } from "./ContentHeader";
 
-type RuleRow = {
-  id: string;
-  recommendation_text: string;
-  program_reference: string | null;
-  skill_areas: { id: string; name: string };
-};
-
-export default async function AdminContentPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ level?: string }>;
-}) {
-  const { level: levelParam } = await searchParams;
-  const LEVEL = levelParam && LEVEL_OPTIONS.includes(Number(levelParam)) ? Number(levelParam) : 1;
+/**
+ * Content → Assessments: for one level, which of its four forms are ready
+ * to give, each way (with an adult, or as a game), with a way into the
+ * game editor. Teachers can only start what's ready here.
+ */
+export default async function AdminContentPage({ searchParams }: { searchParams: Promise<{ level?: string }> }) {
+  const LEVEL = levelFromParam((await searchParams).level);
 
   const supabase = await createClient();
   const {
@@ -31,240 +23,177 @@ export default async function AdminContentPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase.from("profiles").select("role, school_id").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
   if (!profile || profile.role !== "administrator") redirect(pathForUnauthorizedProfile(profile));
 
-  const { data: skillAreas } = await supabase.from("skill_areas").select("id, key, name").order("name");
-
-  const { data: weightRows } = await supabase
-    .from("school_skill_weights")
-    .select("skill_area_id, weight, flagged_threshold")
-    .eq("school_id", profile.school_id);
-  const weightBySkillAreaId = new Map((weightRows ?? []).map((w) => [w.skill_area_id, w]));
-
-  const { data: allAssessmentItems } = await supabase.from("assessments").select("items");
-  const usedSkillAreaKeys = new Set<string>();
-  for (const a of allAssessmentItems ?? []) {
-    for (const item of a.items) usedSkillAreaKeys.add(item.skillAreaKey);
-  }
-  const { data: allRuleSkillAreaIds } = await supabase.from("recommendation_rules").select("skill_area_id");
-  const usedSkillAreaIds = new Set((allRuleSkillAreaIds ?? []).map((r) => r.skill_area_id));
+  const { data: allActive } = await supabase
+    .from("assessments")
+    .select("level")
+    .eq("is_active", true)
+    .not("form", "is", null);
+  const readyByLevel: Record<number, number> = {};
+  for (const a of allActive ?? []) readyByLevel[a.level] = (readyByLevel[a.level] ?? 0) + 1;
+  const levelNotes = Object.fromEntries(
+    Object.entries(readyByLevel).map(([level, n]) => [level, `${n} ready`])
+  ) as Record<number, string>;
 
   const { data: levelAssessments } = await supabase
     .from("assessments")
-    .select("form, delivery, version, show_feedback, items")
+    .select("form, delivery, show_feedback, items, created_at")
     .eq("level", LEVEL)
     .eq("is_active", true)
     .not("form", "is", null);
-  const activeVersion = (form: AssessmentForm, delivery: "assessor" | "game") =>
+  const find = (form: AssessmentForm, delivery: Delivery) =>
     (levelAssessments ?? []).find((a) => a.form === form && a.delivery === delivery);
-
-  const { data: rulesData } = await supabase
-    .from("recommendation_rules")
-    .select("id, recommendation_text, program_reference, skill_areas(id, name)")
-    .eq("level", LEVEL);
-  const rules = (rulesData ?? []) as unknown as RuleRow[];
 
   return (
     <div className="w-full max-w-[920px]">
-      <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-ink)] m-0 mb-1">Content</h1>
-      <p className="text-[var(--color-muted)] text-sm m-0 mb-5">
-        Skill areas, weighting and recommendations are edited here, with no code deploy. Pick a level to see its
-        assessments and recommendations.
-      </p>
+      <ContentHeader
+        tab="assessments"
+        intro="Each level has four forms: A, B, C and the Final assessment. When teachers start an assessment, they pick the form and how it's given. They can only start what's ready below."
+      />
+      <LevelPicker level={LEVEL} basePath="/admin/content" notes={levelNotes} />
 
-      <div className="inline-flex gap-1 mb-6 flex-wrap bg-[var(--color-surface)] rounded-full shadow-[0_4px_16px_rgba(0,0,0,0.05)] p-1.5">
-        {LEVEL_OPTIONS.map((g) => (
-          <Link
-            key={g}
-            href={`/admin/content?level=${g}`}
-            className="px-3.5 py-1.5 rounded-full text-xs font-bold no-underline transition-colors"
-            style={{
-              background: g === LEVEL ? "var(--color-orange)" : "transparent",
-              color: g === LEVEL ? "white" : "var(--color-muted)",
-              boxShadow: g === LEVEL ? "0 4px 10px rgba(74,107,82,0.3)" : "none",
-            }}
-          >
-            {levelLabel(g)}
-          </Link>
-        ))}
+      <div className="grid gap-3 sm:grid-cols-2 mb-6">
+        <WayExplainer icon="🧑🏾‍🏫" title="With an adult">
+          An adult sits with the child and marks each answer on the assessor screen, following the ReadWell guide.
+          These come from the guide, so they can&apos;t be changed here.
+        </WayExplainer>
+        <WayExplainer icon="🎮" title="Game on a tablet">
+          The child plays on their own with Sunny, who reads everything aloud. You build and edit these here.
+        </WayExplainer>
       </div>
 
-      <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-6">
-        <div className="font-heading font-bold text-sm text-[var(--color-ink)] mb-4.5">Skill areas</div>
-        <SkillAreasEditor
-          skillAreas={(skillAreas ?? []).map((sa) => ({
-            ...sa,
-            inUse: usedSkillAreaKeys.has(sa.key) || usedSkillAreaIds.has(sa.id),
-          }))}
-        />
-      </div>
-
-      <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-6">
-        <div className="font-heading font-bold text-sm text-[var(--color-ink)] mb-1.5">Skill area weighting</div>
-        <p className="text-[var(--color-muted)] text-sm mb-4 mt-0">
-          Weight changes how much a skill area counts toward the school-wide average score. The flag threshold
-          overrides the {FLAGGED_SCORE_THRESHOLD}% default just for that skill area; leave it blank to use the
-          default.
-        </p>
-        <SkillWeightsEditor
-          skillAreas={(skillAreas ?? []).map((sa) => ({
-            id: sa.id,
-            name: sa.name,
-            weight: weightBySkillAreaId.get(sa.id)?.weight ?? 1,
-            flaggedThreshold: weightBySkillAreaId.get(sa.id)?.flagged_threshold ?? null,
-          }))}
-        />
-      </div>
-
-      <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-6">
-        <div className="font-heading font-bold text-sm text-[var(--color-ink)] mb-1.5">{levelLabel(LEVEL)} assessments</div>
-        <p className="text-[var(--color-muted)] text-sm mt-0 mb-4.5">
-          Each level has four assessments, and each can be given two ways: by an adult on the assessor screen, from
-          its ReadWell guide (the guide is the master copy, so it&apos;s shown read-only here), or played by the child
-          as a game on their own device, which you build and edit here. Teachers pick the form and the way when they
-          start it.
-        </p>
-        <div className="flex flex-col gap-3">
-          {FORM_OPTIONS.map((form) => {
-            const withAdult = activeVersion(form, "assessor");
-            const game = activeVersion(form, "game");
-            return (
-              <div key={form} className="bg-[var(--color-neutral)] rounded-xl px-4.5 py-3.5">
-                <div className="font-extrabold text-[var(--color-ink)] text-sm mb-2">{formLabel(form)}</div>
-                <div className="flex flex-col gap-2.5">
-                  <div>
-                    <div className="flex justify-between items-baseline gap-3 flex-wrap mb-0.5">
-                      <span className="text-xs font-bold uppercase text-[var(--color-muted)]">Given by an adult</span>
-                      <span className="text-xs text-[var(--color-muted)]">
-                        {withAdult ? `Version ${withAdult.version}` : "Not added yet"}
-                      </span>
-                    </div>
-                    {withAdult ? (
-                      <AssessorFormSummary items={withAdult.items} />
-                    ) : (
-                      <p className="text-sm text-[var(--color-muted)] m-0">Send its assessor guide to add it.</p>
-                    )}
-                  </div>
-                  <div className="border-t border-[var(--color-neutral-divider)] pt-2.5">
-                    <div className="flex justify-between items-baseline gap-3 flex-wrap mb-0.5">
-                      <span className="text-xs font-bold uppercase text-[var(--color-muted)]">Game the child plays</span>
-                      <span className="text-xs text-[var(--color-muted)]">
-                        {game ? `Version ${game.version}` : "Not added yet"}
-                      </span>
-                    </div>
-                    <details>
-                      <summary className="cursor-pointer text-sm font-bold text-[var(--color-orange-dark)]">
-                        {game
-                          ? `${game.items.length} questions · ${game.show_feedback ? "tells children right from wrong" : "no right-or-wrong feedback"}. Edit`
-                          : "Build it as a game"}
-                      </summary>
-                      <div className="mt-3">
-                        <AssessmentItemsEditor level={LEVEL} form={form} initialItems={game?.items ?? []} initialShowFeedback={game?.show_feedback ?? true} skillAreas={skillAreas ?? []} />
-                      </div>
-                    </details>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5">
-        <div className="font-heading font-bold text-sm text-[var(--color-ink)] mb-4.5">
-          Program-aligned recommendations
-        </div>
-
-        <div className="flex flex-col gap-3 mb-5">
-          {rules.length === 0 && (
-            <p className="text-[var(--color-muted)] text-sm m-0">No recommendation rules yet.</p>
-          )}
-          {rules.map((rule) => (
-            <div
-              key={rule.id}
-              className="flex items-start justify-between gap-3 bg-[var(--color-neutral)] rounded-xl px-4.5 py-3.5"
-            >
-              <div>
-                <div className="font-extrabold text-[var(--color-ink)] text-sm mb-1">
-                  {rule.skill_areas.name}
-                </div>
-                <div className="text-[var(--color-body)] text-sm">{rule.recommendation_text}</div>
-                {rule.program_reference && (
-                  <div className="text-[var(--color-muted-light)] text-xs mt-1">{rule.program_reference}</div>
-                )}
-              </div>
-              <form action={deleteRecommendationRule}>
-                <input type="hidden" name="id" value={rule.id} />
-                <button
-                  type="submit"
-                  className="text-[var(--color-orange-dark)] text-xs font-bold bg-none border-none cursor-pointer whitespace-nowrap"
-                >
-                  Delete
-                </button>
-              </form>
+      <h2 className="font-heading font-bold text-lg text-[var(--color-ink)] m-0 mb-3">{levelLabel(LEVEL)} forms</h2>
+      <div className="flex flex-col gap-4">
+        {FORM_OPTIONS.map((form) => (
+          <section key={form} className={`${cardClass} px-5 py-5 sm:px-7`} aria-labelledby={`form-${form}`}>
+            <h3 id={`form-${form}`} className="font-heading font-bold text-base text-[var(--color-ink)] m-0 mb-3.5">
+              {formLabel(form)}
+            </h3>
+            <div className="grid gap-3 md:grid-cols-2">
+              <AdultCell items={find(form, "assessor")?.items ?? null} />
+              <GameCell level={LEVEL} form={form} game={find(form, "game") ?? null} />
             </div>
-          ))}
-        </div>
-
-        <form action={addRecommendationRule} className="flex flex-col gap-3 border-t border-[var(--color-neutral-divider)] pt-5">
-          <input type="hidden" name="level" value={LEVEL} />
-          <div className="flex flex-wrap gap-3">
-            <select
-              name="skillAreaId"
-              aria-label="Skill area"
-              required
-              className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3.5 py-2.5 text-sm"
-              defaultValue=""
-            >
-              <option value="" disabled>
-                Skill area…
-              </option>
-              {(skillAreas ?? []).map((sa) => (
-                <option key={sa.id} value={sa.id}>
-                  {sa.name}
-                </option>
-              ))}
-            </select>
-            <input
-              name="programReference"
-              aria-label="Program reference (optional)"
-              placeholder="Program reference (optional)"
-              className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3.5 py-2.5 text-sm flex-1 min-w-[200px]"
-            />
-          </div>
-          <textarea
-            name="text"
-            aria-label="Recommendation text"
-            required
-            placeholder="Recommendation text"
-            rows={2}
-            className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3.5 py-2.5 text-sm"
-          />
-          <button
-            type="submit"
-            className="self-start bg-[var(--color-orange)] text-white border-none rounded-full font-bold text-sm shadow-[0_6px_16px_rgba(74,107,82,0.25)] transition-transform hover:-translate-y-0.5 px-4.5 py-2.25 cursor-pointer"
-          >
-            Add rule
-          </button>
-        </form>
+          </section>
+        ))}
       </div>
     </div>
   );
 }
 
-/** What an added assessment contains, from its form definition and stored items. */
-function AssessorFormSummary({ items }: { items: Parameters<typeof formForItems>[0] }) {
-  const form = formForItems(items);
-  if (!form) return <p className="text-sm text-[var(--color-body)] m-0">{items.length} items.</p>;
+function WayExplainer({ icon, title, children }: { icon: string; title: string; children: React.ReactNode }) {
   return (
-    <div className="text-sm text-[var(--color-body)]">
-      <p className="m-0 mb-1.5">
-        {form.title}: {items.length} item codes in {form.parts.length} parts, given one to one on the assessor screen.
-      </p>
-      <p className="m-0 text-xs text-[var(--color-muted)]">
-        {form.parts.map((part) => `${part.number} ${part.title}`).join(" · ")}
-      </p>
+    <div className="flex gap-3 rounded-2xl border-2 border-[var(--color-neutral-divider)] px-4 py-3.5">
+      <span aria-hidden="true" className="text-2xl leading-none mt-0.5">
+        {icon}
+      </span>
+      <div>
+        <div className="font-bold text-sm text-[var(--color-ink)] mb-0.5">{title}</div>
+        <p className="text-[13px] leading-relaxed text-[var(--color-body)] m-0">{children}</p>
+      </div>
     </div>
+  );
+}
+
+function CellShell({ title, ready, children }: { title: string; ready: boolean; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-2 rounded-2xl bg-[var(--color-neutral)] px-4 py-3.5">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <span className="text-xs font-bold uppercase tracking-wide text-[var(--color-muted)]">{title}</span>
+        <StatusPill ready={ready}>{ready ? "Ready" : "Not yet"}</StatusPill>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function AdultCell({ items }: { items: AssessmentItem[] | null }) {
+  if (!items) {
+    return (
+      <CellShell title="With an adult" ready={false}>
+        <p className="text-sm text-[var(--color-body)] m-0">
+          Not added yet. It&apos;s added by the ReadWell team once its guide is ready.
+        </p>
+      </CellShell>
+    );
+  }
+  const form = formForItems(items);
+  return (
+    <CellShell title="With an adult" ready>
+      <p className="text-sm text-[var(--color-ink)] font-bold m-0">
+        {form ? `${items.length} items in ${form.parts.length} parts` : `${items.length} items`}
+      </p>
+      {form && (
+        <details className="text-sm">
+          <summary className="cursor-pointer font-bold text-[var(--color-orange-dark)]">What&apos;s in it</summary>
+          <ol className="m-0 mt-2 pl-5 text-[13px] text-[var(--color-body)] columns-1 sm:columns-2 gap-6">
+            {form.parts.map((part) => (
+              <li key={part.number}>{part.title}</li>
+            ))}
+          </ol>
+        </details>
+      )}
+    </CellShell>
+  );
+}
+
+function GameCell({
+  level,
+  form,
+  game,
+}: {
+  level: number;
+  form: AssessmentForm;
+  game: { items: AssessmentItem[]; show_feedback: boolean; created_at: string } | null;
+}) {
+  const href = `/admin/content/game/${level}/${form}`;
+  if (!game) {
+    return (
+      <CellShell title="Game on a tablet" ready={false}>
+        <p className="text-sm text-[var(--color-body)] m-0">Not built yet.</p>
+        <EditLink href={href}>Build the game</EditLink>
+      </CellShell>
+    );
+  }
+  const groups = groupByPart(game.items, partsFor(level));
+  const byPart = !groups.some((g) => g.part === null);
+  const missions = byPart
+    ? groups.filter((g) => g.indexes.length > 0).length
+    : Math.ceil(game.items.length / MISSION_SIZE);
+  const count = (type: AssessmentItem["type"]) => game.items.filter((i) => i.type === type).length;
+  const kinds = [
+    [count("choice"), "tap"],
+    [count("mic"), "read aloud"],
+    [count("text"), "writing"],
+  ]
+    .filter(([n]) => n)
+    .map(([n, label]) => `${n} ${label}`)
+    .join(" · ");
+  const updated = new Date(game.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+
+  return (
+    <CellShell title="Game on a tablet" ready>
+      <p className="text-sm text-[var(--color-ink)] font-bold m-0">
+        {game.items.length} question{game.items.length === 1 ? "" : "s"} in {missions} mission{missions === 1 ? "" : "s"}
+      </p>
+      <ul className="m-0 p-0 list-none text-[13px] text-[var(--color-body)] flex flex-col gap-0.5">
+        <li>{kinds}</li>
+        <li>{game.show_feedback ? "Shows children right and wrong" : "Doesn't show right or wrong"}</li>
+        <li>Last published {updated}</li>
+      </ul>
+      <EditLink href={href}>Edit the game</EditLink>
+    </CellShell>
+  );
+}
+
+function EditLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="self-start mt-1 inline-flex items-center gap-1.5 bg-[var(--color-orange)] text-white no-underline rounded-full font-bold text-sm shadow-[0_6px_16px_rgba(74,107,82,0.25)] transition-transform hover:-translate-y-0.5 px-4 py-2"
+    >
+      {children} <span aria-hidden="true">→</span>
+    </Link>
   );
 }

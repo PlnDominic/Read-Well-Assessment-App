@@ -123,13 +123,18 @@ body {
   border-radius: 8px;
 }
 
-a {
-  color: var(--color-orange);
-  text-decoration: none;
-}
-a:hover {
-  color: var(--color-orange-dark);
-  text-decoration: underline;
+/* In the base layer so a link's own Tailwind classes win: unlayered, these
+   beat every utility, which turned white-text link buttons (text-white on
+   an orange background) orange on orange. */
+@layer base {
+  a {
+    color: var(--color-orange);
+    text-decoration: none;
+  }
+  a:hover {
+    color: var(--color-orange-dark);
+    text-decoration: underline;
+  }
 }
 
 .font-heading {

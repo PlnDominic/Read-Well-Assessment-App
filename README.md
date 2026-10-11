@@ -173,13 +173,13 @@ their own device at `/student`
   was right in its reply, so there's no right/wrong without a connection:
   offline, the game stays neutral and takes the latest pick. Reading-attitude
   questions ("How do you feel about reading?") never show a mark
-  (`itemGivesFeedback` in `src/lib/kiosk.ts`), and read-aloud and writing
+  (`itemGivesFeedback` in `src/lib/gameItems.ts`), and read-aloud and writing
   items don't either, since speech recognition is too noisy to call a read
   wrong.
   The ReadWell guide says never to correct a child on a scored item, so
-  each game form has a **Tell children right from wrong** switch
-  (`assessments.show_feedback`, 0019) in its editor on the admin Content
-  page; it's on by default. Off: the game says nothing about right or wrong
+  each game form has a **Show children right and wrong** switch
+  (`assessments.show_feedback`, 0019) at the top of its game editor
+  (Content → Assessments → Edit the game); it's on by default. Off: the game says nothing about right or wrong
   (the answer endpoint stops sending `isCorrect` at all), the child can
   change their pick until they move on, and the last pick is scored, as it
   was before feedback existed. The switch is saved with the form's
@@ -310,7 +310,8 @@ Each form can come two ways, and Level 1 Form A has both:
   the support level counts the other five foundation strands until those
   rules are added.
 - Game versions of the other forms as they're written, and recommendation
-  rules for each level (add them on the Content page).
+  rules for each level (add them on the Content page's Assessments and
+  Recommendations tabs).
 
 ## Getting started
 
@@ -431,13 +432,32 @@ Signed in as an administrator, the top nav under `/admin` has:
   change a staff member's role, deactivate/reactivate their account, or
   force a password reset (also shown once). An admin can't deactivate or
   demote themselves from this screen.
-- **Content**: pick a level to see its four assessments (each added from
-  its assessor guide, so shown read-only) and its recommendation rules, and
-  edit skill areas (add/rename; delete only when unused), weighting and the
-  skill-area → recommendation mapping, all without a code deploy. A
-  database trigger (the level-match guard, 0017) independently guarantees
-  a session's assessment is for the student's own level, regardless of
-  what the application code does
+- **Content**, in three tabs, all without a code deploy:
+  - **Assessments**: pick a level to see which of its four forms are ready,
+    each way. The adult-given version comes from its ReadWell guide, so
+    it's shown read-only ("What's in it" lists its parts). The game version
+    opens in its own editor (`/admin/content/game/[level]/[form]`): the
+    questions grouped into the missions the child plays, one question open
+    at a time beside a preview drawn with the game's own styles, a "Hear
+    it" button for what Sunny says (and whether that line is recorded), and
+    a publish bar. Nothing is saved until **Publish**, which saves a new
+    version; questions that need fixing are pointed out first, and leaving
+    with unpublished changes asks. A new game can start from a copy of
+    another form's game at the same level. Question ids are never typed:
+    a question's id prefix is what puts it in its mission (`LC01` is Story
+    listening), so the editor gives each new or moved question the next id
+    in its mission (`src/lib/gameItems.ts`, `src/lib/gameParts.ts`).
+  - **Recommendations**: for each level, the next steps a flagged child's
+    report suggests, grouped by skill area, with the skill areas that have
+    none listed.
+  - **Skills and scoring**: each skill area's name, how much it counts in
+    the school's overall score and its flag line, saved per row; add one by
+    name alone (its key is made from the name); delete only when nothing
+    uses it.
+
+  A database trigger (the level-match guard, 0017) independently
+  guarantees a session's assessment is for the student's own level,
+  regardless of what the application code does
 - **Cycles**: close the current assessment cycle and start a new one
 - **Audit Log**: who viewed or exported which report, most recent first
 - **Settings**: set (or clear) the school's data retention period; see
