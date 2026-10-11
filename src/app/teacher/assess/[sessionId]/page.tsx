@@ -1,12 +1,11 @@
 import { notFound, redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { ROLE_AVATAR } from "@/lib/avatars";
-import { gradeLabel } from "@/lib/grades";
 import { loadAssessorSession, requireAssessor } from "@/lib/readwell/assessorSession";
 import { AssessorRunner } from "./AssessorRunner";
 
 /**
- * The assessor screen for assessor-led forms (ReadWell Level 1, KG 1): a
+ * The assessor screen for ReadWell assessments (every level and form): a
  * trained adult sits beside the child, who reads from the printed
  * stimulus book, and taps right or wrong for each item here. The device
  * replaces the score sheet and the stopwatch, not the assessor.
@@ -26,7 +25,6 @@ export default async function AssessSessionPage({ params }: { params: Promise<{ 
         sessionId={session.id}
         studentId={session.studentId}
         studentName={session.studentName}
-        gradeText={gradeLabel(session.studentGrade)}
         items={session.items}
         initialAnswers={session.answers}
       />

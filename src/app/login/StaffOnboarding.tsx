@@ -24,12 +24,12 @@ const SLIDES: OnboardingSlide[] = [
   {
     icon: <Avatar src="/sunny.png" />,
     title: "Welcome to Read Well",
-    body: "Quick, friendly reading checks for Grade 1 students, built for the classroom.",
+    body: "Quick, friendly reading checks for every ReadWell level, built for the classroom.",
   },
   {
     icon: <Avatar src="/avatars/student.png" />,
     title: "Assess in minutes",
-    body: "Students read aloud into the mic and answer a few questions. Read Well scores fluency and skill areas automatically.",
+    body: "Students play a reading game on their own device, or you sit beside them and tap right or wrong as they read. Read Well scores every skill for you.",
   },
   {
     icon: <Avatar src="/avatars/teacher.png" />,

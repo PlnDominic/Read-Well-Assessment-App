@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { addStudentToOwnRoster, type AddStudentState } from "./actions";
-import { GRADE_OPTIONS, gradeLabel } from "@/lib/grades";
+import { LEVEL_OPTIONS, levelLabel } from "@/lib/levels";
 
 const initialState: AddStudentState = { error: null, result: null };
 
@@ -22,14 +22,14 @@ export function AddStudentForm() {
           />
         </label>
         <select
-          name="grade"
-          aria-label="Grade"
+          name="level"
+          aria-label="Level"
           defaultValue={1}
           className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3.5 py-2.5 text-sm"
         >
-          {GRADE_OPTIONS.map((g) => (
-            <option key={g} value={g}>
-              {gradeLabel(g)}
+          {LEVEL_OPTIONS.map((l) => (
+            <option key={l} value={l}>
+              {levelLabel(l)}
             </option>
           ))}
         </select>
@@ -46,15 +46,8 @@ export function AddStudentForm() {
 
       {state.result && (
         <div className="mt-3.5 bg-[var(--color-orange-tint)] rounded-xl px-4.5 py-3.5 text-sm text-[var(--color-ink-soft)]">
-          <strong>{state.result.name}</strong> added.{" "}
-          {state.result.sessionCode ? (
-            <>
-              Kiosk code (give this to the student to enter at /student/join):{" "}
-              <code className="bg-[var(--color-surface)] px-2 py-1 rounded font-bold">{state.result.sessionCode}</code>
-            </>
-          ) : (
-            state.result.note
-          )}
+          <strong>{state.result.name}</strong> added. Start their assessment from the class list when you&apos;re
+          ready.
         </div>
       )}
     </div>

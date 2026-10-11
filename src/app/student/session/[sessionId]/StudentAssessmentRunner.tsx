@@ -20,7 +20,8 @@ interface KioskState {
   currentItemIndex: number;
   sessionCode?: string;
   studentName: string;
-  assessmentGrade?: number;
+  assessmentLevel?: number;
+  assessmentForm?: "A" | "B" | "C" | "Final" | null;
   assessmentVersion?: number;
   items: KioskItem[];
   answersByItemId: Record<string, unknown>;
@@ -109,7 +110,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
 
   const item = state?.items[qIndex];
   const part = partFor(item);
-  const isLevel2 = state?.assessmentGrade === 2 || state?.assessmentVersion === 2 || state?.items.some((entry) => /^(LS|SV|LC|VO|CP|SA|BL|RW|NW|HW|ST|AT|WT)/i.test(entry.id));
+  const isLevel2 = state?.assessmentLevel === 2 || state?.assessmentVersion === 2 || state?.items.some((entry) => /^(LS|SV|LC|VO|CP|SA|BL|RW|NW|HW|ST|AT|WT)/i.test(entry.id));
   const savedAnswer = item ? state?.answersByItemId[item.id] : undefined;
   const savedString = typeof savedAnswer === "string" ? savedAnswer : "";
   const partIndex = Math.max(0, PARTS.findIndex((candidate) => candidate.code === part.code));
@@ -209,7 +210,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
   const firstInPart = qIndex === 0 || partFor(state.items[qIndex - 1]).code !== part.code;
   const sittingLabel = part.sitting === 1 ? "First sitting" : part.sitting === 2 ? "Second sitting" : "Writing time";
 
-  if (!started) return <div className="rw-assessment-shell"><div className="rw-welcome-card"><SunnyAvatar size={138} /><div className="rw-eyebrow">{isLevel2 ? "LEVEL 2 · FORM A" : "READ WELL ASSESSMENT"}</div><h1>Ready for a reading quest?</h1><p>Hi, {state.studentName.split(" ")[0]}! We&apos;ll explore sounds, words, stories and writing together. There are no wrong answers — just try your best.</p><button className="rw-primary rw-start" onClick={() => { setStarted(true); if (item && speechSupported) speak(itemSpokenText(item)); }}>Let&apos;s start <span>→</span></button><div className="rw-quest-note">13 mini-missions · 2 short sittings · lots of high fives</div></div></div>;
+  if (!started) return <div className="rw-assessment-shell"><div className="rw-welcome-card"><SunnyAvatar size={138} /><div className="rw-eyebrow">{state.assessmentLevel ? `LEVEL ${state.assessmentLevel}${state.assessmentForm ? ` · ${state.assessmentForm === "Final" ? "FINAL" : `FORM ${state.assessmentForm}`}` : ""}` : "READ WELL ASSESSMENT"}</div><h1>Ready for a reading quest?</h1><p>Hi, {state.studentName.split(" ")[0]}! We&apos;ll explore sounds, words, stories and writing together. There are no wrong answers — just try your best.</p><button className="rw-primary rw-start" onClick={() => { setStarted(true); if (item && speechSupported) speak(itemSpokenText(item)); }}>Let&apos;s start <span>→</span></button><div className="rw-quest-note">13 mini-missions · 2 short sittings · lots of high fives</div></div></div>;
 
   return <div className="rw-assessment-shell">
     {!isOnline && <div className="rw-offline-banner">You&apos;re offline — your answers are safe on this device.</div>}

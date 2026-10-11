@@ -3,15 +3,13 @@ import { pathForUnauthorizedProfile } from "@/lib/staffRouting";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { FLAGGED_SCORE_THRESHOLD } from "@/lib/theme";
-import { AssessmentItemsEditor } from "./AssessmentItemsEditor";
 import { SkillAreasEditor } from "./SkillAreasEditor";
 import { SkillWeightsEditor } from "./SkillWeightsEditor";
 import { addRecommendationRule, deleteRecommendationRule } from "./actions";
-import { KG1, KG2, gradeLabel } from "@/lib/grades";
-import { isAssessorLed } from "@/lib/readwell/form";
+import { FORM_OPTIONS, LEVEL_OPTIONS, formLabel, levelLabel, type AssessmentForm } from "@/lib/levels";
 import { formForItems } from "@/lib/readwell/forms";
-
-const GRADE_OPTIONS = [KG1, KG2, 1, 2, 3, 4, 5, 6, 7, 8];
+import { isAssessorLed } from "@/lib/readwell/form";
+import { AssessmentItemsEditor } from "./AssessmentItemsEditor";
 
 type RuleRow = {
   id: string;
@@ -23,10 +21,10 @@ type RuleRow = {
 export default async function AdminContentPage({
   searchParams,
 }: {
-  searchParams: Promise<{ grade?: string }>;
+  searchParams: Promise<{ level?: string }>;
 }) {
-  const { grade: gradeParam } = await searchParams;
-  const GRADE_LEVEL = gradeParam && GRADE_OPTIONS.includes(Number(gradeParam)) ? Number(gradeParam) : 1;
+  const { level: levelParam } = await searchParams;
+  const LEVEL = levelParam && LEVEL_OPTIONS.includes(Number(levelParam)) ? Number(levelParam) : 1;
 
   const supabase = await createClient();
   const {
@@ -53,40 +51,41 @@ export default async function AdminContentPage({
   const { data: allRuleSkillAreaIds } = await supabase.from("recommendation_rules").select("skill_area_id");
   const usedSkillAreaIds = new Set((allRuleSkillAreaIds ?? []).map((r) => r.skill_area_id));
 
-  const { data: assessment } = await supabase
+  const { data: levelAssessments } = await supabase
     .from("assessments")
-    .select("items, version")
-    .eq("grade_level", GRADE_LEVEL)
+    .select("form, version, items")
+    .eq("level", LEVEL)
     .eq("is_active", true)
-    .maybeSingle();
+    .not("form", "is", null);
+  const assessmentByForm = new Map((levelAssessments ?? []).map((a) => [a.form as AssessmentForm, a]));
 
   const { data: rulesData } = await supabase
     .from("recommendation_rules")
     .select("id, recommendation_text, program_reference, skill_areas(id, name)")
-    .eq("grade_level", GRADE_LEVEL);
+    .eq("level", LEVEL);
   const rules = (rulesData ?? []) as unknown as RuleRow[];
 
   return (
     <div className="w-full max-w-[920px]">
       <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-ink)] m-0 mb-1">Content</h1>
       <p className="text-[var(--color-muted)] text-sm m-0 mb-5">
-        Edits here don&apos;t require a code deploy. Saving the assessment creates a new version so past
-        sessions keep the content they were assessed against.
+        Skill areas, weighting and recommendations are edited here, with no code deploy. Pick a level to see its
+        assessments and recommendations.
       </p>
 
       <div className="inline-flex gap-1 mb-6 flex-wrap bg-[var(--color-surface)] rounded-full shadow-[0_4px_16px_rgba(0,0,0,0.05)] p-1.5">
-        {GRADE_OPTIONS.map((g) => (
+        {LEVEL_OPTIONS.map((g) => (
           <Link
             key={g}
-            href={`/admin/content?grade=${g}`}
+            href={`/admin/content?level=${g}`}
             className="px-3.5 py-1.5 rounded-full text-xs font-bold no-underline transition-colors"
             style={{
-              background: g === GRADE_LEVEL ? "var(--color-orange)" : "transparent",
-              color: g === GRADE_LEVEL ? "white" : "var(--color-muted)",
-              boxShadow: g === GRADE_LEVEL ? "0 4px 10px rgba(74,107,82,0.3)" : "none",
+              background: g === LEVEL ? "var(--color-orange)" : "transparent",
+              color: g === LEVEL ? "white" : "var(--color-muted)",
+              boxShadow: g === LEVEL ? "0 4px 10px rgba(74,107,82,0.3)" : "none",
             }}
           >
-            {gradeLabel(g)}
+            {levelLabel(g)}
           </Link>
         ))}
       </div>
@@ -119,23 +118,49 @@ export default async function AdminContentPage({
       </div>
 
       <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-6">
-        <div className="flex items-center justify-between mb-4.5">
-          <div className="font-heading font-bold text-sm text-[var(--color-ink)]">
-            {gradeLabel(GRADE_LEVEL)} assessment items
-          </div>
-          {assessment && (
-            <span className="text-xs text-[var(--color-muted)]">Current version: {assessment.version}</span>
-          )}
+        <div className="font-heading font-bold text-sm text-[var(--color-ink)] mb-1.5">{levelLabel(LEVEL)} assessments</div>
+        <p className="text-[var(--color-muted)] text-sm mt-0 mb-4.5">
+          Each level has four assessments. Teachers pick which one a child takes when they start it. A form is
+          either given by an assessor from its ReadWell guide (the guide is the master copy, so it&apos;s shown
+          read-only here) or played by the child as a game on their own device, which you build and edit here.
+        </p>
+        <div className="flex flex-col gap-3">
+          {FORM_OPTIONS.map((form) => {
+            const assessment = assessmentByForm.get(form);
+            return (
+              <div key={form} className="bg-[var(--color-neutral)] rounded-xl px-4.5 py-3.5">
+                <div className="flex justify-between items-baseline gap-3 flex-wrap mb-1">
+                  <span className="font-extrabold text-[var(--color-ink)] text-sm">{formLabel(form)}</span>
+                  <span className="text-xs text-[var(--color-muted)]">
+                    {assessment ? `Version ${assessment.version}` : "Not added yet"}
+                  </span>
+                </div>
+                {assessment && isAssessorLed(assessment.items) ? (
+                  <AssessorFormSummary items={assessment.items} />
+                ) : assessment ? (
+                  <details>
+                    <summary className="cursor-pointer text-sm font-bold text-[var(--color-orange-dark)]">
+                      Student game: {assessment.items.length} questions. Edit
+                    </summary>
+                    <div className="mt-3">
+                      <AssessmentItemsEditor level={LEVEL} form={form} initialItems={assessment.items} skillAreas={skillAreas ?? []} />
+                    </div>
+                  </details>
+                ) : (
+                  <details>
+                    <summary className="cursor-pointer text-sm text-[var(--color-muted)]">
+                      Teachers can&apos;t pick this one yet. Send its assessor guide to add it, or{" "}
+                      <span className="font-bold text-[var(--color-orange-dark)]">build it as a student game</span>
+                    </summary>
+                    <div className="mt-3">
+                      <AssessmentItemsEditor level={LEVEL} form={form} initialItems={[]} skillAreas={skillAreas ?? []} />
+                    </div>
+                  </details>
+                )}
+              </div>
+            );
+          })}
         </div>
-        {assessment && isAssessorLed(assessment.items) ? (
-          <AssessorFormSummary items={assessment.items} />
-        ) : (
-          <AssessmentItemsEditor
-            gradeLevel={GRADE_LEVEL}
-            initialItems={assessment?.items ?? []}
-            skillAreas={skillAreas ?? []}
-          />
-        )}
       </div>
 
       <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5">
@@ -175,7 +200,7 @@ export default async function AdminContentPage({
         </div>
 
         <form action={addRecommendationRule} className="flex flex-col gap-3 border-t border-[var(--color-neutral-divider)] pt-5">
-          <input type="hidden" name="gradeLevel" value={GRADE_LEVEL} />
+          <input type="hidden" name="level" value={LEVEL} />
           <div className="flex flex-wrap gap-3">
             <select
               name="skillAreaId"
@@ -220,34 +245,18 @@ export default async function AdminContentPage({
   );
 }
 
-/**
- * Assessor-led forms (ReadWell Level 1) aren't edited here: the guide is
- * the master copy and its item codes never change, so the free-form item
- * editor would break the link between paper and app results. Changes go
- * through src/lib/readwell/ and the SQL that seeds it.
- */
+/** What an added assessment contains, from its form definition and stored items. */
 function AssessorFormSummary({ items }: { items: Parameters<typeof formForItems>[0] }) {
   const form = formForItems(items);
+  if (!form) return <p className="text-sm text-[var(--color-body)] m-0">{items.length} items.</p>;
   return (
     <div className="text-sm text-[var(--color-body)]">
-      <p className="m-0 mb-3">
-        <strong>{form?.title ?? "Assessor-led assessment"}</strong>, given one to one by a trained assessor on the
-        assessor screen. {items.length} item codes across {form?.parts.length ?? "its"} parts.
+      <p className="m-0 mb-1.5">
+        {form.title}: {items.length} item codes in {form.parts.length} parts, given one to one on the assessor screen.
       </p>
-      <p className="m-0 mb-3 text-[var(--color-muted)]">
-        The assessor guide is the master copy, so this form isn&apos;t edited here: change the guide first, then
-        the item bank in the app&apos;s code, so paper and tablet results keep the same item codes.
+      <p className="m-0 text-xs text-[var(--color-muted)]">
+        {form.parts.map((part) => `${part.number} ${part.title}`).join(" · ")}
       </p>
-      {form && (
-        <ol className="m-0 pl-5 flex flex-col gap-1">
-          {form.parts.map((part) => (
-            <li key={part.number}>
-              {part.title} ({part.code}): {items.filter((i) => i.part === part.number).length} items
-              {part.groupOnPaper ? ", group task on paper" : ""}
-            </li>
-          ))}
-        </ol>
-      )}
     </div>
   );
 }

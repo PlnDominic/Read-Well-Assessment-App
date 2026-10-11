@@ -6,6 +6,8 @@
  *   supabase gen types typescript --linked > src/lib/database.types.ts
  */
 
+import type { AssessmentForm } from "@/lib/levels";
+
 export type UserRole = "teacher" | "reading_specialist" | "administrator";
 export type SessionStatus = "not_started" | "in_progress" | "completed";
 export type ReportStatus = "pending" | "ready" | "failed";
@@ -19,8 +21,11 @@ export interface AssessmentItem {
   id: string;
   skillAreaKey: string;
   /**
-   * "choice", "mic", and "text" are answered by the student on the kiosk.
-   * "assessor" items are scored by a trained adult on the assessor screen.
+   * "choice", "mic" and "text" are answered by the student in the game on
+   * their own device (src/app/student). "assessor" items are scored by a
+   * trained adult on the assessor screen (src/lib/readwell/). An assessment
+   * is one or the other, never a mix (see isAssessorLed in
+   * src/lib/readwell/form.ts).
    */
   type: "choice" | "mic" | "text" | "assessor";
   prompt: string;
@@ -28,9 +33,9 @@ export interface AssessmentItem {
   options?: AssessmentItemOption[];
   /**
    * The exact word/phrase a mic item expects the student to read aloud,
-   * used to score the browser's speech-to-text transcript in
-   * evaluateResponse (src/lib/kiosk.ts). Optional: a mic item with no
-   * expectedText configured falls back to "any attempt counts."
+   * used to score the browser's speech-to-text transcript (or a typed
+   * writing answer) in evaluateResponse (src/lib/kiosk.ts). Optional: an
+   * item with no expectedText counts any attempt.
    */
   expectedText?: string;
 
@@ -93,7 +98,7 @@ export interface Database {
           school_id: string;
           teacher_id: string;
           name: string;
-          grade: number;
+          level: number;
           created_at: string;
           deleted_at: string | null;
         },
@@ -102,7 +107,7 @@ export interface Database {
           school_id: string;
           teacher_id: string;
           name: string;
-          grade: number;
+          level: number;
           deleted_at?: string | null;
         }
       >;
@@ -126,7 +131,9 @@ export interface Database {
       assessments: Table<
         {
           id: string;
-          grade_level: number;
+          level: number;
+          /** null only for content from before levels that wasn't kept (switched off). */
+          form: AssessmentForm | null;
           version: number;
           items: AssessmentItem[];
           is_active: boolean;
@@ -134,7 +141,8 @@ export interface Database {
         },
         {
           id?: string;
-          grade_level: number;
+          level: number;
+          form?: AssessmentForm | null;
           version?: number;
           items: AssessmentItem[];
           is_active?: boolean;
@@ -144,7 +152,7 @@ export interface Database {
         {
           id: string;
           skill_area_id: string;
-          grade_level: number;
+          level: number;
           recommendation_text: string;
           program_reference: string | null;
           created_at: string;
@@ -152,7 +160,7 @@ export interface Database {
         {
           id?: string;
           skill_area_id: string;
-          grade_level: number;
+          level: number;
           recommendation_text: string;
           program_reference?: string | null;
         }
@@ -183,7 +191,8 @@ export interface Database {
           assessment_id: string;
           cycle_id: string;
           status: SessionStatus;
-          session_code: string;
+          /** Student game sessions have one for /student/join; assessor-led ones don't. */
+          session_code: string | null;
           current_item_index: number;
           started_at: string | null;
           completed_at: string | null;
@@ -197,7 +206,7 @@ export interface Database {
           assessment_id: string;
           cycle_id: string;
           status?: SessionStatus;
-          session_code: string;
+          session_code?: string | null;
           current_item_index?: number;
           started_at?: string | null;
           completed_at?: string | null;

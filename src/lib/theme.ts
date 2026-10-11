@@ -28,29 +28,3 @@ export const colors = {
 
 /** Score threshold below which a skill area is flagged as a difficulty area. */
 export const FLAGGED_SCORE_THRESHOLD = 65;
-
-export const SKILL_AREA_ORDER = [
-  "phonics",
-  "sightWords",
-  "fluency",
-  "vocabulary",
-  "comprehension",
-] as const;
-
-export type SkillAreaKey = (typeof SKILL_AREA_ORDER)[number];
-
-export const SKILL_AREA_LABELS: Record<SkillAreaKey, string> = {
-  phonics: "Phonemic Awareness / Phonics",
-  sightWords: "Sight Word Recognition",
-  fluency: "Fluency",
-  vocabulary: "Vocabulary",
-  comprehension: "Comprehension",
-};
-
-export const SKILL_AREA_TILE_COLOR: Record<SkillAreaKey, string> = {
-  phonics: colors.orange,
-  sightWords: colors.orange,
-  fluency: colors.muted,
-  vocabulary: colors.orange,
-  comprehension: colors.orange,
-};

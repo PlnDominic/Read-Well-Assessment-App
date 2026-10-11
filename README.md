@@ -1,11 +1,13 @@
 # Read Well Assessment App
 
-A Grade 1 reading assessment app: students take a grade-matched assessment on
-a shared/kiosk device, and the app auto-generates a per-student report
-(skill-area breakdown + program-aligned recommendations) and a school-wide
-report for administrators, both exportable as PDF. KG 1 uses the ReadWell
-Level 1 Baseline Assessment instead, given one to one by a trained assessor
-on a tablet or phone (see [KG 1](#kg-1-readwell-level-1-baseline-assessor-led)).
+A reading assessment app built around the ReadWell programme. Students are
+placed in ReadWell levels, and each level has four assessments: Form A,
+Form B, Form C and the Final assessment. A trained assessor gives each one
+to a child one to one on a tablet or phone, and the app applies the
+guide's stop and gate rules, then generates a per-student report (each
+strand's raw score and band, plus program-aligned recommendations) and a
+school-wide report for administrators, both exportable as PDF. See
+[Levels and assessments](#readwell-levels-and-assessments).
 
 This implements the design handed off from Claude Design (see
 [`design-handoff/`](./design-handoff)) as a full application, per the
@@ -48,102 +50,38 @@ A few things the PRD/TRD left open that needed a concrete decision to ship:
   `src/app/manifest.ts` (the browser-chrome/PWA-install accent color),
   which CSS custom properties can't reach and would need updating by hand
   too.
-- **Students never authenticate.** Per TRD §6 ("kiosk-style, teacher-initiated"),
-  a kiosk code (`session_code`, 6 random characters excluding 0/O/1/I) is
-  created automatically the moment a student is added to the roster; see
-  `createSessionForStudent` in `src/lib/kiosk.ts`, called from both
-  `addStudent`/`addStudentToOwnRoster` (adding a student) and
-  `startOrResumeAssessment` (adding a student is the common case, since most
-  students are on a separate device from the staff member who added them;
-  this covers the same-device case too, and re-running it after a student
-  completes an assessment starts a fresh one with a new code, cycle
-  permitting). The code is shown once in a banner right after adding the
-  student, and persists visibly on that student's roster row at `/teacher`
-  (labeled "Code: …") for as long as the session is `not_started` or
-  `in_progress`, so it isn't a one-time value staff have to remember or look
-  up in the database. The student enters it at `/student/join`. If the
-  student is on the *same* device as the teacher, clicking **Start
-  Assessment**/**Resume** on the roster redirects straight into
-  `/student/session/[id]` instead of requiring the code. All student-facing
-  reads/writes go through Route Handlers using the Supabase **service-role**
-  client (`src/lib/supabase/admin.ts`), since there's no `auth.uid()` for
-  RLS to key off of; authorization is instead enforced in application code
-  against the session id / code. See the header
-  comment in `supabase/migrations/0002_rls.sql` for the full rationale.
-- **Fluency scoring uses the browser's Web Speech API.** The PRD/TRD don't
-  name a specific ASR vendor, and every paid option (Whisper, Deepgram,
-  AssemblyAI, Google Speech-to-Text) needs an account/API key this project
-  doesn't have, so mic items are scored with `SpeechRecognition` /
-  `webkitSpeechRecognition`, which is free and built into Chrome and Edge
-  (see `src/types/speech-recognition.d.ts` for the ambient types it needs,
-  since they're not in `lib.dom.d.ts`). **Firefox and Safari don't
-  implement it**; `StudentAssessmentRunner.tsx`'s `toggleMic` detects that
-  and falls back to the original "tap to mark attempted" flow.
-  Each mic item can define an `expectedText` (set via the "Expected
-  word/phrase" field in the admin content editor); `evaluateResponse` in
-  `src/lib/kiosk.ts` normalizes both the transcript and `expectedText`
-  (lowercase, strip punctuation, collapse whitespace) and does a lenient
-  substring match rather than exact equality, since early readers'
-  transcripts are noisy and a false "wrong" is worse than a false "right"
-  here. Two fallbacks keep old behavior intact: the `"attempted"` sentinel
-  (from the no-SpeechRecognition-support path) always counts as correct,
-  and a mic item with no `expectedText` configured counts any non-empty
-  attempt as correct.
-  Because the transcript can still mishear an early reader, the student's
-  teacher (or an administrator) can review each read-aloud answer on the
-  report page and mark it correct or incorrect, or undo that. This calls
-  `reviewSpokenAnswer` in
-  `src/app/teacher/students/[studentId]/report/actions.ts`, which
-  re-scores the session and re-renders both PDFs. The automatic score is
-  kept in `responses.auto_is_correct`
-  (`supabase/migrations/0012_response_review.sql`), and each review is
-  written to the audit log. Reading specialists stay read-only.
-- **Teachers (and administrators) can override a student's grade-matched
-  assessment**, answering PRD open question 3 ("Should teachers be able to
-  override/reassign a student's grade-level assessment, and under what
-  conditions?") in the affirmative, gated the way PRD §4.1's acceptance
-  criterion asks: "blocked or requires explicit override with a warning."
-  `GradeOverrideControl.tsx` on the teacher roster shows a confirm dialog
-  naming exactly what's about to happen (e.g. "starts Amara's next
-  assessment with Grade 2 content instead of the automatically matched
-  Grade 1 content") before calling `overrideAssessmentGrade`
-  (`src/app/teacher/actions.ts`), which re-validates server-side via
-  `validateGradeOverride`/`overrideStudentGrade` in `src/lib/kiosk.ts` and
-  logs an `assessment.grade_override` audit_log row. Only available before
-  a session starts (`status = 'not_started'`), since overriding one already
-  in progress would discard answers already recorded against the original
-  assessment's items. A session whose content grade ends up differing from
-  the student's own enrolled grade shows that plainly on both the report
-  page and the PDF ("Assessed with Grade X content (grade override)")
-  rather than silently using the mismatched grade's `recommendation_rules`
-  — the teacher report page previously did use the student's enrolled
-  grade for that lookup regardless of which assessment the session
-  actually used, a latent bug this override feature would otherwise have
-  turned into an observable one; fixed alongside it to use the session's
-  actual `assessments.grade_level` (`contentGradeLevel`, matching what the
-  PDF generator already did in `lib/reports.ts`).
-- **Overall report label.** "On Track" vs. "Needs Support" wasn't specified
-  as a formula anywhere. `computeOverallLabel` in `src/lib/scoring.ts` uses
-  "2+ flagged skill areas → Needs Support", chosen because it reproduces the
-  original prototype's mock reports exactly (Amara: 1 flag → On Track;
-  Diego: 4 flags → Needs Support; Layla: 0 flags → On Track).
+- **A form is either assessor-led or a student game.** ReadWell's assessor
+  guides call for a trained adult beside the child, so forms written from
+  a guide (Level 1 Form A) run on the assessor screen under the teacher's
+  or administrator's own login, scoped by RLS like every other staff page.
+  Forms built on the admin Content page are games the child plays on their
+  own device (the TRD's §6 kiosk, `/student`): starting one gives the
+  session a join code to type at `/student/join`, or **Play here** opens it
+  on the teacher's device. Sessions from before levels keep their reports:
+  an active game becomes its level's Form A (0017), anything else is
+  switched off with `form` null, and a teacher can still review read-aloud
+  answers on the report page (`reviewSpokenAnswer`, 0012).
+- **Levels replace grades, and the teacher picks the form.** Students are
+  placed in a level (`students.level`), and each level has Form A, Form B,
+  Form C and the Final assessment (`assessments.level` + `assessments.form`,
+  at most one active per level and form). When starting an assessment the
+  teacher picks which of the four; only the ones added for that level can
+  be picked. A database trigger (the level-match guard, 0017) guarantees a
+  session's assessment is for the student's own level. To assess a child
+  at another level, change their level on the Students page (this replaces
+  the earlier grade-override control).
+- **Overall report label.** ReadWell assessments use the guide's support
+  level: 0-1 Emerging foundation strands is on track, 2-4 needs support,
+  5-6 needs urgent support. Where only a generic label fits (the CSV export,
+  classroom breakdown), `computeOverallLabel` in `src/lib/scoring.ts` uses
+  "2+ flagged strands → Needs Support", which lines up with the guide's
+  first step since a strand is flagged when it's Emerging.
 - **Report generation** runs synchronously-but-non-blocking via `after()`
   (Next.js 15+) rather than a separate queue/worker, which is the pragmatic
   reading of the TRD's "must not block the assessment-completion response"
   requirement without standing up separate infrastructure for an MVP.
-- **Assessment questions and passages are read aloud** on the student
-  screen (`StudentAssessmentRunner.tsx`), per the PRD/BRD's "minimal
-  reliance on reading instructions independently." This uses the browser's
-  built-in Web Speech *Synthesis* API — the read-aloud counterpart to the
-  SpeechRecognition used for mic items, same reasoning as `evaluateResponse`
-  in `src/lib/kiosk.ts`: free, no account/API key, broadly supported.
-  Each question plays automatically once the student taps "Let's Start!"
-  (the user gesture Safari/iOS requires before it will play audio at all),
-  and a speaker button lets them replay it. Devices without
-  SpeechSynthesis support just don't show the button; nothing else in the
-  flow depends on it.
 - **The school-wide report breaks results down by classroom as well as by
-  grade** (PRD open question 6: "by classroom, by grade only, or both?").
+  level** (PRD open question 6: "by classroom, by grade only, or both?").
   `aggregateClassroomBreakdown` in `src/lib/scoring.ts` groups a cycle's
   results by the student's teacher, computing per-classroom average score
   and % of students flagged "Needs Support"; it's shown on the admin
@@ -179,52 +117,63 @@ A few things the PRD/TRD left open that needed a concrete decision to ship:
   all and shouldn't depend on an image fetch that might not have been cached
   yet.
 
-## KG 1: ReadWell Level 1 baseline (assessor-led)
+## ReadWell levels and assessments
 
-KG 1 students take the **ReadWell Level 1 Baseline Assessment, Form A**
-(thirteen parts, ten strands of early literacy), built from the assessor
-guide. Unlike the Grade 1 kiosk, the child never touches the device: a
-trained adult sits beside the child, who reads from the printed Learner
-Stimulus Book, and the adult taps right or wrong for each item. The device
-replaces the score sheet and the stopwatch, not the assessor.
+Students are placed in a **ReadWell level** (Level 1 to 6 for now; raise
+`MAX_LEVEL` in `src/lib/levels.ts` when the programme adds levels). Each
+level has **four assessments: Form A, Form B, Form C and the Final
+assessment**. The teacher picks which one a child takes each time.
+**Level 1 Form A** (the ReadWell Level 1 Baseline Assessment) is the first
+written; the others are added as their assessor guides arrive.
 
-- **Grades.** KG 1 is stored as grade `-1` and KG 2 as `0`, so kindergarten
-  sorts below Grade 1 (`src/lib/grades.ts`). Every grade picker offers
-  KG 1 and KG 2, and the roster CSV import accepts `KG1`/`KG2`.
-- **Giving it.** On the class roster, Start Assessment for a KG 1 student
-  opens the assessor screen (`/teacher/assess/[sessionId]`) rather than the
-  kiosk; there's no session code to type. The screen shows each part's
-  script word for word (bold lines to say, plain lines to do), the practice
-  item, notes and accept rules. Grids are tap once for right, twice for
-  wrong. The story reading part has the built-in 2-minute timer, tap-to-slash
-  errors and the bracket for the last word read. The app applies the stop
-  rules and **Gates A to E** for you, says which gate applied and why, and
-  skips straight to the right part. Marks are kept on the device until the
-  server has them, so a dropped connection or a reload mid-session loses
-  nothing; Pause returns to the class and Resume picks up where you left
-  off. Teachers and administrators can give it; reading specialists can't.
-- **Part 13 (writing)** is given to a small group on paper, as the guide
-  says. Score each child's writing sheet afterwards on their report page;
-  saving re-scores the session and regenerates the reports.
-- **The item bank** is `src/lib/readwell/level1FormA.ts`: the guide's
-  wording, item codes (`L1A.LS.07` is Level 1, Form A, letter sounds,
-  item 7) and band tables. It's seeded into `assessments` (grade `-1`) by
-  `supabase/migrations/0016_readwell_level1_kg1.sql` and `setup.sql`, and
-  `src/lib/readwell/seedSql.test.ts` fails if either SQL copy drifts from
-  the code. "Paper is the master": change the guide first, then this file,
-  then the SQL. The admin Content page shows the form read-only, since the
-  free-form editor would break the item codes.
+A form is one of two kinds:
+
+- **Assessor-led** (forms written from a ReadWell assessor guide, such as
+  Level 1 Form A): a trained adult sits beside the child, who reads from
+  the printed Learner Stimulus Book, and taps right or wrong for each item.
+  The device replaces the score sheet and the stopwatch, not the assessor.
+- **Student game** (forms built on the admin Content page): the child plays
+  it on their own device: multiple choice, read-aloud into the mic, and
+  typed writing, with Sunny cheering them on.
+
+- **Giving one.** On the class list, **Start assessment** opens a choice of
+  Form A, B, C and the Final assessment; forms not yet added for the
+  child's level are shown but can't be picked. A student game shows its
+  join code on the class list (and **Play here** to hand over this device).
+  An assessor-led form opens the assessor screen
+  (`/teacher/assess/[sessionId]`), which shows each part's script word for
+  word (bold lines to say, plain lines to do), the practice item, notes and
+  accept rules. Grids are tap once for right, twice for wrong. The story
+  reading part has the built-in 2-minute timer, tap-to-slash errors and the
+  bracket for the last word read. The app applies the stop rules and the
+  guide's gates for you, says which gate applied and why, and skips straight
+  to the right part. Marks are kept on the device until the server has them,
+  so a dropped connection or a reload loses nothing; an unfinished
+  assessment shows **Resume** on the class list (or **Cancel**, to start a
+  different form). Teachers and administrators can give assessments;
+  reading specialists can't.
+- **The group writing task** (Part 13 of Level 1 Form A) is given on paper,
+  as the guide says. Score each child's writing sheet afterwards on their
+  report page; saving re-scores the session and regenerates the reports.
+- **Item banks.** Each form is a module in `src/lib/readwell/` (Level 1
+  Form A is `level1FormA.ts`): the guide's wording, item codes (`L1A.LS.07`
+  is Level 1, Form A, letter sounds, item 7; F is the Final assessment) and
+  band tables, registered in `forms.ts`. It's seeded into `assessments` by a
+  migration and `setup.sql`, and `seedSql.test.ts` fails if the SQL copy
+  drifts from the code. "Paper is the master": change the guide first, then
+  the module, then the SQL. The admin Content page lists assessor-led forms
+  read-only, since a free-form editor would break the item codes; every
+  other form slot can be built or edited there as a student game.
 - **Scoring** (`src/lib/readwell/score.ts`) reports each strand on its own
-  as a raw score and a band (Emerging / Developing / Secure / Advanced,
-  the guide's table, which equals its 30/70/95 percent rule; provisional
-  until the pilot). At baseline only the six foundation strands are banded;
-  word reading, heart words, story questions and writing are raw scores.
-  The support level counts Emerging foundation strands: 0-1 on track for
-  Level 1, 2-4 needs support, 5-6 needs urgent support. Story reading is
-  also reported as words correct out of 40 and words correct per minute.
-  Skipped parts show as NA. Each scored strand is also written to `results`
-  (percent of the strand's maximum, flagged when Emerging), so the admin
-  dashboard, school report and CSV export work unchanged.
+  as a raw score and a band (Emerging / Developing / Secure / Advanced, the
+  guide's table, which equals its 30/70/95 percent rule; provisional until
+  the pilot). A baseline form bands only the six foundation strands; the
+  rest are raw scores. The support level counts Emerging foundation
+  strands. Story reading is also reported as words correct and words
+  correct per minute. Skipped parts show as NA. Each scored strand is also
+  written to `results` (percent of the strand's maximum, flagged when
+  Emerging), so the admin dashboard, school report and CSV export work
+  unchanged.
 - **The gate engine** (`src/lib/readwell/flow.ts`) is one pure function of
   the marks so far, used by both the assessor screen and scoring, so they
   can't disagree. `flow.test.ts` walks each gate through the guide's cases.
@@ -232,20 +181,21 @@ replaces the score sheet and the stopwatch, not the assessor.
   signed-in teacher or administrator who can already see the student
   through RLS; only then does it write, with the service role, after
   checking every mark against its item (score range, allowed answers, a
-  well-formed story record). The unauthenticated kiosk routes and code
-  entry refuse assessor-led sessions.
+  well-formed story record).
 
-**Still to come, from the guide's own list:**
-- **Part 4, sound awareness**, is scripted in the separate *Sound Awareness
-  Subtest: Form A*, which isn't in the app yet. Its 45 item codes
-  (SA1.1 to SA9.5) are there for the assessor to mark while reading the
-  ladder from the paper script, but its rung rules aren't, so sound
-  awareness has a raw score and no band, and the support level counts the
-  other five foundation strands until those rules are added.
-- **Form B** (post programme, where every strand is banded), a **child
-  view** of the letters and words on the device, the digital-led (child
-  taps) mode, and KG 1 recommendation rules (add them on the Content page
-  under KG 1).
+**Still to come:**
+- **Form B, Form C and the Final assessment** for Level 1, and every form
+  for the other levels: send each assessor guide and it becomes a module
+  like `level1FormA.ts`.
+- **Level 1 Form A, Part 4 (sound awareness)** is scripted in the separate
+  *Sound Awareness Subtest: Form A*. Its 45 item codes are there for the
+  assessor to mark while reading the ladder from the paper script, but its
+  rung rules aren't, so sound awareness has a raw score and no band, and
+  the support level counts the other five foundation strands until those
+  rules are added.
+- A child view of the letters and words on the device, the digital-led
+  (child taps) mode, and recommendation rules for each level (add them on
+  the Content page).
 
 ## Getting started
 
@@ -263,8 +213,7 @@ You need a Supabase project (local via the CLI, or hosted at supabase.com).
 1. Create a project at [supabase.com](https://supabase.com).
 2. In the SQL editor, run `supabase/setup.sql`. It's every migration in
    `supabase/migrations/` folded into one file, plus the private `reports`
-   storage bucket, starter Grade 1 content and the KG 1 ReadWell Level 1
-   form, and it's safe to run on a
+   storage bucket and Level 1 Form A, and it's safe to run on a
    new project, a partly migrated one, or again on an up-to-date one. The
    `sql` CI job (`supabase/test/check-sql.sh`) checks all three on every
    push. When you add a migration, add the same change to `setup.sql`.
@@ -298,44 +247,26 @@ Visit `http://localhost:3000`.
 with `rivera@lincoln-elementary.edu` (teacher) or
 `chen@lincoln-elementary.edu` (administrator), password `readwell-demo` for
 both. These only exist in that local database, never in a hosted one (see
-the warning in `supabase/seed.sql`). To try the student flow: sign in as
-the teacher, add a new student and a kiosk code appears in a banner right
-away (and stays visible on their roster row after that). Enter it at
-`/student/join` to test the separate-device path, or click **Start
-Assessment** next to a student on the roster instead to go straight into
-that student's assessment on the current device (simulating handing it to
-them).
+the warning in `supabase/seed.sql`). To try an assessment: sign in as the
+teacher, click **Start assessment** next to a student and pick **Form A**.
 
 **If you bootstrapped a real deployment (Option A):** sign in with the
 administrator account you created in `supabase/bootstrap.sql`, then use
 `/admin/staff` to add real teachers/specialists and `/admin/students` (or
-a teacher's own roster page) to add real students. Each one gets a kiosk
-code immediately, as long as a cycle (`/admin/cycles`) and an active
-assessment for their grade (`/admin/content`) already exist.
+a teacher's own class list) to add real students with their level. Teachers
+start each assessment from their class list once a cycle (`/admin/cycles`)
+exists; only forms already added for the student's level can be picked.
 
 ### Offline handling
 
 TRD §7 asks the assessment client to "tolerate brief connectivity drops
-without losing in-progress answers." `StudentAssessmentRunner` caches three
-things in `localStorage`, keyed by session id, to make that concrete:
-
-- **Unsent answers**: every response is queued locally the instant it's
-  picked, then flushed to the server in the background (on selection, every
-  6s while anything's queued, and immediately on the browser's `online`
-  event). A student can keep answering questions while offline; nothing is
-  lost, it just syncs late.
-- **Last-known server state**: if the *very first* load of the assessment
-  happens while offline (`fetch` throws rather than resolving), the runner
-  falls back to whatever was cached from the last successful load instead
-  of showing a dead-end error, and shows a persistent "You're offline"
-  banner. It retries the real fetch automatically once the `online` event
-  fires.
-- **A pending-finish flag**: if the final "I'm Done!" tap can't reach the
-  server (offline, or a one-off failure), the student sees an "Almost
-  done!" screen instead of a false "You're all done," and completion is
-  retried automatically on reconnect (or manually via a "Try again"
-  button). The flag survives a page reload, so closing and reopening the
-  kiosk tab doesn't lose the fact that the student already tried to finish.
+without losing in-progress answers." The assessor screen keeps every mark
+in `localStorage` (keyed by session id) until the server has it, flushing
+in batches as marks are made, every 5 seconds while any are waiting, and on
+the browser's `online` event. The status pill says when marks are only on
+the device. A reload resumes at the right part with offline marks intact.
+Finishing needs the connection: it waits until every mark is saved, then
+scores the assessment.
 
 **Using the app offline.** A service worker (`public/sw.js`, registered
 by `src/components/ServiceWorkerRegistrar.tsx` in production builds) keeps
@@ -345,12 +276,6 @@ registrar also asks the worker to save each page as it's shown. Online,
 pages always load live (network first); the saved copy is only used when
 there's no connection.
 
-- **Students:** the login screen, "I'm a Student", and any assessment
-  already opened on the device work offline. Entering a code that was
-  opened here goes straight back into that assessment (the runner records
-  code → session in `localStorage`), resuming at the right question with
-  offline answers intact. A code never used on the device can't work
-  offline, since only the server knows which student it belongs to.
 - **Staff:** the roster, reports, and admin pages open offline showing the
   data from when they were last loaded, with a banner saying so. Buttons
   that change data are greyed out (`body[data-offline]` in
@@ -367,7 +292,7 @@ there's no connection.
 
 **Installable as an app.** `src/app/manifest.ts` (Next.js's manifest route
 convention, served at `/manifest.webmanifest`) and `src/app/apple-icon.png`
-make "Add to Home Screen"/kiosk installation available on both Android and
+make "Add to Home Screen" installation available on both Android and
 iOS, which matters given the offline support above is otherwise wasted if a
 school can't actually put this on a shared tablet as its own app icon
 rather than a browser tab. `proxy.ts`'s matcher exempts
@@ -385,28 +310,26 @@ app online at least once after the latest deploy.
 
 Signed in as an administrator, the top nav under `/admin` has:
 - **Students**: add, edit, or delete a student; assign/unassign a reading
-  specialist; bulk-import a roster from a CSV (`name,grade,teacher_email`)
+  specialist; bulk-import a roster from a CSV (`name,level,teacher_email`)
 - **Staff**: invite a teacher/reading-specialist/administrator (creates the
   Supabase Auth user via service role and shows a one-time temp password);
   change a staff member's role, deactivate/reactivate their account, or
   force a password reset (also shown once). An admin can't deactivate or
   demote themselves from this screen.
-- **Content**: pick a grade (1-8), then edit that grade's assessment items
-  (choice/mic, options, correct answers), its skill areas (add/rename;
-  delete only when unused), and its skill-area → recommendation mapping,
-  all without a code deploy. Saving the assessment creates a new version
-  rather than mutating in place, so already-completed sessions keep
-  pointing at the exact content they were scored against. A database
-  trigger (`0006_grade_match_guard.sql`) independently guarantees a
-  session's assessment always matches the student's own grade, regardless
-  of what the application code does
+- **Content**: pick a level to see its four assessments (each added from
+  its assessor guide, so shown read-only) and its recommendation rules, and
+  edit skill areas (add/rename; delete only when unused), weighting and the
+  skill-area → recommendation mapping, all without a code deploy. A
+  database trigger (the level-match guard, 0017) independently guarantees
+  a session's assessment is for the student's own level, regardless of
+  what the application code does
 - **Cycles**: close the current assessment cycle and start a new one
 - **Audit Log**: who viewed or exported which report, most recent first
 - **Settings**: set (or clear) the school's data retention period; see
   "Data retention" below
 
 A teacher can cancel a not-yet-completed session directly from `/teacher`
-(e.g. one started by mistake, or to hand the student a fresh code); this
+(e.g. one started by mistake, or the wrong form was picked); this
 is blocked for already-completed sessions at the RLS layer, not just in
 the UI.
 
@@ -530,11 +453,9 @@ found and fixed, across a few rounds:
   see git history for that palette's since-superseded values.
 - **Accessible names.** Added `aria-label`s to controls with no accessible
   name at all (relying on a `placeholder` alone, which isn't reliably
-  exposed as a label): the student kiosk-code input, the forgot/reset
-  password inputs, a few bare `<select>`s and placeholder-only `<input>`s
-  in the admin content/skill-area editors, and the per-option radio
-  buttons in the assessment item editor (which previously had no way to
-  tell them apart by name at all).
+  exposed as a label): the forgot/reset password inputs and a few bare
+  `<select>`s and placeholder-only `<input>`s in the admin content and
+  skill-area editors.
 - **Bypass Blocks (WCAG 2.4.1).** Added a "Skip to main content" link as
   the first focusable element on every staff/student page
   (`src/components/AppShell.tsx`), hidden until it receives keyboard
@@ -580,14 +501,11 @@ here.
 ```
 src/app/                 Routes (App Router)
   login/                 Staff sign-in + role tiles
-  student/join/          Kiosk session-code entry (unauthenticated)
-  student/session/[id]/  The assessment itself (unauthenticated, service-role backed)
-  teacher/                Roster + per-student report (RLS-scoped to the signed-in teacher/specialist)
-  teacher/assess/[id]/    Assessor screen for assessor-led forms (KG 1, ReadWell Level 1)
+  teacher/                Class list + per-student report (RLS-scoped to the signed-in teacher/specialist)
+  teacher/assess/[id]/    Assessor screen: gives any level's Form A, B, C or Final assessment
   specialist/             Read-only roster of a specialist's assigned students
   admin/                  Dashboard, students, staff, content, cycles, settings (administrator only)
   notifications/          Bell-icon inbox (RLS-scoped to the signed-in user)
-  api/kiosk/              Session start/autosave/complete (service-role)
   api/assess/             Assessor screen save/complete (signed-in teacher/admin, RLS-checked)
   api/reports/            Signed PDF download + audit log
   api/cron/               Data-retention purge (Vercel Cron, CRON_SECRET-gated)
@@ -596,9 +514,9 @@ src/lib/
   scoring.ts              Scoring Service (TRD §4.2)
   recommendations.ts      Recommendation Engine (TRD §4.3)
   reports.ts + pdf/       Report Generation Service (TRD §4.4)
-  kiosk.ts                Student-session helpers (response evaluation, codes)
-  readwell/               ReadWell Level 1 item bank, gate rules, strand scoring (KG 1)
-  grades.ts               KG 1 / KG 2 / Grade n labels and parsing
+  sessions.ts             Start, finish and re-score assessment sessions
+  readwell/               ReadWell item banks (one module per form), gate rules, strand scoring
+  levels.ts               Levels and the four forms: labels and parsing
 supabase/
   migrations/             Schema + RLS + storage bucket
   seed.sql                Demo data (LOCAL DEV ONLY, never run against a hosted project)
@@ -608,8 +526,7 @@ design-handoff/           Original Claude Design bundle (BRD/PRD/TRD, chat trans
 
 ## What's out of scope (matches the PRD)
 
-Grades other than KG 1 and 1, parent/guardian access, SIS integration, district-level
-rollup reporting, and native mobile apps are explicitly out of scope for this
-release per the PRD; the data model (e.g. `students.grade`,
-`assessments.grade_level`) is shaped to extend to more grades later without a
-redesign.
+Parent/guardian access, SIS integration, district-level rollup reporting, and
+native mobile apps are explicitly out of scope for this release per the PRD.
+New ReadWell levels and forms need no redesign: each is a new item-bank module
+and the SQL that seeds it.

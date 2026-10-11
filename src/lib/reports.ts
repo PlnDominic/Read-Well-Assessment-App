@@ -11,7 +11,7 @@ import type { AssessmentItem } from "@/lib/database.types";
 import { isAssessorLed } from "@/lib/readwell/form";
 import { formForItems } from "@/lib/readwell/forms";
 import { scoreForm, type FormSummary } from "@/lib/readwell/score";
-import { gradeLabel } from "@/lib/grades";
+import { levelLabel, type AssessmentForm } from "@/lib/levels";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
@@ -26,7 +26,15 @@ const REPORTS_BUCKET = "reports";
  */
 export async function buildStudentReportPageData(
   admin: AdminClient,
-  params: { sessionId: string; studentName: string; displayGrade: number; contentGradeLevel: number; completedAt: string | null }
+  params: {
+    sessionId: string;
+    studentName: string;
+    studentLevel: number;
+    /** The level and form of the assessment this session used (form is null for kiosk sessions from before levels). */
+    assessmentLevel: number;
+    form: AssessmentForm | null;
+    completedAt: string | null;
+  }
 ): Promise<StudentReportPageProps> {
   const { data: results, error: resultsError } = await admin
     .from("results")
@@ -40,7 +48,7 @@ export async function buildStudentReportPageData(
   const skills = rows.map((r) => ({ name: r.skill_areas.name, score: r.score, flagged: r.flagged_as_difficulty }));
   const flaggedSkillAreaIds = rows.filter((r) => r.flagged_as_difficulty).map((r) => r.skill_areas.id);
 
-  const recs = await getRecommendations(admin, flaggedSkillAreaIds, params.contentGradeLevel);
+  const recs = await getRecommendations(admin, flaggedSkillAreaIds, params.assessmentLevel);
   const formSummary = await assessorFormSummary(admin, params.sessionId);
   // Assessor-led forms report the guide's three-step support level; its
   // first step lines up with "On Track" (0-1 Emerging foundation strands).
@@ -48,8 +56,9 @@ export async function buildStudentReportPageData(
 
   return {
     studentName: params.studentName,
-    grade: params.displayGrade,
-    contentGrade: params.contentGradeLevel,
+    level: params.studentLevel,
+    assessedLevel: params.assessmentLevel,
+    form: params.form,
     assessedDate: new Date(params.completedAt ?? Date.now()).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
@@ -104,25 +113,25 @@ export async function generateStudentReport(
 
   const { data: session, error: sessionError } = await admin
     .from("assessment_sessions")
-    .select("id, student_id, completed_at, assessments(grade_level)")
+    .select("id, student_id, completed_at, assessments(level, form)")
     .eq("id", sessionId)
     .single();
   if (sessionError || !session) throw new Error(`Session ${sessionId} not found`);
 
   const { data: student, error: studentError } = await admin
     .from("students")
-    .select("name, grade, teacher_id")
+    .select("name, level, teacher_id")
     .eq("id", session.student_id)
     .single();
   if (studentError || !student) throw new Error(`Student for session ${sessionId} not found`);
 
-  // @ts-expect-error -- joined relation shape isn't modeled in database.types.ts
-  const gradeLevel: number = session.assessments?.grade_level ?? student.grade;
+  const assessment = (session as unknown as { assessments: { level: number; form: AssessmentForm | null } | null }).assessments;
   const pageData = await buildStudentReportPageData(admin, {
     sessionId,
     studentName: student.name,
-    displayGrade: student.grade,
-    contentGradeLevel: gradeLevel,
+    studentLevel: student.level,
+    assessmentLevel: assessment?.level ?? student.level,
+    form: assessment?.form ?? null,
     completedAt: session.completed_at,
   });
 
@@ -215,7 +224,7 @@ export async function generateSchoolReport(schoolId: string, cycleId: string): P
 
   const { data: sessions, error: sessionsError } = await admin
     .from("assessment_sessions")
-    .select("id, student_id, students!inner(school_id, grade, teacher_id, profiles(name))")
+    .select("id, student_id, students!inner(school_id, level, teacher_id, profiles(name))")
     .eq("cycle_id", cycleId)
     .eq("status", "completed")
     .eq("students.school_id", schoolId);
@@ -224,13 +233,13 @@ export async function generateSchoolReport(schoolId: string, cycleId: string): P
   type SessionRow = {
     id: string;
     student_id: string;
-    students: { grade: number; teacher_id: string; profiles: { name: string } | null } | null;
+    students: { level: number; teacher_id: string; profiles: { name: string } | null } | null;
   };
   const sessionRows = sessions as unknown as SessionRow[];
 
   const sessionIds = sessionRows.map((s) => s.id);
   const studentsAssessed = new Set(sessionRows.map((s) => s.student_id)).size;
-  const gradeLevel: number = sessionRows[0]?.students?.grade ?? 1;
+  const level: number = sessionRows[0]?.students?.level ?? 1;
   // See the matching comment in admin/page.tsx: profiles is typed nullable
   // defensively rather than assumed to always resolve.
   const teacherBySessionId = new Map(
@@ -308,7 +317,7 @@ export async function generateSchoolReport(schoolId: string, cycleId: string): P
           topFlagged.length > 1 ? "s" : ""
         } this cycle. Consider prioritizing intervention resources for ${
           topFlagged.length > 1 ? "these skill areas" : "this skill area"
-        } across ${gradeLabel(gradeLevel)} classrooms.`
+        } across ${levelLabel(level)} classes.`
       : "No skill areas are broadly flagged this cycle.";
 
   const pdfBuffer = await renderToBuffer(
@@ -317,7 +326,7 @@ export async function generateSchoolReport(schoolId: string, cycleId: string): P
       cycleName: cycle.name,
       studentsAssessed,
       studentsTotal: studentsTotal ?? 0,
-      gradeLevel,
+      level,
       avgOverallScore,
       skillDistribution,
       classroomBreakdown,

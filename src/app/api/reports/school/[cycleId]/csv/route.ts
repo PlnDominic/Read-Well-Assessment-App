@@ -6,7 +6,8 @@ import { toCsvRow } from "@/lib/csv";
 
 type SessionRow = {
   id: string;
-  students: { name: string; grade: number; teacher_id: string } | null;
+  students: { name: string; level: number; teacher_id: string } | null;
+  assessments: { form: string | null } | null;
 };
 type ResultRow = { session_id: string; score: number; flagged_as_difficulty: boolean; skill_areas: { name: string } };
 
@@ -31,7 +32,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ cyc
 
   const { data: sessionsRaw, error: sessionsError } = await supabase
     .from("assessment_sessions")
-    .select("id, students(name, grade, teacher_id)")
+    .select("id, students(name, level, teacher_id), assessments(form)")
     .eq("cycle_id", cycleId)
     .eq("status", "completed");
   if (sessionsError) return NextResponse.json({ error: sessionsError.message }, { status: 500 });
@@ -59,7 +60,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ cyc
     : { data: [] };
   const teacherNameById = new Map((teachers ?? []).map((t) => [t.id, t.name]));
 
-  const lines = [toCsvRow(["student_name", "grade", "teacher_name", "skill_area", "score", "flagged", "overall_label"])];
+  const lines = [toCsvRow(["student_name", "level", "form", "teacher_name", "skill_area", "score", "flagged", "overall_label"])];
   for (const session of sessions) {
     if (!session.students) continue;
     const sessionResults = resultsBySession.get(session.id) ?? [];
@@ -69,7 +70,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ cyc
       lines.push(
         toCsvRow([
           session.students.name,
-          session.students.grade,
+          session.students.level,
+          session.assessments?.form ?? "",
           teacherName,
           r.skill_areas.name,
           r.score,

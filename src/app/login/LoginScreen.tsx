@@ -54,7 +54,7 @@ export function LoginScreen() {
         Read Well
       </h1>
       <span className="inline-block bg-[var(--color-orange-tint)] text-[var(--color-orange-dark)] text-sm font-bold px-4 py-1.5 rounded-full mb-9">
-        Grade 1 Reading Assessment
+        Early Reading Assessment
       </span>
 
       {offlineHome && (

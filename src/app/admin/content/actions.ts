@@ -4,7 +4,10 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/authz";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { AssessmentItem } from "@/lib/database.types";
+import { isAssessmentForm, isValidLevel } from "@/lib/levels";
 import { isAssessorLed } from "@/lib/readwell/form";
+
+const GAME_ITEM_TYPES = ["choice", "mic", "text"];
 
 function validateItems(items: AssessmentItem[]) {
   if (items.length === 0) throw new Error("At least one item is required");
@@ -15,7 +18,7 @@ function validateItems(items: AssessmentItem[]) {
     ids.add(item.id);
     if (!item.prompt.trim()) throw new Error(`Item ${item.id} needs a prompt`);
     if (!item.skillAreaKey) throw new Error(`Item ${item.id} needs a skill area`);
-    if (item.type !== "choice" && item.type !== "mic") throw new Error(`Item ${item.id} has an unknown type`);
+    if (!GAME_ITEM_TYPES.includes(item.type)) throw new Error(`Item ${item.id} has an unknown type`);
     if (item.type === "choice") {
       if (!item.options || item.options.length < 2) {
         throw new Error(`Item ${item.id} needs at least 2 options`);
@@ -31,43 +34,49 @@ function validateItems(items: AssessmentItem[]) {
 }
 
 /**
- * assessments has no client-facing write policy (see 0002_rls.sql) so this
- * needs the service role, gated by requireAdmin(). Saving creates a new
- * version rather than mutating in place, so past sessions keep pointing at
- * the exact content they were assessed against (TRD §3: Assessment.version).
+ * Saves a student game form (choice, read-aloud and writing items the child
+ * answers on their own device) for one level and form. assessments has no
+ * client-facing write policy (see 0002_rls.sql) so this needs the service
+ * role, gated by requireAdmin(). Saving creates a new version rather than
+ * mutating in place, so past sessions keep pointing at the exact content
+ * they were assessed against (TRD §3: Assessment.version).
  */
-export async function saveAssessmentItems(gradeLevel: number, items: AssessmentItem[]) {
+export async function saveAssessmentItems(level: number, form: string, items: AssessmentItem[]) {
   await requireAdmin();
+  if (!isValidLevel(level) || !isAssessmentForm(form)) throw new Error("Pick a level and form");
   validateItems(items);
 
   const admin = createAdminClient();
-  const { data: current } = await admin
+  const { data: versions } = await admin
     .from("assessments")
-    .select("id, version, items")
-    .eq("grade_level", gradeLevel)
-    .eq("is_active", true)
-    .maybeSingle();
-  // An assessor-led form (ReadWell Level 1) is managed from its guide and
-  // item bank, never replaced from this editor; see AssessorFormSummary.
+    .select("id, version, items, is_active")
+    .eq("level", level)
+    .eq("form", form)
+    .order("version", { ascending: false });
+  const current = (versions ?? []).find((v) => v.is_active);
+  // An assessor-led form (from a ReadWell guide) is managed from its item
+  // bank, never replaced from this editor.
   if (current && isAssessorLed(current.items)) {
-    throw new Error("This grade uses an assessor-led form, which isn't edited here");
+    throw new Error("This form is given by an assessor from its guide, so it isn't edited here");
   }
 
-  const nextVersion = (current?.version ?? 0) + 1;
+  // At most one active version per level and form (0017's unique index),
+  // so the old one is switched off before the new one goes in, and back
+  // on if the insert fails.
+  if (current) {
+    const { error } = await admin.from("assessments").update({ is_active: false }).eq("id", current.id);
+    if (error) throw new Error(error.message);
+  }
   const { error: insertError } = await admin.from("assessments").insert({
-    grade_level: gradeLevel,
-    version: nextVersion,
+    level,
+    form,
+    version: (versions?.[0]?.version ?? 0) + 1,
     items,
     is_active: true,
   });
-  if (insertError) throw new Error(insertError.message);
-
-  if (current) {
-    const { error: deactivateError } = await admin
-      .from("assessments")
-      .update({ is_active: false })
-      .eq("id", current.id);
-    if (deactivateError) throw new Error(deactivateError.message);
+  if (insertError) {
+    if (current) await admin.from("assessments").update({ is_active: true }).eq("id", current.id);
+    throw new Error(insertError.message);
   }
 
   revalidatePath("/admin/content");
@@ -77,15 +86,16 @@ export async function addRecommendationRule(formData: FormData) {
   await requireAdmin();
 
   const skillAreaId = String(formData.get("skillAreaId") ?? "");
-  const gradeLevel = Number(formData.get("gradeLevel") ?? 1);
+  const level = Number(formData.get("level") ?? 1);
   const text = String(formData.get("text") ?? "").trim();
   const programReference = String(formData.get("programReference") ?? "").trim() || null;
   if (!skillAreaId || !text) throw new Error("Skill area and recommendation text are required");
+  if (!isValidLevel(level)) throw new Error("Pick a level");
 
   const admin = createAdminClient();
   const { error } = await admin.from("recommendation_rules").insert({
     skill_area_id: skillAreaId,
-    grade_level: gradeLevel,
+    level,
     recommendation_text: text,
     program_reference: programReference,
   });

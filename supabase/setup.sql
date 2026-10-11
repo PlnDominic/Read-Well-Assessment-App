@@ -7,8 +7,8 @@
 -- Safe to run on a brand-new project, on a project that ran only some of
 -- the migrations, and again on one that already ran all of this: every
 -- statement checks before it creates or changes anything. It is the
--- migrations in supabase/migrations/ (0001-0016) folded together, plus the
--- reports storage bucket and starter Grade 1 content. It creates no login
+-- migrations in supabase/migrations/ (0001-0017) folded together, plus the
+-- reports storage bucket and the ReadWell Level 1 Form A content. It creates no login
 -- accounts; run supabase/bootstrap.sql afterwards for your first admin.
 
 begin;
@@ -59,7 +59,7 @@ create table if not exists public.students (
   school_id uuid not null references public.schools (id) on delete restrict,
   teacher_id uuid not null references public.profiles (id) on delete restrict,
   name text not null,
-  grade smallint not null,
+  level smallint not null,
   created_at timestamptz not null default now()
 );
 alter table public.students add column if not exists deleted_at timestamptz;
@@ -81,24 +81,23 @@ create table if not exists public.skill_areas (
 
 create table if not exists public.assessments (
   id uuid primary key default gen_random_uuid(),
-  grade_level smallint not null,
+  level smallint not null,
+  form text constraint assessments_form_check check (form in ('A', 'B', 'C', 'Final')),
   version integer not null default 1,
   items jsonb not null,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
-  unique (grade_level, version)
+  constraint assessments_level_form_version_key unique (level, form, version)
 );
 
 create table if not exists public.recommendation_rules (
   id uuid primary key default gen_random_uuid(),
   skill_area_id uuid not null references public.skill_areas (id) on delete cascade,
-  grade_level smallint not null,
+  level smallint not null,
   recommendation_text text not null,
   program_reference text,
   created_at timestamptz not null default now()
 );
-create index if not exists recommendation_rules_lookup_idx
-  on public.recommendation_rules (skill_area_id, grade_level);
 
 create table if not exists public.assessment_cycles (
   id uuid primary key default gen_random_uuid(),
@@ -117,7 +116,7 @@ create table if not exists public.assessment_sessions (
   assessment_id uuid not null references public.assessments (id) on delete restrict,
   cycle_id uuid not null references public.assessment_cycles (id) on delete restrict,
   status public.session_status not null default 'not_started',
-  session_code text not null unique,
+  session_code text unique,
   current_item_index integer not null default 0,
   started_at timestamptz,
   completed_at timestamptz,
@@ -271,35 +270,106 @@ grant execute on function public.can_access_student(uuid) to authenticated;
 grant execute on function public.can_access_session(uuid) to authenticated;
 
 -- ===========================================================================
--- Grade-match guard (0006, relaxed by 0014 for explicit overrides)
+-- Levels and forms (0017). ReadWell levels replace grades, and each level
+-- has Form A, B, C and the Final assessment. On a project set up before
+-- this, the grade columns are renamed, the KG 1 content (0016) becomes
+-- Level 1 Form A, KG students move to Level 1, each level's active game
+-- content becomes its Form A, and anything else from before is switched
+-- off (its sessions keep their reports).
 -- ===========================================================================
 
-create or replace function public.check_session_grade_match()
+do $$ begin
+  if exists (select 1 from information_schema.columns
+             where table_schema = 'public' and table_name = 'students' and column_name = 'grade') then
+    alter table public.students rename column grade to level;
+  end if;
+  if exists (select 1 from information_schema.columns
+             where table_schema = 'public' and table_name = 'assessments' and column_name = 'grade_level') then
+    alter table public.assessments rename column grade_level to level;
+  end if;
+  if exists (select 1 from information_schema.columns
+             where table_schema = 'public' and table_name = 'recommendation_rules' and column_name = 'grade_level') then
+    alter table public.recommendation_rules rename column grade_level to level;
+  end if;
+end $$;
+
+-- After the renames: Postgres checks an index's columns even when it
+-- already exists, so this can't sit with the table above on older projects.
+create index if not exists recommendation_rules_lookup_idx
+  on public.recommendation_rules (skill_area_id, level);
+
+alter table public.assessments add column if not exists form text;
+do $$ begin
+  alter table public.assessments add constraint assessments_form_check
+    check (form in ('A', 'B', 'C', 'Final'));
+exception when duplicate_object then null; end $$;
+alter table public.assessments drop constraint if exists assessments_grade_level_version_key;
+
+update public.assessments
+set level = 1, form = 'A'
+where form is null and items -> 0 ->> 'id' like 'L1A.%';
+-- Active game content from before levels becomes its level's Form A.
+update public.assessments a
+set form = 'A'
+where a.id in (
+    -- Nothing stopped two being active at once before; take the newest.
+    select distinct on (level) id from public.assessments
+    where form is null and is_active
+    order by level, version desc
+  )
+  and not exists (
+    select 1 from public.assessments b
+    where b.level = a.level and b.form = 'A' and b.id <> a.id
+  );
+update public.assessments set is_active = false where form is null and is_active;
+
+do $$ begin
+  alter table public.assessments add constraint assessments_level_form_version_key
+    unique (level, form, version);
+exception when duplicate_object or duplicate_table then null; end $$;
+create unique index if not exists assessments_one_active_per_form
+  on public.assessments (level, form)
+  where is_active and form is not null;
+
+update public.students set level = 1 where level < 1;
+do $$ begin
+  alter table public.students add constraint students_level_positive check (level >= 1);
+exception when duplicate_object then null; end $$;
+
+alter table public.assessment_sessions alter column session_code drop not null;
+
+-- ===========================================================================
+-- Level-match guard (0006, 0014, 0017): a session's assessment must be for
+-- the student's own level. grade_override is still honoured for sessions
+-- created with an override before levels; nothing sets it any more.
+-- ===========================================================================
+
+drop trigger if exists assessment_sessions_grade_match on public.assessment_sessions;
+drop function if exists public.check_session_grade_match();
+
+create or replace function public.check_session_level_match()
 returns trigger language plpgsql
 as $$
 declare
-  student_grade smallint;
-  assessment_grade smallint;
+  student_level smallint;
+  assessment_level smallint;
 begin
-  -- An explicit, audited override (overrideStudentGrade in src/lib/kiosk.ts)
-  -- is the one allowed mismatch: PRD §4.1 says "blocked or requires explicit
-  -- override with a warning".
   if new.grade_override then
     return new;
   end if;
-  select grade into student_grade from public.students where id = new.student_id;
-  select grade_level into assessment_grade from public.assessments where id = new.assessment_id;
-  if student_grade is distinct from assessment_grade then
-    raise exception 'Grade mismatch: student is grade %, assessment is grade %', student_grade, assessment_grade;
+  select level into student_level from public.students where id = new.student_id;
+  select level into assessment_level from public.assessments where id = new.assessment_id;
+  if student_level is distinct from assessment_level then
+    raise exception 'Level mismatch: student is Level %, assessment is Level %', student_level, assessment_level;
   end if;
   return new;
 end;
 $$;
 
-drop trigger if exists assessment_sessions_grade_match on public.assessment_sessions;
-create trigger assessment_sessions_grade_match
+drop trigger if exists assessment_sessions_level_match on public.assessment_sessions;
+create trigger assessment_sessions_level_match
   before insert or update of student_id, assessment_id, grade_override on public.assessment_sessions
-  for each row execute function public.check_session_grade_match();
+  for each row execute function public.check_session_level_match();
 
 -- ===========================================================================
 -- Row Level Security (0002, 0004, 0007, 0009, 0010, 0011, 0015)
@@ -488,61 +558,15 @@ values ('reports', 'reports', false)
 on conflict (id) do nothing;
 
 -- ===========================================================================
--- Starter Grade 1 content (skill areas, one assessment, recommendations).
--- Editable afterwards at /admin/content. Only added where missing, so this
--- never overwrites content you've changed.
--- ===========================================================================
-
-insert into public.skill_areas (key, name) values
-  ('phonics', 'Phonemic Awareness / Phonics'),
-  ('sightWords', 'Sight Word Recognition'),
-  ('fluency', 'Fluency'),
-  ('vocabulary', 'Vocabulary'),
-  ('comprehension', 'Comprehension')
-on conflict (key) do nothing;
-
-insert into public.assessments (grade_level, version, items, is_active)
-select 1, 1, '[
-    {"id": "q1", "skillAreaKey": "phonics", "type": "choice",
-     "prompt": "Tap the word that starts with the same sound as this: /b/",
-     "options": [{"text": "BALL", "isCorrect": true}, {"text": "CAT", "isCorrect": false}, {"text": "SUN", "isCorrect": false}]},
-    {"id": "q2", "skillAreaKey": "sightWords", "type": "choice",
-     "prompt": "Tap the word: \"the\"",
-     "options": [{"text": "THE", "isCorrect": true}, {"text": "AND", "isCorrect": false}, {"text": "SHE", "isCorrect": false}]},
-    {"id": "q3", "skillAreaKey": "fluency", "type": "mic",
-     "prompt": "Tap the button and read this word out loud: \"jump\"", "expectedText": "jump"},
-    {"id": "q4", "skillAreaKey": "vocabulary", "type": "choice",
-     "prompt": "Which word means the same as \"happy\"?",
-     "options": [{"text": "JOYFUL", "isCorrect": true}, {"text": "SAD", "isCorrect": false}, {"text": "ANGRY", "isCorrect": false}]},
-    {"id": "q5", "skillAreaKey": "comprehension", "type": "choice",
-     "passage": "The dog ran to the park. It was sunny outside.",
-     "prompt": "Where did the dog go?",
-     "options": [{"text": "THE PARK", "isCorrect": true}, {"text": "THE STORE", "isCorrect": false}, {"text": "SCHOOL", "isCorrect": false}]}
-  ]'::jsonb, true
-where not exists (select 1 from public.assessments where grade_level = 1);
-
-insert into public.recommendation_rules (skill_area_id, grade_level, recommendation_text, program_reference)
-select sa.id, 1, r.text, r.ref
-from (values
-  ('phonics', 'Daily sound-blending drills from Read Well Foundations Level A, focusing on short-vowel patterns.', 'Read Well Foundations Level A'),
-  ('sightWords', 'Flashcard review of the Read Well Grade 1 high-frequency word list, 10 minutes per day.', 'Read Well Grade 1 HFW List'),
-  ('fluency', 'Practice repeated readings of grade-level passages (Read Well Unit 4) to build reading rate and expression.', 'Read Well Unit 4'),
-  ('vocabulary', 'Pre-teach unit vocabulary using picture cards before each Read Well lesson.', 'Read Well Grade 1 Vocabulary Cards'),
-  ('comprehension', 'Guided retelling practice after each passage using the Read Well comprehension question stems.', 'Read Well Grade 1 Comprehension Stems')
-) as r(key, text, ref)
-join public.skill_areas sa on sa.key = r.key
-where not exists (
-  select 1 from public.recommendation_rules rr where rr.skill_area_id = sa.id and rr.grade_level = 1
-);
-
--- ===========================================================================
--- KG 1: ReadWell Level 1 Baseline Assessment, Form A (0016). Assessor-led;
--- items generated from src/lib/readwell/level1FormA.ts (seedSql.test.ts
--- keeps this copy in step). Only added where no KG 1 assessment exists.
+-- Level 1, Form A: the ReadWell Level 1 Baseline Assessment (0016, 0017).
+-- Assessor-led; items generated from src/lib/readwell/level1FormA.ts
+-- (seedSql.test.ts keeps this copy in step). Only added where Level 1 has
+-- no Form A yet, so this never replaces one.
 -- ===========================================================================
 
 insert into public.skill_areas (key, name) values
   ('storyListening', 'Story listening'),
+  ('vocabulary', 'Vocabulary'),
   ('printConcepts', 'Print concepts'),
   ('soundAwareness', 'Sound awareness'),
   ('letterNames', 'Letter names'),
@@ -553,8 +577,8 @@ insert into public.skill_areas (key, name) values
   ('writing', 'Writing')
 on conflict (key) do nothing;
 
-insert into public.assessments (grade_level, version, items, is_active)
-select -1, 1, '[
+insert into public.assessments (level, form, version, items, is_active)
+select 1, 'A', 1, '[
     {"id":"L1A.LC.01","skillAreaKey":"storyListening","type":"assessor","part":1,"prompt":"What animal does Kwaku have?","accept":"A goat"},
     {"id":"L1A.LC.02","skillAreaKey":"storyListening","type":"assessor","part":1,"prompt":"What does Kwaku give the goat every morning?","accept":"Water"},
     {"id":"L1A.LC.03","skillAreaKey":"storyListening","type":"assessor","part":1,"prompt":"Where did Kwaku find the goat?","accept":"In the kitchen"},
@@ -762,7 +786,7 @@ select -1, 1, '[
     {"id":"L1A.WT.13","skillAreaKey":"writing","type":"assessor","part":13,"row":4,"prompt":"The sentence ends with a full stop"},
     {"id":"L1A.WT.14","skillAreaKey":"writing","type":"assessor","part":13,"row":4,"prompt":"At least three of the five words are spelled correctly"}
   ]'::jsonb, true
-where not exists (select 1 from public.assessments where grade_level = -1);
+where not exists (select 1 from public.assessments where level = 1 and form = 'A');
 
 commit;
 

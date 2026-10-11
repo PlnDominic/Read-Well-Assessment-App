@@ -1,9 +1,8 @@
 import type { AssessmentItem } from "@/lib/database.types";
-import { KG1 } from "@/lib/grades";
 import type { FormDef, PartDef, StrandDef, StrandKey } from "./form";
 
 /**
- * ReadWell Level 1 Baseline Assessment: Assessor Guide, Form A, for KG 1.
+ * ReadWell Level 1 Baseline Assessment: Assessor Guide, Form A (Level 1, Form A).
  *
  * "Paper is the master": the wording below is the guide's, word for word.
  * Change the guide first, then this file, then supabase/setup.sql and the
@@ -548,7 +547,8 @@ const STRANDS: StrandDef[] = [
 export const LEVEL1_FORM_A: FormDef = {
   id: FORM,
   title: "ReadWell Level 1 Baseline Assessment, Form A",
-  gradeLevel: KG1,
+  level: 1,
+  form: "A",
   baseline: true,
   intro: {
     kit: [
@@ -591,5 +591,5 @@ export const LEVEL1_FORM_A: FormDef = {
 
 export const LEVEL1_FORM_A_ITEMS = LEVEL1_FORM_A.items;
 
-/** Strand skill areas the KG 1 content needs (vocabulary is shared with the Grade 1 starter content). */
+/** Strand skill areas the Level 1 forms need. */
 export const LEVEL1_SKILL_AREAS: { key: StrandKey; name: string }[] = STRANDS.map((s) => ({ key: s.key, name: s.name }));

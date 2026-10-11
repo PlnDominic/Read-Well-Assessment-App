@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import type { AssessmentItem, AssessmentItemOption } from "@/lib/database.types";
 import { saveAssessmentItems } from "./actions";
+import type { AssessmentForm } from "@/lib/levels";
 
 interface SkillArea {
   key: string;
@@ -23,11 +24,13 @@ function newItem(skillAreaKey: string): AssessmentItem {
 }
 
 export function AssessmentItemsEditor({
-  gradeLevel,
+  level,
+  form,
   initialItems,
   skillAreas,
 }: {
-  gradeLevel: number;
+  level: number;
+  form: AssessmentForm;
   initialItems: AssessmentItem[];
   skillAreas: SkillArea[];
 }) {
@@ -92,7 +95,7 @@ export function AssessmentItemsEditor({
     setSaved(false);
     startTransition(async () => {
       try {
-        await saveAssessmentItems(gradeLevel, items);
+        await saveAssessmentItems(level, form, items);
         setSaved(true);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not save");

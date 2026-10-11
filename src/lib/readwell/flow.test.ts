@@ -214,7 +214,7 @@ describe("scoreForm", () => {
 
 describe("supportLevelFor", () => {
   it("follows the guide's table", () => {
-    expect([0, 1, 2, 4, 5, 6].map(supportLevelFor)).toEqual([
+    expect([0, 1, 2, 4, 5, 6].map((n) => supportLevelFor(n, 1))).toEqual([
       "On track for Level 1",
       "On track for Level 1",
       "Needs support",

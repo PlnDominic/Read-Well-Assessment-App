@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { aggregateClassroomBreakdown, computeWeightedAverage } from "@/lib/scoring";
 import { retrySchoolReport } from "./actions";
-import { gradeLabel } from "@/lib/grades";
+import { levelLabel } from "@/lib/levels";
 
 type ResultRow = {
   session_id: string;
@@ -37,7 +37,7 @@ export default async function AdminDashboardPage() {
     .select("id", { count: "exact", head: true });
 
   let studentsAssessed = 0;
-  let gradeLevel = 1;
+  let level = 1;
   let avgOverallScore = 0;
   let skillDistribution: { name: string; pct: number }[] = [];
   let classroomBreakdown: ReturnType<typeof aggregateClassroomBreakdown> = [];
@@ -47,20 +47,20 @@ export default async function AdminDashboardPage() {
   if (cycle) {
     const { data: sessions } = await supabase
       .from("assessment_sessions")
-      .select("id, student_id, students(grade, teacher_id, profiles(name))")
+      .select("id, student_id, students(level, teacher_id, profiles(name))")
       .eq("cycle_id", cycle.id)
       .eq("status", "completed");
 
     type SessionRow = {
       id: string;
       student_id: string;
-      students: { grade: number; teacher_id: string; profiles: { name: string } | null } | null;
+      students: { level: number; teacher_id: string; profiles: { name: string } | null } | null;
     };
     const sessionRows = (sessions ?? []) as unknown as SessionRow[];
 
     const sessionIds = sessionRows.map((s) => s.id);
     studentsAssessed = new Set(sessionRows.map((s) => s.student_id)).size;
-    gradeLevel = sessionRows[0]?.students?.grade ?? 1;
+    level = sessionRows[0]?.students?.level ?? 1;
     // students/profiles are typed above as possibly null defensively: an
     // embedded to-one relation PostgREST can't resolve (RLS, or a student
     // whose teacher account was since removed) comes back null rather
@@ -150,7 +150,7 @@ export default async function AdminDashboardPage() {
           topFlagged.length > 1 ? "s" : ""
         } this cycle. Consider prioritizing intervention resources for ${
           topFlagged.length > 1 ? "these skill areas" : "this skill area"
-        } across ${gradeLabel(gradeLevel)} classrooms.`
+        } across ${levelLabel(level)} classes.`
       : "No skill areas are broadly flagged this cycle.";
 
   return (
@@ -214,7 +214,7 @@ export default async function AdminDashboardPage() {
 
         <div className="grid gap-4 mb-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
           <StatCard label="Students Assessed" value={`${studentsAssessed} / ${studentsTotal ?? 0}`} />
-          <StatCard label="Grade Level" value={gradeLabel(gradeLevel)} />
+          <StatCard label="Level" value={levelLabel(level)} />
           <StatCard label="Avg. Overall Score" value={`${avgOverallScore}%`} valueColor="var(--color-orange)" />
         </div>
 

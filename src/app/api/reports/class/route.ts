@@ -28,7 +28,7 @@ export async function GET() {
   const { data: profile } = await supabase.from("profiles").select("id, name").eq("id", user.id).single();
   if (!profile) return NextResponse.json({ error: "Profile not found" }, { status: 404 });
 
-  const { data: students } = await supabase.from("students").select("id, name, grade").order("name");
+  const { data: students } = await supabase.from("students").select("id, name, level").order("name");
   if (!students || students.length === 0) {
     return NextResponse.json({ error: "No students to export" }, { status: 404 });
   }
@@ -48,7 +48,7 @@ export async function GET() {
 
     const { data: assessment } = await admin
       .from("assessments")
-      .select("grade_level")
+      .select("level, form")
       .eq("id", session.assessment_id)
       .single();
 
@@ -56,8 +56,9 @@ export async function GET() {
       await buildStudentReportPageData(admin, {
         sessionId: session.id,
         studentName: student.name,
-        displayGrade: student.grade,
-        contentGradeLevel: assessment?.grade_level ?? student.grade,
+        studentLevel: student.level,
+        assessmentLevel: assessment?.level ?? student.level,
+        form: assessment?.form ?? null,
         completedAt: session.completed_at,
       })
     );

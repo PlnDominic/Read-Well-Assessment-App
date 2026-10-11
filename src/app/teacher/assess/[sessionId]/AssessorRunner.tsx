@@ -64,14 +64,12 @@ export function AssessorRunner({
   sessionId,
   studentId,
   studentName,
-  gradeText,
   items,
   initialAnswers,
 }: {
   sessionId: string;
   studentId: string;
   studentName: string;
-  gradeText: string;
   items: AssessmentItem[];
   initialAnswers: Answers;
 }) {
@@ -221,7 +219,7 @@ export function AssessorRunner({
           </Link>
           <h1 className="font-heading font-bold text-[26px] tracking-tight text-[var(--color-ink)] m-0 mt-2">{studentName}</h1>
           <p className="text-[var(--color-muted)] text-sm m-0">
-            {gradeText} · {form.title}
+            {form.title}
           </p>
         </div>
         <span

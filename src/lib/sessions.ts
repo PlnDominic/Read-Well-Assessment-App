@@ -1,16 +1,83 @@
 import "server-only";
+import { randomUUID } from "crypto";
 import { after } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { createAdminClient } from "@/lib/supabase/admin";
+import type { Database } from "@/lib/database.types";
+import type { AssessmentForm } from "@/lib/levels";
+import { generateSessionCode } from "@/lib/kiosk";
 import { scoreSession } from "@/lib/scoring";
 import { generateSchoolReport, generateStudentReport, markSchoolReportFailed, markStudentReportFailed } from "@/lib/reports";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
+export type CreateSessionResult =
+  /** game: the form is played by the child on their own device, so sessionCode is the code they type at /student/join. Assessor-led forms have no code. */
+  | { ok: true; id: string; game: boolean; sessionCode: string | null }
+  | { ok: false; reason: "no_cycle" | "no_assessment" };
+
+/**
+ * Creates a not-yet-started session for a student at their level, for the
+ * form the teacher picked (A, B, C or the Final assessment), in the
+ * school's current cycle. Returns `ok: false` rather than throwing when
+ * there's no current cycle or that form hasn't been added for the level
+ * yet: normal, fixable setup gaps, not errors.
+ *
+ * `supabase` is the caller's own RLS-scoped client, so
+ * assessment_sessions_insert_staff (0004) decides who may do this: a
+ * teacher for their own students, an administrator for their school.
+ */
+export async function createSessionForStudent(
+  supabase: SupabaseClient<Database>,
+  params: { studentId: string; schoolId: string; level: number; form: AssessmentForm; createdBy: string }
+): Promise<CreateSessionResult> {
+  const { data: cycle } = await supabase
+    .from("assessment_cycles")
+    .select("id")
+    .eq("school_id", params.schoolId)
+    .eq("is_current", true)
+    .maybeSingle();
+  if (!cycle) return { ok: false, reason: "no_cycle" };
+
+  const { data: assessment } = await supabase
+    .from("assessments")
+    .select("id, firstType:items->0->>type")
+    .eq("level", params.level)
+    .eq("form", params.form)
+    .eq("is_active", true)
+    .maybeSingle();
+  if (!assessment) return { ok: false, reason: "no_assessment" };
+  // Only the first item's type is read, not the whole item bank.
+  const game = (assessment as unknown as { firstType: string | null }).firstType !== "assessor";
+
+  // A game session gets a code the child types on their own device; a
+  // collision with an existing code (unique) just draws another.
+  for (let attempt = 0; attempt < 5; attempt++) {
+    // Generating the id here rather than chaining .select() (INSERT ...
+    // RETURNING) sidesteps a Postgres RLS quirk verified on this project:
+    // the RETURNING read can fail the select policy even though the same
+    // row is immediately selectable with an ordinary SELECT.
+    const id = randomUUID();
+    const sessionCode = game ? generateSessionCode() : null;
+    const { error } = await supabase.from("assessment_sessions").insert({
+      id,
+      student_id: params.studentId,
+      assessment_id: assessment.id,
+      cycle_id: cycle.id,
+      created_by: params.createdBy,
+      session_code: sessionCode,
+    });
+    if (!error) return { ok: true, id, game, sessionCode };
+    if (!error.message.includes("session_code")) throw error;
+  }
+  throw new Error("Could not allocate a session code. Try again.");
+}
+
 /**
  * Marks a session done, runs the Scoring Service synchronously (fast: a
  * few hundred rows at most), then schedules PDF report generation with
  * `after()` so it never blocks the response (TRD §5). Shared by the
- * student kiosk and the assessor screen; each route does its own
+ * student game and the assessor screen; each route does its own
  * authorization first. A session that's already completed is left alone.
  */
 export async function completeSession(admin: AdminClient, sessionId: string): Promise<{ ok: true } | { ok: false; status: number; error: string }> {

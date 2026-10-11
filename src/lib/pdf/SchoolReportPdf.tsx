@@ -1,6 +1,6 @@
 import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
 import { colors } from "@/lib/theme";
-import { gradeLabel } from "@/lib/grades";
+import { levelLabel } from "@/lib/levels";
 
 const styles = StyleSheet.create({
   page: { backgroundColor: colors.white, padding: 40, fontSize: 11, color: colors.ink },
@@ -48,7 +48,7 @@ export interface SchoolReportPdfProps {
   cycleName: string;
   studentsAssessed: number;
   studentsTotal: number;
-  gradeLevel: number;
+  level: number;
   avgOverallScore: number;
   skillDistribution: { name: string; pctFlagged: number }[];
   classroomBreakdown: { teacherName: string; studentsAssessed: number; avgScore: number; pctNeedsSupport: number }[];
@@ -60,7 +60,7 @@ export function SchoolReportPdf({
   cycleName,
   studentsAssessed,
   studentsTotal,
-  gradeLevel,
+  level,
   avgOverallScore,
   skillDistribution,
   classroomBreakdown,
@@ -84,8 +84,8 @@ export function SchoolReportPdf({
             </Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statLabel}>GRADE LEVEL</Text>
-            <Text style={styles.statValue}>{gradeLabel(gradeLevel)}</Text>
+            <Text style={styles.statLabel}>LEVEL</Text>
+            <Text style={styles.statValue}>{levelLabel(level)}</Text>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>AVG. OVERALL SCORE</Text>

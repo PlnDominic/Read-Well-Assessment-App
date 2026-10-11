@@ -1,7 +1,7 @@
 import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
 import { colors } from "@/lib/theme";
-import { gradeLabel } from "@/lib/grades";
-import type { FormSummary } from "@/lib/readwell/score";
+import { formLabel, levelLabel, type AssessmentForm } from "@/lib/levels";
+import { isOnTrackLabel, type FormSummary } from "@/lib/readwell/score";
 
 const styles = StyleSheet.create({
   page: { backgroundColor: colors.white, padding: 40, fontSize: 11, color: colors.ink },
@@ -37,11 +37,13 @@ const styles = StyleSheet.create({
 
 export interface StudentReportPageProps {
   studentName: string;
-  grade: number;
-  /** The grade level of the assessment this session actually used, only
-   * passed when it differs from `grade` (a grade override -- see
-   * GradeOverrideControl.tsx / overrideStudentGrade in lib/kiosk.ts). */
-  contentGrade?: number;
+  /** The student's level. */
+  level: number;
+  /** The level of the assessment this session used, when known; it differs
+   * from `level` only if the student has since moved level. */
+  assessedLevel?: number;
+  /** Form A, B, C or the Final assessment; null for kiosk sessions from before levels. */
+  form?: AssessmentForm | null;
   assessedDate: string;
   overallLabel: string;
   skills: { name: string; score: number; flagged: boolean }[];
@@ -58,25 +60,27 @@ export interface StudentReportPageProps {
  */
 export function StudentReportPage({
   studentName,
-  grade,
-  contentGrade,
+  level,
+  assessedLevel,
+  form,
   assessedDate,
   overallLabel,
   skills,
   recommendations,
   formSummary,
 }: StudentReportPageProps) {
-  const isOnTrack = overallLabel === "On Track" || overallLabel === "On track for Level 1";
+  const isOnTrack = isOnTrackLabel(overallLabel);
   return (
     <Page size="A4" style={styles.page}>
       <View style={styles.headerRow}>
         <View>
           <Text style={styles.name}>{studentName}</Text>
-          <Text style={styles.meta}>{gradeLabel(grade)} · Assessed {assessedDate}</Text>
-          {contentGrade !== undefined && contentGrade !== grade && (
-            <Text style={[styles.meta, { color: colors.orangeDark, fontWeight: 700 }]}>
-              Assessed with {gradeLabel(contentGrade)} content (grade override)
-            </Text>
+          <Text style={styles.meta}>
+            {levelLabel(assessedLevel ?? level)}
+            {form ? ` · ${formLabel(form)}` : ""} · Assessed {assessedDate}
+          </Text>
+          {assessedLevel !== undefined && assessedLevel !== level && (
+            <Text style={[styles.meta, { color: colors.orangeDark, fontWeight: 700 }]}>Now in {levelLabel(level)}</Text>
           )}
         </View>
         {/* On Track is solid black/white, not orange -- see the matching
@@ -128,7 +132,7 @@ export function StudentReportPage({
         <>
           <Text style={styles.sectionTitle}>Program-Aligned Recommendations</Text>
           {recommendations.length === 0 ? (
-            <Text style={styles.recText}>No flagged areas this cycle. Continue with grade-level independent reading.</Text>
+            <Text style={styles.recText}>No flagged areas this cycle. Continue with level-appropriate independent reading.</Text>
           ) : (
             recommendations.map((rec, i) => (
               <View style={styles.recCard} key={`${rec.skillName}-${i}`}>

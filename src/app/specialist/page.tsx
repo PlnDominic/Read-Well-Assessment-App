@@ -4,7 +4,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { ROLE_AVATAR } from "@/lib/avatars";
 import { createClient } from "@/lib/supabase/server";
-import { gradeLabel } from "@/lib/grades";
+import { formLabel, levelLabel, type AssessmentForm } from "@/lib/levels";
 
 // completed is solid black/white rather than the orange used everywhere
 // else: orange is reserved for "needs attention" states, so a finished
@@ -27,7 +27,7 @@ export default async function SpecialistPage() {
 
   // RLS (can_access_student) already scopes this to the specialist's
   // assigned students; no need to join specialist_assignments explicitly.
-  const { data: students } = await supabase.from("students").select("id, name, grade").order("name");
+  const { data: students } = await supabase.from("students").select("id, name, level").order("name");
 
   const { data: cycle } = await supabase
     .from("assessment_cycles")
@@ -40,15 +40,17 @@ export default async function SpecialistPage() {
   const { data: sessions } = cycle && studentIds.length > 0
     ? await supabase
         .from("assessment_sessions")
-        .select("id, student_id, status, created_at")
+        .select("id, student_id, status, created_at, assessments(form)")
         .in("student_id", studentIds)
         .eq("cycle_id", cycle.id)
         .order("created_at", { ascending: false })
     : { data: [] };
 
-  const latestByStudent = new Map<string, { id: string; status: string }>();
-  for (const s of sessions ?? []) {
-    if (!latestByStudent.has(s.student_id)) latestByStudent.set(s.student_id, { id: s.id, status: s.status });
+  const latestByStudent = new Map<string, { id: string; status: string; form: AssessmentForm | null }>();
+  for (const s of (sessions ?? []) as unknown as { id: string; student_id: string; status: string; assessments: { form: AssessmentForm | null } | null }[]) {
+    if (!latestByStudent.has(s.student_id)) {
+      latestByStudent.set(s.student_id, { id: s.id, status: s.status, form: s.assessments?.form ?? null });
+    }
   }
 
   return (
@@ -82,7 +84,7 @@ export default async function SpecialistPage() {
                   </div>
                   <div>
                     <div className="font-extrabold text-[var(--color-ink)] text-base">{s.name}</div>
-                    <div className="text-[13px] text-[var(--color-muted-light)]">{gradeLabel(s.grade)}</div>
+                    <div className="text-[13px] text-[var(--color-muted-light)]">{levelLabel(s.level)}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-4 flex-wrap">
@@ -91,6 +93,7 @@ export default async function SpecialistPage() {
                     style={{ background: style.bg, color: style.color }}
                   >
                     {style.label}
+                    {latest?.form ? ` · ${formLabel(latest.form)}` : ""}
                   </span>
                   {status === "completed" && latest && (
                     <Link

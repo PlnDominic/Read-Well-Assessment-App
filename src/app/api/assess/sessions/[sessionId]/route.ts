@@ -4,8 +4,7 @@ import { loadAssessorSession, requireAssessor, saveMarks } from "@/lib/readwell/
 import { ONE_TO_ONE_PARTS } from "@/lib/readwell/flow";
 
 /**
- * Assessor screen endpoints (src/app/teacher/assess/[sessionId]). Unlike
- * the kiosk routes, these need a signed-in teacher or administrator who
+ * Assessor screen endpoints (src/app/teacher/assess/[sessionId]). These need a signed-in teacher or administrator who
  * can already see the student; see lib/readwell/assessorSession.ts.
  */
 

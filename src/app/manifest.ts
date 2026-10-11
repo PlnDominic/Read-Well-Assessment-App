@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Read Well Assessment App",
     short_name: "Read Well",
-    description: "Grade 1 Reading Assessment",
+    description: "ReadWell early reading assessment",
     start_url: "/login",
     display: "standalone",
     background_color: "#ffffff",

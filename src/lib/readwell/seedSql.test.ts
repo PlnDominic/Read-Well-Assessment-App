@@ -15,7 +15,8 @@ import { LEVEL1_FORM_A_ITEMS, LEVEL1_SKILL_AREAS } from "./level1FormA";
 const SQL_FILES = ["supabase/setup.sql", "supabase/migrations/0016_readwell_level1_kg1.sql"];
 
 function kg1ItemsFrom(sql: string): unknown {
-  const match = /select -1, 1, '(\[[\s\S]*?\])'::jsonb/.exec(sql);
+  // 0016 seeded it at grade -1; setup.sql seeds it as Level 1, Form A (0017).
+  const match = /select (?:-1, 1|1, 'A', 1), '(\[[\s\S]*?\])'::jsonb/.exec(sql);
   if (!match) throw new Error("No KG 1 assessment insert found");
   return JSON.parse(match[1].replace(/''/g, "'"));
 }
