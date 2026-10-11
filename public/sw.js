@@ -28,6 +28,20 @@ const PRECACHE_PAGES = ["/login", "/student/join", "/offline"];
 // they're available offline after just one visit, same as everything else.
 const PRECACHE_ASSETS = [
   "/sunny.png",
+  // Sunny's moods and the game sounds (src/components/AnimatedSunny.tsx,
+  // src/lib/gameFx.ts): loaded by JavaScript, so nothing in a page's HTML
+  // would lead the worker to them.
+  "/sunny/sunny-wave.webp",
+  "/sunny/sunny-think.webp",
+  "/sunny/sunny-listen.webp",
+  "/sunny/sunny-cheer.webp",
+  "/sunny/sunny-thumbs.webp",
+  "/sunny/sunny-trophy.webp",
+  "/sunny/sunny-face.webp",
+  "/sounds/tap.mp3",
+  "/sounds/star.mp3",
+  "/sounds/mission.mp3",
+  "/sounds/quest.mp3",
   "/avatars/student.png",
   "/avatars/teacher.png",
   "/avatars/admin.png",

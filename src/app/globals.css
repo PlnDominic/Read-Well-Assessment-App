@@ -178,3 +178,168 @@ body[data-offline] form button:not([type="button"]) {
 .rw-welcome-card, .rw-message-card { max-width:520px; margin:7vh auto 0; text-align:center; }.rw-welcome-card h1, .rw-message-card h1 { margin:14px 0 8px; font:800 34px var(--font-heading); }.rw-welcome-card p, .rw-message-card p { margin:0 auto 20px; color:var(--color-body); font-size:18px; line-height:1.55; }.rw-eyebrow { color:var(--color-orange-dark); font-size:12px; font-weight:900; letter-spacing:.12em; }.rw-quest-note { margin-top:18px; }.rw-success-orb { display:grid; place-items:center; width:132px; height:132px; margin:0 auto; border-radius:50%; background:var(--color-orange); }.rw-offline-banner { margin-bottom:12px; padding:10px 14px; border:1px solid var(--color-orange-tint-border); border-radius:12px; background:var(--color-orange-tint); color:var(--color-orange-dark); font-size:13px; font-weight:800; text-align:center; }.rw-loading { margin-top:20vh; color:var(--color-muted); text-align:center; }
 @keyframes rw-pulse { 50% { transform:scale(1.05); box-shadow:0 0 0 14px rgba(220,38,38,.12); } }
 @media (max-width:600px) { .rw-assessment-shell { padding-top:4px; }.rw-mission-card,.rw-welcome-card,.rw-message-card { padding:22px 17px; border-radius:22px; }.rw-quest-header { align-items:flex-start; }.rw-header-score { text-align:right; }.rw-actions { align-items:flex-start; flex-direction:column; }.rw-primary { width:100%; }.rw-encouragement { width:100%; text-align:center; } }
+
+/* ---------------------------------------------------------------------------
+   Student game: animated Sunny, quest map, stars and celebrations
+   (src/components/AnimatedSunny.tsx, StudentAssessmentRunner.tsx). Every
+   animation here stops under prefers-reduced-motion (bottom of this block).
+   --------------------------------------------------------------------------- */
+
+/* Sunny. .rw-sunny-motion carries the mood's idle loop, the img the pop-in
+   that plays whenever the mood changes. */
+.rw-sunny { position: relative; flex: none; }
+.rw-sunny-clip { position: absolute; inset: 0; }
+.rw-sunny-motion { width: 100%; height: 100%; transform-origin: 50% 100%; animation: rw-sunny-float 3.4s ease-in-out infinite; }
+.rw-sunny-img { display: block; width: 100%; height: 100%; object-fit: contain; object-position: 50% 100%; transform-origin: 50% 100%; animation: rw-sunny-pop .55s cubic-bezier(.34, 1.56, .64, 1) both; user-select: none; -webkit-user-drag: none; }
+.rw-sunny-cheer .rw-sunny-motion, .rw-sunny-trophy .rw-sunny-motion { animation: rw-sunny-bounce .95s ease-in-out infinite; }
+.rw-sunny-listen .rw-sunny-motion { animation: rw-sunny-lean 1.8s ease-in-out infinite; }
+.rw-sunny-think .rw-sunny-motion { animation: rw-sunny-tilt 4.2s ease-in-out infinite; }
+.rw-sunny-wave .rw-sunny-motion { animation: rw-sunny-rock 1.3s ease-in-out infinite; }
+.rw-sunny-thumbs .rw-sunny-motion { animation: rw-sunny-nod 1.6s ease-in-out infinite; }
+
+/* Peeking over the card below: the stills are cut off flat at the bottom,
+   so the image hangs past the clip box and only the card's edge shows. */
+/* Clip only the bottom edge, so a waving hand or a lean can still poke out the sides. */
+.rw-sunny-peek .rw-sunny-clip { clip-path: inset(-60% -60% 0 -60%); }
+.rw-sunny-peek .rw-sunny-motion { height: 122%; }
+
+.rw-sunny-bubble {
+  position: absolute; right: calc(100% + 6px); top: 18%; max-width: 210px; width: max-content;
+  padding: 10px 14px; border-radius: 18px 18px 4px 18px; background: var(--color-surface); color: var(--color-ink);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .12); font: 800 15px/1.3 var(--font-heading); text-align: left;
+  transform-origin: 100% 100%; animation: rw-bubble-pop .45s cubic-bezier(.34, 1.56, .64, 1) both;
+}
+
+.rw-sunny-bubble::after {
+  content: ""; position: absolute; right: -7px; bottom: 10px; width: 14px; height: 14px; background: inherit;
+  transform: rotate(45deg); border-radius: 0 3px 0 0; box-shadow: 3px -3px 6px rgba(0, 0, 0, .04);
+}
+
+@keyframes rw-sunny-float { 0%, 100% { transform: translateY(0) scale(1, 1); } 50% { transform: translateY(-4%) scale(1.01, .99); } }
+@keyframes rw-sunny-pop {
+  0% { opacity: 0; transform: translateY(10%) scale(.7, .6); }
+  55% { opacity: 1; transform: translateY(0) scale(1.06, .95); }
+  78% { transform: scale(.97, 1.04); }
+  100% { transform: scale(1); }
+}
+@keyframes rw-sunny-bounce {
+  0%, 100% { transform: translateY(0) scale(1.05, .95); }
+  35% { transform: translateY(-9%) scale(.97, 1.04); }
+  55% { transform: translateY(-11%) scale(1, 1); }
+  85% { transform: translateY(0) scale(1.03, .97); }
+}
+@keyframes rw-sunny-lean { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg) translateX(2%); } }
+@keyframes rw-sunny-tilt { 0%, 100% { transform: rotate(0); } 30% { transform: rotate(-3deg); } 65% { transform: rotate(2deg) translateY(-2%); } }
+@keyframes rw-sunny-rock { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+@keyframes rw-sunny-nod { 0%, 100% { transform: translateY(0) rotate(0); } 20% { transform: translateY(2%) rotate(-2deg); } 40% { transform: translateY(-2%) rotate(1deg); } }
+@keyframes rw-bubble-pop { 0% { opacity: 0; transform: scale(.4); } 100% { opacity: 1; transform: scale(1); } }
+
+/* The mission card with Sunny peeking over its top right corner. */
+.rw-stage { position: relative; margin-top: 108px; }
+.rw-stage .rw-mission-card { position: relative; z-index: 1; margin-top: 0; }
+.rw-stage-sunny { position: absolute; right: 22px; bottom: 100%; z-index: 0; }
+
+/* HUD: stars and the sound switch. */
+.rw-hud { display: flex; align-items: center; gap: 8px; }
+.rw-stars {
+  display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px 6px 9px; border-radius: 999px;
+  background: #fff7d6; color: #8a5a00; border: 1.5px solid #f5d77a; font: 900 15px var(--font-heading);
+}
+.rw-stars-icon { font-size: 17px; line-height: 1; }
+.rw-stars.bump { animation: rw-star-bump .6s cubic-bezier(.34, 1.56, .64, 1); }
+@keyframes rw-star-bump { 0% { transform: scale(1); } 35% { transform: scale(1.28) rotate(-6deg); } 100% { transform: scale(1); } }
+.rw-sound {
+  position: relative; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%;
+  border: 1.5px solid var(--color-neutral-border); background: var(--color-surface); color: var(--color-orange-dark); cursor: pointer;
+}
+.rw-sound.off { color: var(--color-muted); }
+.rw-sound.off::after { content: ""; position: absolute; width: 22px; height: 2px; border-radius: 2px; background: currentColor; transform: rotate(-45deg); }
+
+/* Quest map: a sky strip with drifting clouds, the path of missions, and
+   Sunny's face travelling to the current one. */
+.rw-map {
+  position: relative; margin: 16px 0 8px; padding: 34px 14px 12px; border-radius: 22px; overflow: hidden;
+  background: linear-gradient(180deg, #dff1ff 0%, #f3f9ff 70%, var(--color-surface) 100%);
+}
+.rw-cloud { position: absolute; top: 8px; width: 46px; height: 14px; border-radius: 999px; background: rgba(255, 255, 255, .95); animation: rw-drift 26s linear infinite; }
+.rw-cloud::before, .rw-cloud::after { content: ""; position: absolute; border-radius: 50%; background: inherit; }
+.rw-cloud::before { width: 20px; height: 20px; left: 8px; top: -9px; }
+.rw-cloud::after { width: 15px; height: 15px; left: 23px; top: -6px; }
+.rw-cloud.c2 { top: 16px; transform: scale(.7); animation-duration: 34s; animation-delay: -14s; opacity: .8; }
+.rw-cloud.c3 { top: 4px; transform: scale(.55); animation-duration: 41s; animation-delay: -27s; opacity: .7; }
+@keyframes rw-drift { from { left: -60px; } to { left: 105%; } }
+.rw-path { position: relative; display: grid; align-items: center; }
+.rw-path-line, .rw-path-fill { position: absolute; left: 0; height: 6px; border-radius: 999px; top: 50%; transform: translateY(-50%); }
+.rw-path-line { right: 0; background: repeating-linear-gradient(90deg, #c8d9ea 0 8px, transparent 8px 14px); }
+.rw-path-fill { background: linear-gradient(90deg, var(--color-orange), #f59e0b); transition: width .7s cubic-bezier(.65, 0, .35, 1); }
+.rw-node {
+  position: relative; z-index: 1; justify-self: center; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%;
+  background: var(--color-surface); border: 2.5px solid #c8d9ea; color: #fff; font-size: 11px; line-height: 1; transition: transform .3s ease;
+}
+.rw-node.done { background: var(--node-color); border-color: var(--node-color); }
+.rw-node.current { width: 26px; height: 26px; border-color: var(--node-color); box-shadow: 0 0 0 5px color-mix(in srgb, var(--node-color) 22%, transparent); }
+.rw-node.goal { width: 28px; height: 28px; background: #fff7d6; border-color: #f5d77a; font-size: 15px; }
+.rw-map-face {
+  position: absolute; top: -33px; z-index: 2; width: 34px; height: 34px; margin-left: -17px; border-radius: 50%;
+  background: #fff; border: 2.5px solid var(--color-orange); box-shadow: 0 4px 10px rgba(0, 0, 0, .15); overflow: hidden;
+  transition: left .7s cubic-bezier(.65, 0, .35, 1);
+}
+.rw-map-face img { width: 100%; height: 100%; object-fit: cover; animation: rw-hop .7s ease; }
+.rw-map-caption { display: flex; align-items: center; gap: 10px; margin-top: 12px; color: var(--color-muted); font-size: 13px; font-weight: 800; }
+.rw-map-pill { border-radius: 999px; padding: 5px 11px; color: #fff; font-size: 11px; font-weight: 900; letter-spacing: .06em; }
+@keyframes rw-hop { 0%, 100% { transform: translateY(0); } 45% { transform: translateY(-5px); } }
+
+/* Mission complete and quest complete. */
+.rw-celebrate-card { max-width: 540px; margin: 5vh auto 0; padding: 26px 28px 30px; border-radius: 28px; background: var(--color-surface); box-shadow: 0 12px 32px rgba(0, 0, 0, .08); text-align: center; }
+.rw-celebrate-card h1 { margin: 10px 0 6px; font: 800 30px var(--font-heading); }
+.rw-celebrate-card p { margin: 0 auto 18px; color: var(--color-body); font-size: 17px; line-height: 1.5; }
+/* Centred Sunny on the welcome, celebration and end cards: the bubble sits
+   above his head, so it never covers his face on a narrow phone. */
+.rw-celebrate-sunny { margin: 0 auto; }
+.rw-celebrate-sunny:has(.rw-sunny-bubble) { margin-top: 46px; }
+.rw-celebrate-sunny .rw-sunny-bubble {
+  right: auto; top: auto; left: 50%; bottom: calc(100% - 4px); translate: -50% 0; max-width: 260px;
+  border-radius: 18px; transform-origin: 50% 100%; text-align: center; white-space: nowrap;
+}
+.rw-celebrate-sunny .rw-sunny-bubble::after { right: auto; left: calc(50% - 7px); bottom: -6px; border-radius: 0 0 3px 0; box-shadow: none; }
+.rw-earned { display: flex; justify-content: center; gap: 6px; margin: 4px 0 14px; font-size: 26px; }
+.rw-earned span { display: inline-block; animation: rw-star-in .5s cubic-bezier(.34, 1.56, .64, 1) both; }
+@keyframes rw-star-in { from { opacity: 0; transform: translateY(-14px) scale(.3) rotate(-40deg); } to { opacity: 1; transform: none; } }
+.rw-break-note { margin: 0 auto 16px; padding: 10px 14px; border-radius: 14px; background: var(--color-orange-tint); color: var(--color-orange-dark); font-weight: 800; font-size: 14px; }
+.rw-badge {
+  display: inline-grid; place-items: center; gap: 2px; width: 138px; height: 138px; margin: 4px auto 14px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff3b0, #f7c948 60%, #e2a516); border: 5px solid #fff; box-shadow: 0 0 0 4px #f5d77a, 0 12px 26px rgba(226, 165, 22, .35);
+  color: #6b4500; animation: rw-badge-in .8s cubic-bezier(.34, 1.56, .64, 1) .2s both;
+}
+.rw-badge strong { font: 900 32px var(--font-heading); line-height: 1; }
+.rw-badge small { font-size: 11px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+@keyframes rw-badge-in { from { opacity: 0; transform: scale(.2) rotate(-120deg); } to { opacity: 1; transform: none; } }
+.rw-stamps { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 0 0 18px; }
+.rw-stamp { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--node-color); color: #fff; font-size: 13px; font-weight: 900; animation: rw-star-in .45s cubic-bezier(.34, 1.56, .64, 1) both; }
+
+/* Night sky in dark mode. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .rw-map { background: linear-gradient(180deg, #1c3048 0%, #18222f 70%, var(--color-surface) 100%); }
+  :root:not([data-theme="light"]) .rw-cloud { background: rgba(255, 255, 255, .22); }
+}
+:root[data-theme="dark"] .rw-map { background: linear-gradient(180deg, #1c3048 0%, #18222f 70%, var(--color-surface) 100%); }
+:root[data-theme="dark"] .rw-cloud { background: rgba(255, 255, 255, .22); }
+
+.rw-confetti-canvas { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 60; }
+
+@media (max-width: 600px) {
+  .rw-stage { margin-top: 104px; }
+  .rw-stage-sunny { right: 10px; }
+  .rw-sunny-bubble { max-width: 160px; font-size: 14px; }
+  .rw-map { padding: 32px 8px 10px; }
+  .rw-node { width: 16px; height: 16px; border-width: 2px; font-size: 9px; }
+  .rw-node.current { width: 22px; height: 22px; }
+  .rw-node.goal { width: 24px; height: 24px; font-size: 13px; }
+  .rw-celebrate-card { padding: 20px 16px 24px; border-radius: 22px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rw-sunny-motion, .rw-sunny-img, .rw-sunny-bubble, .rw-stars.bump, .rw-cloud, .rw-map-face img,
+  .rw-earned span, .rw-badge, .rw-stamp { animation: none !important; }
+  .rw-path-fill, .rw-map-face { transition: none; }
+}

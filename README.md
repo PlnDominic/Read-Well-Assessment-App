@@ -104,18 +104,60 @@ A few things the PRD/TRD left open that needed a concrete decision to ship:
   count against the automatic budget, and a report's `last_error` is shown
   next to that button so a human doesn't have to dig through logs
   (`supabase/migrations/0013_report_retry_tracking.sql`).
-- **Sunny (the mascot) is a plain static image** (`public/sunny.png`), shown
-  by `src/components/SunnyAvatar.tsx` as an ordinary `<img>` — deliberately
-  not `next/image`, since its on-demand `/_next/image` endpoint needs the
-  server even for a local file, which would undo the point of caching it for
-  offline use. `sw.js` precaches `/sunny.png` on install for exactly that
-  reason (same as the public pages), since — unlike `_next/static` chunks —
-  nothing in the page's own HTML references it for the worker to discover on
-  its own. `/offline/page.tsx` keeps the separate flat SVG mascot
-  (`SunnyMascot` in `icons.tsx`) instead of switching to `SunnyAvatar`, since
-  that page is the last-resort fallback shown when there's no connection at
-  all and shouldn't depend on an image fetch that might not have been cached
-  yet.
+- **Sunny (the mascot) is plain static images.** The original is
+  `public/sunny.png`, shown on staff screens by `src/components/SunnyAvatar.tsx`
+  as an ordinary `<img>`, deliberately not `next/image`, since its on-demand
+  `/_next/image` endpoint needs the server even for a local file, which would
+  undo the point of caching it for offline use. The student game uses
+  Sunny's moods (`public/sunny/`, see "The student game" below), plain
+  `<img>`s for the same reason. `sw.js` precaches all of them on install,
+  since (unlike `_next/static` chunks) nothing in the page's own HTML
+  references them for the worker to discover on its own.
+  `/offline/page.tsx` keeps the separate flat SVG mascot (`SunnyMascot` in
+  `icons.tsx`), since that page is the last-resort fallback shown when
+  there's no connection at all and shouldn't depend on an image fetch that
+  might not have been cached yet.
+
+## The student game
+
+Game forms (the ones built on the admin Content page) play as a quest the
+child goes through on their own device at `/student`
+(`src/app/student/session/[sessionId]/StudentAssessmentRunner.tsx`).
+
+- **Missions and the quest map.** The questions are split into missions:
+  one per ReadWell part when the item ids carry part codes (`LS01`, `SV03`,
+  the Level 2 quest), otherwise every five questions. A map across a little
+  sky shows the missions as a path ending in a trophy, with Sunny's face
+  travelling along it. Finishing a mission shows a celebration card (and, at
+  a change of sitting, "time for a little break"); finishing the quest shows
+  Sunny with a trophy, a Reading Star badge and the missions stamped off.
+- **Stars reward effort, never correctness.** A child earns one star for
+  each question they answer, whatever they answer. Nothing in the game
+  tells right from wrong (the praise is the same either way), so the game
+  can't coach the child or change what the assessment measures.
+- **Animated Sunny** (`src/components/AnimatedSunny.tsx`). Sunny peeks over
+  the top of the question card and changes mood with the moment: thinking
+  while a question is open, reading for a read-aloud item, listening while
+  the mic is on, a thumbs-up or a cheer once the child answers, waving
+  hello, a trophy at the end. Each mood is a still; a new mood pops in with
+  a squash-and-stretch, and each has its own idle motion (bounce, lean,
+  tilt, rock, nod) in `globals.css`. Every animation and the confetti stop
+  under the device's "reduce motion" setting.
+- **How the moods were made.** One expression sheet of six poses was
+  generated from `public/sunny.png` as the reference image (Nano Banana 2,
+  on a flat magenta background), so every pose has the same face, clothes,
+  size and lighting. The magenta was keyed out and the sheet cut into
+  480x480 transparent WebP stills, each the whole grid cell so Sunny's head
+  is the same size in every mood and swapping moods doesn't make him jump.
+  To add a mood, generate it the same way from `sunny.png` and add it to
+  `SUNNY_MOOD_SRC` and `PRECACHE_ASSETS` in `public/sw.js`.
+- **Sounds and confetti** (`src/lib/gameFx.ts`). Short sounds for a tap, a
+  star, a finished mission and the finished quest are from Kenney's CC0
+  "Interface Sounds" and "Music Jingles" packs (`public/sounds/CREDITS.txt`),
+  played with Web Audio so the service worker can serve them offline. A
+  speaker button mutes them, remembered on the device. Confetti is
+  `canvas-confetti`, run without its web worker because the CSP allows no
+  `blob:` workers.
 
 ## ReadWell levels and assessments
 

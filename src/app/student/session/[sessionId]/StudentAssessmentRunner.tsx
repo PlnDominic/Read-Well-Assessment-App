@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { CheckIcon, MicIcon, SpeakerIcon } from "@/components/icons";
-import { SunnyAvatar } from "@/components/SunnyAvatar";
+import { MicIcon, SpeakerIcon } from "@/components/icons";
+import { AnimatedSunny, SUNNY_FACE_SRC, type SunnyMood } from "@/components/AnimatedSunny";
+import { burst, originOf, playSound, setSoundEnabled, soundEnabled } from "@/lib/gameFx";
 
 interface KioskItem {
   id: string;
@@ -42,6 +43,31 @@ const PARTS = [
   { code: "AT", number: 12, title: "Reading attitude", subtitle: "Tell us how reading feels", sitting: 2, color: "#db2777" },
   { code: "WT", number: 13, title: "Writing", subtitle: "Show what you can write", sitting: 3, color: "#ca8a04" },
 ] as const;
+const PART_CODE = /^(LS|SV|LC|VO|CP|SA|BL|RW|NW|HW|ST|AT|WT)/i;
+
+/**
+ * The game is split into missions: one per ReadWell part when the items
+ * carry part codes (the Level 2 quest), otherwise every MISSION_SIZE
+ * questions. Stars reward effort, one per question answered, never
+ * correctness: the child mustn't be able to tell right from wrong, or the
+ * assessment stops measuring what they know.
+ */
+const MISSION_SIZE = 5;
+const MISSION_COLORS = ["#0f766e", "#2563eb", "#7c3aed", "#ea580c", "#db2777", "#ca8a04"];
+const PRAISE = ["Nice work!", "Super!", "You did it!", "Awesome!", "Way to go!", "High five!", "You're a star!", "Brilliant!"];
+
+interface Mission {
+  key: string;
+  title: string;
+  subtitle: string;
+  color: string;
+  /** The ReadWell sitting (1, 2, or 3 for writing); null for forms without parts. */
+  sitting: number | null;
+  partLabel: string | null;
+  /** Item indexes [start, end). */
+  start: number;
+  end: number;
+}
 
 function storageKey(prefix: string, id: string) { return `rw:${prefix}:${id}`; }
 function readJson<T>(key: string, fallback: T): T { try { return JSON.parse(localStorage.getItem(key) ?? "null") ?? fallback; } catch { return fallback; } }
@@ -56,6 +82,50 @@ function speak(text: string) {
   window.speechSynthesis.speak(utterance);
 }
 function itemSpokenText(item: KioskItem) { return [item.passage, item.prompt].filter(Boolean).join(". "); }
+function isAnswered(answer: unknown) { return typeof answer === "string" ? answer.trim().length > 0 : answer !== undefined && answer !== null; }
+
+function buildMissions(items: KioskItem[]): Mission[] {
+  const byPart = items.length > 0 && items.every((item) => PART_CODE.test(item.id));
+  const missions: Mission[] = [];
+  items.forEach((item, index) => {
+    const part = partFor(item);
+    const key = byPart ? part.code : String(Math.floor(index / MISSION_SIZE));
+    const last = missions[missions.length - 1];
+    if (last && last.key === key) { last.end = index + 1; return; }
+    const n = missions.length;
+    missions.push(byPart
+      ? { key, title: part.title, subtitle: part.subtitle, color: part.color, sitting: part.sitting, partLabel: `PART ${part.number} · ${part.code}`, start: index, end: index + 1 }
+      : { key, title: `Mission ${n + 1}`, subtitle: "", color: MISSION_COLORS[n % MISSION_COLORS.length], sitting: null, partLabel: null, start: index, end: index + 1 });
+  });
+  for (const m of missions) if (!m.partLabel) m.subtitle = `${m.end - m.start} question${m.end - m.start === 1 ? "" : "s"}`;
+  return missions;
+}
+
+/** The path of missions across a little sky, with Sunny's face at the current one. */
+function QuestMap({ missions, current, children }: { missions: Mission[]; current: number; children?: ReactNode }) {
+  const stops = missions.length + 1; // the trophy at the end
+  const at = (i: number) => ((Math.min(i, stops - 1) + 0.5) / stops) * 100;
+  return (
+    <div className="rw-map">
+      <span className="rw-cloud" aria-hidden="true" /><span className="rw-cloud c2" aria-hidden="true" /><span className="rw-cloud c3" aria-hidden="true" />
+      <div className="rw-path" role="img" aria-label={current >= missions.length ? "Every mission done" : `Quest map: mission ${current + 1} of ${missions.length}`} style={{ gridTemplateColumns: `repeat(${stops}, 1fr)` }}>
+        <div className="rw-path-line" style={{ left: `${at(0)}%`, right: `${100 - at(stops - 1)}%` }} />
+        <div className="rw-path-fill" style={{ left: `${at(0)}%`, width: `${at(current) - at(0)}%` }} />
+        {missions.map((m, i) => (
+          <span key={m.key + i} className={`rw-node ${i < current ? "done" : i === current ? "current" : ""}`} style={{ "--node-color": m.color } as CSSProperties}>
+            {i < current ? "★" : ""}
+          </span>
+        ))}
+        <span className="rw-node goal">🏆</span>
+        <div className="rw-map-face" style={{ left: `${at(current)}%` }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img key={current} src={SUNNY_FACE_SRC} alt="" />
+        </div>
+      </div>
+      {children && <div className="rw-map-caption">{children}</div>}
+    </div>
+  );
+}
 
 export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
   const router = useRouter();
@@ -69,8 +139,14 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
   const [isOnline, setIsOnline] = useState(true);
   const [speechSupported, setSpeechSupported] = useState(false);
   const [storySeconds, setStorySeconds] = useState(0);
+  const [soundOn, setSoundOn] = useState(true);
+  /** The mission just finished, while its celebration is showing. */
+  const [celebrating, setCelebrating] = useState<number | null>(null);
+  const [starBump, setStarBump] = useState(0);
   const pendingRef = useRef<Record<string, unknown>>({});
   const storyTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const starsRef = useRef<HTMLSpanElement>(null);
+  const finishCelebrated = useRef(false);
 
   const pendingKey = storageKey("pending", sessionId);
   const stateKey = storageKey("state", sessionId);
@@ -104,18 +180,20 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsOnline(navigator.onLine);
     setSpeechSupported(typeof window.speechSynthesis !== "undefined");
+    setSoundOn(soundEnabled());
     pendingRef.current = readJson<Record<string, unknown>>(pendingKey, {});
     load();
   }, [load, pendingKey]);
 
   const item = state?.items[qIndex];
-  const part = partFor(item);
-  const isLevel2 = state?.assessmentLevel === 2 || state?.assessmentVersion === 2 || state?.items.some((entry) => /^(LS|SV|LC|VO|CP|SA|BL|RW|NW|HW|ST|AT|WT)/i.test(entry.id));
+  const missions = state ? buildMissions(state.items) : [];
+  const missionIndexOf = (index: number) => Math.max(0, missions.findIndex((m) => index >= m.start && index < m.end));
+  const missionIndex = missionIndexOf(qIndex);
+  const mission = missions[missionIndex];
   const savedAnswer = item ? state?.answersByItemId[item.id] : undefined;
   const savedString = typeof savedAnswer === "string" ? savedAnswer : "";
-  const partIndex = Math.max(0, PARTS.findIndex((candidate) => candidate.code === part.code));
-  const partProgress = isLevel2 ? Math.round(((partIndex + 1) / PARTS.length) * 100) : Math.round(((qIndex + 1) / (state?.items.length || 1)) * 100);
   const isStory = item?.id.toUpperCase().startsWith("ST");
+  const stars = state ? state.items.filter((entry) => isAnswered(state.answersByItemId[entry.id])).length : 0;
 
   useEffect(() => {
     if (!started || !item || !isStory || state?.status === "completed") return;
@@ -130,6 +208,14 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
     if (started && item && speechSupported) speak(itemSpokenText(item));
     return () => window.speechSynthesis?.cancel();
   }, [item, started, speechSupported]);
+
+  // The big finish, once per visit to the finished screen.
+  useEffect(() => {
+    if (state?.status !== "completed" || finishCelebrated.current) return;
+    finishCelebrated.current = true;
+    playSound("quest");
+    burst("quest");
+  }, [state?.status]);
 
   const flushPending = useCallback(async () => {
     const entries = Object.entries(pendingRef.current);
@@ -168,6 +254,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
 
   function saveAnswer(answer: unknown) {
     if (!item) return;
+    const firstAnswer = !isAnswered(state?.answersByItemId[item.id]) && isAnswered(answer);
     pendingRef.current[item.id] = answer;
     writeJson(pendingKey, pendingRef.current);
     setState((current) => {
@@ -177,6 +264,13 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
       return next;
     });
     flushPending();
+    if (firstAnswer) {
+      playSound("star");
+      burst("star", originOf(starsRef.current));
+      setStarBump((n) => n + 1);
+    } else if (item.type === "choice") {
+      playSound("tap");
+    }
   }
 
   function recordMic() {
@@ -194,39 +288,145 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
 
   async function next() {
     if (!state || !item) return;
-    if (qIndex < state.items.length - 1) { setQIndex((index) => index + 1); return; }
+    if (qIndex < state.items.length - 1) {
+      if (missionIndexOf(qIndex + 1) !== missionIndex) {
+        setCelebrating(missionIndex);
+        playSound("mission");
+        burst("mission");
+        if (speechSupported) speak("Mission complete! Great job!");
+        return;
+      }
+      setQIndex((index) => index + 1);
+      return;
+    }
     setCompleting(true);
     const ok = await complete();
     setCompleting(false);
     if (!ok) localStorage.setItem(pendingCompleteKey, "1");
   }
 
-  if (error) return <div className="rw-assessment-shell"><div className="rw-message-card"><SunnyAvatar size={92} /><h1>Let&apos;s try again</h1><p>{error}</p><button className="rw-primary" onClick={load}>Try again</button></div></div>;
-  if (!state) return <div className="rw-assessment-shell"><div className="rw-loading">Loading Sunny&apos;s reading quest…</div></div>;
-  if (state.status === "completed") return <div className="rw-assessment-shell"><div className="rw-message-card"><div className="rw-success-orb"><CheckIcon /></div><h1>Quest complete!</h1><p>You worked very hard today. Go tell your teacher you finished.</p><button className="rw-primary" onClick={() => router.push("/login")}>Finish</button></div></div>;
-  if (!item) return <div className="rw-assessment-shell"><div className="rw-message-card"><h1>Assessment ready</h1><p>Your teacher hasn&apos;t added the Level 2 questions yet.</p></div></div>;
+  function continueQuest() {
+    setCelebrating(null);
+    setQIndex((index) => index + 1);
+  }
 
-  const canProceed = item && (item.type === "choice" ? !!savedString : item.type === "text" ? savedString.trim().length > 0 : !!savedString);
-  const firstInPart = qIndex === 0 || partFor(state.items[qIndex - 1]).code !== part.code;
-  const sittingLabel = part.sitting === 1 ? "First sitting" : part.sitting === 2 ? "Second sitting" : "Writing time";
+  function toggleSound() {
+    const on = !soundOn;
+    setSoundEnabled(on);
+    setSoundOn(on);
+    if (on) playSound("tap");
+  }
 
-  if (!started) return <div className="rw-assessment-shell"><div className="rw-welcome-card"><SunnyAvatar size={138} /><div className="rw-eyebrow">{state.assessmentLevel ? `LEVEL ${state.assessmentLevel}${state.assessmentForm ? ` · ${state.assessmentForm === "Final" ? "FINAL" : `FORM ${state.assessmentForm}`}` : ""}` : "READ WELL ASSESSMENT"}</div><h1>Ready for a reading quest?</h1><p>Hi, {state.studentName.split(" ")[0]}! We&apos;ll explore sounds, words, stories and writing together. There are no wrong answers — just try your best.</p><button className="rw-primary rw-start" onClick={() => { setStarted(true); if (item && speechSupported) speak(itemSpokenText(item)); }}>Let&apos;s start <span>→</span></button><div className="rw-quest-note">13 mini-missions · 2 short sittings · lots of high fives</div></div></div>;
+  const firstName = state?.studentName.split(" ")[0] ?? "";
+
+  if (error) return <div className="rw-assessment-shell"><div className="rw-message-card"><AnimatedSunny mood="think" size={130} className="rw-celebrate-sunny" /><h1>Let&apos;s try again</h1><p>{error}</p><button className="rw-primary" onClick={load}>Try again</button></div></div>;
+  if (!state) return <div className="rw-assessment-shell"><div className="rw-loading"><AnimatedSunny mood="read" size={110} className="rw-celebrate-sunny" />Loading Sunny&apos;s reading quest…</div></div>;
+  if (state.status === "completed") return (
+    <div className="rw-assessment-shell">
+      {missions.length > 0 && <QuestMap missions={missions} current={missions.length} />}
+      <div className="rw-celebrate-card">
+        <AnimatedSunny mood="trophy" size={180} say={firstName ? `You did it, ${firstName}!` : "You did it!"} className="rw-celebrate-sunny" />
+        <h1>Quest complete!</h1>
+        <div className="rw-badge" aria-label={`${stars} stars earned`}><strong>⭐ {stars}</strong><small>Reading star</small></div>
+        {missions.length > 1 && (
+          <div className="rw-stamps" aria-hidden="true">
+            {missions.map((m, i) => <span key={m.key + i} className="rw-stamp" style={{ "--node-color": m.color, animationDelay: `${300 + i * 70}ms` } as CSSProperties}>★</span>)}
+          </div>
+        )}
+        <p>You worked very hard today. Go tell your teacher you finished.</p>
+        <button className="rw-primary" onClick={() => router.push("/login")}>Finish</button>
+      </div>
+    </div>
+  );
+  if (!item || !mission) return <div className="rw-assessment-shell"><div className="rw-message-card"><AnimatedSunny mood="think" size={130} className="rw-celebrate-sunny" /><h1>Assessment ready</h1><p>Your teacher hasn&apos;t added the questions yet.</p></div></div>;
+
+  const questName = state.assessmentLevel ? `Level ${state.assessmentLevel} reading quest` : "Reading quest";
+  const sittings = new Set(missions.map((m) => m.sitting).filter((s) => s !== null && s < 3)).size;
+
+  if (!started) return (
+    <div className="rw-assessment-shell">
+      <div className="rw-welcome-card">
+        <AnimatedSunny mood="wave" size={170} say={`Hi, ${firstName}!`} className="rw-celebrate-sunny" />
+        <div className="rw-eyebrow">{state.assessmentLevel ? `LEVEL ${state.assessmentLevel}${state.assessmentForm ? ` · ${state.assessmentForm === "Final" ? "FINAL" : `FORM ${state.assessmentForm}`}` : ""}` : "READ WELL ASSESSMENT"}</div>
+        <h1>Ready for a reading quest?</h1>
+        <p>We&apos;ll explore sounds, words, stories and writing together. There are no wrong answers. Just try your best!</p>
+        <button className="rw-primary rw-start" onClick={() => { setStarted(true); playSound("tap"); if (item && speechSupported) speak(itemSpokenText(item)); }}>Let&apos;s start <span>→</span></button>
+        <div className="rw-quest-note">
+          {missions.length} mini-mission{missions.length === 1 ? "" : "s"}
+          {sittings > 1 ? ` · ${sittings} short sittings` : ""} · a star for every answer
+        </div>
+      </div>
+    </div>
+  );
+
+  if (celebrating !== null) {
+    const done = missions[celebrating];
+    const upNext = missions[celebrating + 1];
+    const earned = state.items.slice(done.start, done.end).filter((entry) => isAnswered(state.answersByItemId[entry.id])).length;
+    const breakTime = !!upNext && done.sitting !== null && upNext.sitting !== null && upNext.sitting !== done.sitting;
+    return (
+      <div className="rw-assessment-shell">
+        <QuestMap missions={missions} current={celebrating + 1} />
+        <div className="rw-celebrate-card">
+          <AnimatedSunny mood="cheer" size={160} say="Mission complete!" className="rw-celebrate-sunny" />
+          <div className="rw-eyebrow">MISSION {celebrating + 1} OF {missions.length}</div>
+          <h1>{done.title}: done!</h1>
+          <div className="rw-earned" aria-label={`${earned} stars`}>
+            {Array.from({ length: Math.min(earned, 10) }, (_, i) => <span key={i} style={{ animationDelay: `${150 + i * 90}ms` }}>⭐</span>)}
+          </div>
+          {breakTime && <div className="rw-break-note">Time for a little break! Your teacher will tell you when to start the next part.</div>}
+          {upNext && <p>Next up: <strong>{upNext.title}</strong>{upNext.partLabel ? ` · ${upNext.subtitle}` : ""}</p>}
+          <button className="rw-primary rw-start" onClick={continueQuest} autoFocus>Next mission <span>→</span></button>
+        </div>
+      </div>
+    );
+  }
+
+  const canProceed = item.type === "choice" ? !!savedString : item.type === "text" ? savedString.trim().length > 0 : !!savedString;
+  const firstInMission = qIndex === mission.start;
+  const leftInMission = mission.end - (qIndex + 1);
+  const lastQuestion = qIndex === state.items.length - 1;
+  const sittingLabel = mission.sitting === 1 ? "First sitting" : mission.sitting === 2 ? "Second sitting" : "Writing time";
+
+  let mood: SunnyMood;
+  let say: string;
+  if (recording) { mood = "listen"; say = "I'm listening…"; }
+  else if (item.type === "text" && canProceed) { mood = "thumbs"; say = "Looking good! Tap Next when you're done."; }
+  else if (canProceed) { mood = qIndex % 2 ? "cheer" : "thumbs"; say = PRAISE[qIndex % PRAISE.length]; }
+  else if (item.type === "mic") { mood = "read"; say = isStory ? "Read the story to me!" : "Tap the mic and read to me!"; }
+  else if (item.type === "text") { mood = "think"; say = "Write it your way!"; }
+  else { mood = "think"; say = "Which one do you think?"; }
 
   return <div className="rw-assessment-shell">
     {!isOnline && <div className="rw-offline-banner">You&apos;re offline — your answers are safe on this device.</div>}
-    <div className="rw-quest-header"><div><div className="rw-brand"><span className="rw-brand-dot">✦</span> Read Well</div><div className="rw-header-sub">{isLevel2 ? "Level 2 reading quest" : "Reading quest"}</div></div><div className="rw-header-score"><span className="rw-spark">✦</span> Mission {isLevel2 ? `${part.number} of 13` : `${qIndex + 1} of ${state.items.length}`}</div></div>
-    <div className="rw-progress-track"><div className="rw-progress-fill" style={{ width: `${partProgress}%` }} /></div>
-    <div className="rw-sitting-row"><span className="rw-sitting-pill">{sittingLabel}</span><span>{firstInPart ? "New mission" : "Keep going!"}</span>{syncing && <span className="rw-saving">Saving…</span>}</div>
-    <main className="rw-mission-card">
-      <div className="rw-mission-top"><div className="rw-part-badge" style={{ background: part.color }}>PART {part.number} · {part.code}</div>{speechSupported && <button className="rw-listen" onClick={() => speak(itemSpokenText(item))}><SpeakerIcon size={17} /> Listen</button>}</div>
-      {firstInPart && <div className="rw-part-intro"><strong>{part.title}</strong><span>{part.subtitle}</span></div>}
-      {item.passage && <div className="rw-passage">{item.passage}</div>}
-      <h1 className="rw-prompt">{item.prompt}</h1>
-      {isStory && <div className="rw-timer"><span className="rw-timer-dot" /> Story time {Math.floor(storySeconds / 60)}:{String(storySeconds % 60).padStart(2, "0")}</div>}
-      {item.type === "choice" && item.options && <div className="rw-options">{item.options.map((option) => <button key={option} className={`rw-option ${savedString === option ? "selected" : ""}`} onClick={() => saveAnswer(option)}><span className="rw-option-letter">{String.fromCharCode(65 + item.options!.indexOf(option))}</span>{option}{savedString === option && <span className="rw-check">✓</span>}</button>)}</div>}
-      {item.type === "text" && <textarea className="rw-writing-input" value={savedString} onChange={(event) => saveAnswer(event.target.value)} placeholder="Write your answer here…" rows={3} autoFocus />}
-      {item.type === "mic" && <div className="rw-mic-wrap"><button className={`rw-mic ${savedString ? "done" : recording ? "recording" : ""}`} onClick={recordMic} aria-label="Read aloud"><MicIcon /></button><strong>{savedString ? "Nice reading! ✓" : recording ? "Sunny is listening…" : "Tap to read aloud"}</strong><small>Take your time. You can try once.</small></div>}
-    </main>
-    <div className="rw-actions"><span className="rw-encouragement">{canProceed ? "Great work! Ready for the next one?" : "Take your time — you can do it."}</span>{canProceed && <button className="rw-primary" onClick={next} disabled={completing}>{completing ? "Finishing…" : qIndex === state.items.length - 1 ? "Finish quest ✓" : "Next mission →"}</button>}</div>
+    <div className="rw-quest-header">
+      <div><div className="rw-brand"><span className="rw-brand-dot">✦</span> Read Well</div><div className="rw-header-sub">{questName}</div></div>
+      <div className="rw-hud">
+        <span ref={starsRef} key={starBump} className={`rw-stars ${starBump ? "bump" : ""}`} aria-label={`${stars} stars`}><span className="rw-stars-icon" aria-hidden="true">⭐</span>{stars}</span>
+        <button className={`rw-sound ${soundOn ? "" : "off"}`} onClick={toggleSound} aria-pressed={soundOn} aria-label={soundOn ? "Turn sounds off" : "Turn sounds on"}><SpeakerIcon size={17} color="currentColor" /></button>
+      </div>
+    </div>
+    <QuestMap missions={missions} current={missionIndex}>
+      {mission.sitting !== null && <span className="rw-map-pill" style={{ background: mission.color }}>{sittingLabel}</span>}
+      <span>Mission {missionIndex + 1} of {missions.length}</span>
+      {syncing && <span className="rw-saving">Saving…</span>}
+    </QuestMap>
+    <div className="rw-stage">
+      <AnimatedSunny mood={mood} size={120} say={say} peek className="rw-stage-sunny" />
+      <main className="rw-mission-card">
+        <div className="rw-mission-top"><div className="rw-part-badge" style={{ background: mission.color }}>{mission.partLabel ?? `MISSION ${missionIndex + 1}`}</div>{speechSupported && <button className="rw-listen" onClick={() => speak(itemSpokenText(item))}><SpeakerIcon size={17} color="currentColor" /> Listen</button>}</div>
+        {firstInMission && <div className="rw-part-intro"><strong>{mission.title}</strong><span>{mission.subtitle}</span></div>}
+        {item.passage && <div className="rw-passage">{item.passage}</div>}
+        <h1 className="rw-prompt">{item.prompt}</h1>
+        {isStory && <div className="rw-timer"><span className="rw-timer-dot" /> Story time {Math.floor(storySeconds / 60)}:{String(storySeconds % 60).padStart(2, "0")}</div>}
+        {item.type === "choice" && item.options && <div className="rw-options">{item.options.map((option) => <button key={option} className={`rw-option ${savedString === option ? "selected" : ""}`} onClick={() => saveAnswer(option)}><span className="rw-option-letter">{String.fromCharCode(65 + item.options!.indexOf(option))}</span>{option}{savedString === option && <span className="rw-check">✓</span>}</button>)}</div>}
+        {item.type === "text" && <textarea className="rw-writing-input" value={savedString} onChange={(event) => saveAnswer(event.target.value)} placeholder="Write your answer here…" rows={3} autoFocus />}
+        {item.type === "mic" && <div className="rw-mic-wrap"><button className={`rw-mic ${savedString ? "done" : recording ? "recording" : ""}`} onClick={recordMic} aria-label="Read aloud"><MicIcon /></button><strong>{savedString ? "Nice reading! ✓" : recording ? "Sunny is listening…" : "Tap to read aloud"}</strong><small>Take your time. You can try once.</small></div>}
+      </main>
+    </div>
+    <div className="rw-actions">
+      <span className="rw-encouragement">{lastQuestion ? "Last one. You're almost there!" : leftInMission === 0 ? "Last one in this mission!" : `${leftInMission} more in this mission`}</span>
+      {canProceed && <button className="rw-primary" onClick={next} disabled={completing}>{completing ? "Finishing…" : lastQuestion ? "Finish quest ✓" : leftInMission === 0 ? "Finish mission ★" : "Next →"}</button>}
+    </div>
   </div>;
 }
