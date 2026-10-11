@@ -1,11 +1,12 @@
 import confetti from "canvas-confetti";
 
 /**
- * Sounds and confetti for the student game. Sounds are Kenney's CC0
- * "Interface Sounds" and "Music Jingles" packs (public/sounds/CREDITS.txt),
+ * Sounds and confetti for the student game. The sounds are short stingers
+ * composed from the sound of Ghanaian instruments (talking drum, gyil,
+ * gankogui, shekere; scripts/make-game-sounds.py, public/sounds/CREDITS.txt),
  * served from public/ and precached by the service worker so they work
  * offline. A child can mute them with the speaker button; the choice is
- * kept on the device.
+ * kept on the device. Sunny's voice is separate (src/lib/voice.ts).
  */
 export type GameSound = "tap" | "star" | "mission" | "quest" | "oops";
 
@@ -34,7 +35,8 @@ export function setSoundEnabled(on: boolean) {
 let audioCtx: AudioContext | null = null;
 const buffers = new Map<GameSound, Promise<AudioBuffer | null>>();
 
-function context(): AudioContext | null {
+/** The one audio context the game shares: sounds here, Sunny's recorded voice in voice.ts. */
+export function getAudioContext(): AudioContext | null {
   if (audioCtx) return audioCtx;
   const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!Ctor) return null;
@@ -56,7 +58,7 @@ function load(ctx: AudioContext, name: GameSound): Promise<AudioBuffer | null> {
 
 export function playSound(name: GameSound) {
   if (typeof window === "undefined" || !soundEnabled()) return;
-  const ctx = context();
+  const ctx = getAudioContext();
   if (!ctx) return;
   // Browsers keep audio suspended until the first tap; resuming before that just fails.
   if (ctx.state === "suspended") ctx.resume().catch(() => {});

@@ -202,13 +202,34 @@ their own device at `/student`
   is the same size in every mood and swapping moods doesn't make him jump.
   To add a mood, generate it the same way from `sunny.png` and add it to
   `SUNNY_MOOD_SRC` and `PRECACHE_ASSETS` in `public/sw.js`.
-- **Sounds and confetti** (`src/lib/gameFx.ts`). Short sounds for a tap, a
-  star, a finished mission and the finished quest are from Kenney's CC0
-  "Interface Sounds" and "Music Jingles" packs (`public/sounds/CREDITS.txt`),
-  played with Web Audio so the service worker can serve them offline. A
-  speaker button mutes them, remembered on the device. Confetti is
-  `canvas-confetti`, run without its web worker because the CSP allows no
-  `blob:` workers.
+- **Sounds and confetti** (`src/lib/gameFx.ts`). Short stingers for a
+  tap, a star, a finished mission, the finished quest and a wrong answer
+  are composed from the sound of Ghanaian instruments: a talking-drum glide,
+  a gyil (xylophone) in the pentatonic scale, the gankogui double bell
+  keeping highlife's 12/8 time, and a shekere. `scripts/make-game-sounds.py`
+  synthesises them, so they're original to the project and carry no licence;
+  they're inspired by those instruments, not recordings of Ghanaian
+  musicians, so swap in real recordings (same file names in `public/sounds/`)
+  when you have them. Played with Web Audio so the service worker can serve
+  them offline. A speaker button mutes them, remembered on the device.
+  Confetti is `canvas-confetti`, run without its web worker because the CSP
+  allows no `blob:` workers.
+- **Sunny's voice** (`src/lib/voice.ts`). Sunny speaks with recorded clips
+  in a Ghanaian-accented voice (`public/voice/`, 76 lines: his reactions and
+  every Level 1 prompt except the writing ones). A clip is found by a hash of
+  the exact text Sunny is about to say (`src/lib/voiceKey.ts`), so a line an
+  admin writes, or one that has been reworded, has no clip and is spoken by
+  the device's own voice, picked as the nearest to West African English the
+  device has (`en-GH`, then `en-NG`, `en-KE`, `en-ZA`, `en-GB`). The clips are
+  an AI voice (Qwen Audio TTS through Higgsfield) asked for "a warm Ghanaian
+  English accent, like a kind primary school teacher in Accra"; **nobody has
+  checked how Ghanaian it sounds, so listen to it**. To use a real Ghanaian
+  teacher's recording for any line, or to fill a gap, run
+  `python3 scripts/add-voice.py recording.m4a "Tap the ram."` (any audio file;
+  the text must match what Sunny says exactly). It trims, converts, and
+  updates `src/lib/voiceManifest.json` and the offline list in `public/sw.js`;
+  `src/lib/voice.test.ts` checks everything still fits and lists which Level
+  1 lines are still unrecorded.
 
 ## ReadWell levels and assessments
 

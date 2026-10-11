@@ -88,5 +88,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|webp)$).*)"],
+  // Static files a signed-out student's device needs (Sunny's pictures,
+  // moods, voice and the game sounds) bypass the sign-in redirect.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|webp|mp3)$).*)"],
 };

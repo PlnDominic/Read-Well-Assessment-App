@@ -6,6 +6,8 @@ import { MicIcon, SpeakerIcon } from "@/components/icons";
 import { AnimatedSunny, SUNNY_FACE_SRC, type SunnyMood } from "@/components/AnimatedSunny";
 import { burst, originOf, playSound, setSoundEnabled, soundEnabled } from "@/lib/gameFx";
 import { optionPicture, type OptionPicture } from "@/lib/optionPicture";
+import { REACTION_LINES, itemSpokenText } from "@/lib/spoken";
+import { canSpeak, sayAloud, stopSpeaking } from "@/lib/voice";
 
 interface KioskItem {
   id: string;
@@ -122,23 +124,6 @@ function storageKey(prefix: string, id: string) { return `rw:${prefix}:${id}`; }
 function readJson<T>(key: string, fallback: T): T { try { return JSON.parse(localStorage.getItem(key) ?? "null") ?? fallback; } catch { return fallback; } }
 function writeJson(key: string, value: unknown) { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* best effort */ } }
 function partFor(parts: Part[], item?: KioskItem) { return parts.find((part) => item?.id.toUpperCase().startsWith(part.code)); }
-function speak(text: string) {
-  if (typeof window === "undefined" || !window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "en-US";
-  utterance.rate = 0.86;
-  window.speechSynthesis.speak(utterance);
-}
-/**
- * What Sunny reads out: the item's `say` if it has one, otherwise the
- * passage and prompt. A read-aloud item never reads its passage, which is
- * what the child is meant to read themselves.
- */
-function itemSpokenText(item: KioskItem) {
-  if (item.say) return item.say;
-  return item.type === "mic" ? item.prompt : [item.passage, item.prompt].filter(Boolean).join(". ");
-}
 function isAnswered(answer: unknown) { return typeof answer === "string" ? answer.trim().length > 0 : answer !== undefined && answer !== null; }
 // What a read-aloud item records when the child skips it; scored as wrong (evaluateResponse in src/lib/kiosk.ts).
 const SKIPPED = "skipped";
@@ -256,7 +241,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
     // Browser-only session bootstrapping happens after hydration.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsOnline(navigator.onLine);
-    setSpeechSupported(typeof window.speechSynthesis !== "undefined");
+    setSpeechSupported(canSpeak());
     setSoundOn(soundEnabled());
     pendingRef.current = readJson<Record<string, unknown>>(pendingKey, {});
     load();
@@ -282,8 +267,8 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
   }, [item, isStory, started, state?.status]);
 
   useEffect(() => {
-    if (started && item && speechSupported) speak(itemSpokenText(item));
-    return () => window.speechSynthesis?.cancel();
+    if (started && item && speechSupported) sayAloud(itemSpokenText(item));
+    return () => stopSpeaking();
   }, [item, started, speechSupported]);
 
   // The big finish, once per visit to the finished screen.
@@ -319,20 +304,20 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
     if (kind === "right") {
       playSound("star");
       burst("star", originOf(starsRef.current));
-      if (speechSupported) speak("That's right!");
+      if (speechSupported) sayAloud(REACTION_LINES.right);
     } else if (kind === "solved") {
       playSound("star");
       burst("star");
-      if (speechSupported) speak("You got it!");
+      if (speechSupported) sayAloud(REACTION_LINES.solved);
     } else if (kind === "wrong") {
       playSound("oops");
-      if (speechSupported) speak("Not quite. Try again!");
+      if (speechSupported) sayAloud(REACTION_LINES.wrong);
       // Sunny's sheepish "oops" first, then the encouraging pose.
       const timer = setTimeout(() => setEncouraged(feedbackKey), 1400);
       return () => clearTimeout(timer);
     } else if (kind === "revealed") {
       playSound("oops");
-      if (speechSupported) speak("That's okay. It's this one!");
+      if (speechSupported) sayAloud(REACTION_LINES.revealed);
     }
   }, [feedbackKey, speechSupported]);
 
@@ -476,7 +461,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
         setCelebrating(missionIndex);
         playSound("mission");
         burst("mission");
-        if (speechSupported) speak("Mission complete! Great job!");
+        if (speechSupported) sayAloud(REACTION_LINES.missionComplete);
         return;
       }
       setQIndex((index) => index + 1);
@@ -533,7 +518,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
         <div className="rw-eyebrow">{state.assessmentLevel ? `LEVEL ${state.assessmentLevel}${state.assessmentForm ? ` · ${state.assessmentForm === "Final" ? "FINAL" : `FORM ${state.assessmentForm}`}` : ""}` : "READ WELL ASSESSMENT"}</div>
         <h1>Ready for a reading quest?</h1>
         <p>We&apos;ll explore sounds, words, stories and writing together. There are no wrong answers. Just try your best!</p>
-        <button className="rw-primary rw-start" onClick={() => { setStarted(true); playSound("tap"); if (item && speechSupported) speak(itemSpokenText(item)); }}>Let&apos;s start <span>→</span></button>
+        <button className="rw-primary rw-start" onClick={() => { setStarted(true); playSound("tap"); if (item && speechSupported) sayAloud(itemSpokenText(item)); }}>Let&apos;s start <span>→</span></button>
         <div className="rw-quest-note">
           {missions.length} mini-mission{missions.length === 1 ? "" : "s"}
           {sittings > 1 ? ` · ${sittings} short sittings` : ""} · a star for every answer
@@ -619,7 +604,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
     <div className="rw-stage">
       <AnimatedSunny mood={mood} size={120} say={say} peek className="rw-stage-sunny" />
       <main className="rw-mission-card">
-        <div className="rw-mission-top"><div className="rw-part-badge" style={{ background: mission.color }}>{mission.partLabel ?? `MISSION ${missionIndex + 1}`}</div>{speechSupported && <button className="rw-listen" onClick={() => speak(itemSpokenText(item))}><SpeakerIcon size={17} color="currentColor" /> Listen</button>}</div>
+        <div className="rw-mission-top"><div className="rw-part-badge" style={{ background: mission.color }}>{mission.partLabel ?? `MISSION ${missionIndex + 1}`}</div>{speechSupported && <button className="rw-listen" onClick={() => sayAloud(itemSpokenText(item))}><SpeakerIcon size={17} color="currentColor" /> Listen</button>}</div>
         {firstInMission && <div className="rw-part-intro"><strong>{mission.title}</strong><span>{mission.subtitle}</span></div>}
         {item.passage && (wordCard
           ? <div className="rw-word-card">{item.passage}</div>

@@ -70,6 +70,29 @@ const PICTURES = [
   "27a1.svg", "2b05.svg", "2b06.svg", "book-back.svg", "book-front.svg", "book-upside-down.svg",
   "gate.svg", "mop.svg", "roof.svg"
 ];
+// Sunny's recorded voice (src/lib/voice.ts), by file name under /voice/.
+// voice.test.ts fails if a clip is missing from this list.
+const VOICE_CLIPS = [
+  "002670c0b797eb.mp3", "002aa09ff018a4.mp3", "00e29499ebea6d.mp3", "01286c7fb0dc17.mp3",
+  "01e81181f12d69.mp3", "023ab265ec3b9e.mp3", "02ee2a0bcdc3cd.mp3", "036a99f78c0f45.mp3",
+  "03861b6ff2ac02.mp3", "041983a38179ca.mp3", "0429893bdd15d3.mp3", "047c7e4bede014.mp3",
+  "04bbe2e248cc66.mp3", "05041a15316d69.mp3", "05596db1d65809.mp3", "056ffd8618a84c.mp3",
+  "05e3ed1111f686.mp3", "0658b64a402e09.mp3", "065f9a89dafdfb.mp3", "071a6d4784e5ce.mp3",
+  "078b1a2df3797a.mp3", "079d5fbcfb9e91.mp3", "07e4c44f67a177.mp3", "0826c38476f9fb.mp3",
+  "08988e5cefe011.mp3", "0949b87a756ad0.mp3", "0966ac7728165c.mp3", "09f033f093aab1.mp3",
+  "0a1d9bf121cda6.mp3", "0a7546d0071685.mp3", "0b3c04c72125a3.mp3", "0c4c98b37494c4.mp3",
+  "0d776448d3d2a4.mp3", "0da41b5ffc1074.mp3", "0f7032d9aae35b.mp3", "0fa758e5a76750.mp3",
+  "1060ba37869f0f.mp3", "1115126d354ab7.mp3", "12f0acf0c56fb2.mp3", "133502e4091bb4.mp3",
+  "13d016d14bb915.mp3", "1412afb8c4b467.mp3", "14c118035c1ed8.mp3", "14ffe2ce41ca88.mp3",
+  "154c433de7a411.mp3", "1578f0defdade1.mp3", "1592c84b183480.mp3", "1628aef46a890f.mp3",
+  "1660d33ba1f7f8.mp3", "16718b41ae3108.mp3", "171ae52f6e4096.mp3", "17982d0cc23b9c.mp3",
+  "17ad420b844056.mp3", "18d67080798e44.mp3", "18db4a22786163.mp3", "190b278b829c8c.mp3",
+  "190da225805f1b.mp3", "1921daab5ea5a8.mp3", "194aaf2cf029eb.mp3", "19575d9199d3f8.mp3",
+  "197f42bba72ffe.mp3", "1a629172431a62.mp3", "1a93c39ad4ee93.mp3", "1a9e3750d3d660.mp3",
+  "1abba644a0a981.mp3", "1bac99b326c7c6.mp3", "1c3da3a2a9146c.mp3", "1cb9b408dcd630.mp3",
+  "1d0c1bfc0558c2.mp3", "1d7188d1630fc0.mp3", "1ea056cde63d6b.mp3", "1eb2783d92009b.mp3",
+  "1ed815504cc99f.mp3", "1f356c85437e3f.mp3", "1f4879589ed776.mp3", "1f947edf92b2cb.mp3"
+];
 const STAFF_HOMES = ["/teacher", "/admin", "/specialist"];
 
 function isPublicPage(pathname) {
@@ -132,7 +155,13 @@ const recentlySaved = new Map();
 async function precacheAsset(path) {
   const cache = await caches.open(CACHE);
   if (await cache.match(path)) return;
-  await cache.add(path).catch(() => undefined);
+  // Not cache.add(): that would store a sign-in redirect as if it were the file.
+  try {
+    const res = await fetch(path, { credentials: "omit" });
+    if (isCacheableResponse(res)) await cache.put(path, res);
+  } catch {
+    /* offline during install: it's fetched and cached on first use instead */
+  }
 }
 
 self.addEventListener("install", (event) => {
@@ -141,6 +170,7 @@ self.addEventListener("install", (event) => {
       ...PRECACHE_PAGES.map((p) => savePage(p).catch(() => undefined)),
       ...PRECACHE_ASSETS.map(precacheAsset),
       ...PICTURES.map((f) => precacheAsset(`/pictures/${f}`)),
+      ...VOICE_CLIPS.map((f) => precacheAsset(`/voice/${f}`)),
     ]).then(() => self.skipWaiting())
   );
 });
@@ -183,7 +213,7 @@ self.addEventListener("fetch", (event) => {
   // Build assets are content-hashed, so a cached copy is always correct.
   // The avatar images don't change without a new deploy either (a new image
   // would get a new filename), so they get the same cache-first treatment.
-  if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/pictures/") || PRECACHE_ASSETS.includes(url.pathname)) {
+  if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/pictures/") || url.pathname.startsWith("/voice/") || PRECACHE_ASSETS.includes(url.pathname)) {
     event.respondWith(
       caches.open(CACHE).then(async (cache) => {
         const hit = await cache.match(request);

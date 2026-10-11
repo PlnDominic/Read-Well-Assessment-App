@@ -1,0 +1,12 @@
+Sunny's recorded voice: one clip per line he says, named by the hash of the
+exact text (src/lib/voiceKey.ts) and listed in src/lib/voiceManifest.json.
+
+Made with Qwen Audio 3.0 TTS Flash (Alibaba Cloud) through Higgsfield: preset
+voice "Naomi", seed 7, instruction "Warm, friendly Ghanaian English accent,
+like a kind primary school teacher in Accra speaking to young children". It
+is an AI voice asked for a Ghanaian accent. Nobody has checked how Ghanaian
+it sounds: please listen, and replace any clip with a real recording using
+scripts/add-voice.py.
+
+Lines were generated in groups and cut apart at the pauses; each cut was
+checked against the length its text predicts.
