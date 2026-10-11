@@ -26,7 +26,7 @@ export default async function GameEditorPage({ params }: { params: Promise<{ lev
   const { data: skillAreas } = await supabase.from("skill_areas").select("key, name").order("name");
   const { data: games } = await supabase
     .from("assessments")
-    .select("form, show_feedback, items, created_at")
+    .select("form, items, created_at")
     .eq("level", level)
     .eq("delivery", "game")
     .eq("is_active", true)
@@ -45,7 +45,6 @@ export default async function GameEditorPage({ params }: { params: Promise<{ lev
         form={form}
         parts={partsFor(level)}
         initialItems={game?.items ?? []}
-        initialShowFeedback={game?.show_feedback ?? true}
         publishedAt={game?.created_at ?? null}
         skillAreas={skillAreas ?? []}
         copySources={copySources}

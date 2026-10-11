@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { evaluateResponse, itemGivesFeedback, loadSessionForKiosk } from "@/lib/kiosk";
+import { evaluateResponse, loadSessionForKiosk } from "@/lib/kiosk";
 
 /**
  * Kiosk endpoints (student-facing, no auth; see supabase/migrations/0002_rls.sql
@@ -77,28 +77,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ se
   const item = state.items.find((i) => i.id === body.itemId);
   if (!item) return NextResponse.json({ error: "Unknown item" }, { status: 400 });
 
+  // The latest answer before the child moves on is the one scored. The
+  // reply never says whether it was right: the game doesn't tell a child
+  // right from wrong (the ReadWell guide: never correct a child on a scored
+  // item), so the right answers never leave the server.
   const isCorrect = evaluateResponse(item, body.answer);
-
-  // A choice item with a wrong option gets right/wrong feedback in the game,
-  // so only the child's FIRST answer to it is recorded and scored: a retry
-  // is practice, and changing an answer later can't improve the score.
-  // Items with no wrong answer (reading attitude) just keep the latest.
-  // The form can switch feedback off (show_feedback), and then nothing here
-  // tells the child anything about right and wrong, and the latest pick wins.
-  const givesFeedback = state.assessment.show_feedback && itemGivesFeedback(item);
-  if (givesFeedback && state.responses.some((r) => r.item_id === item.id)) {
-    // Nothing is written. A wrong retry also says which answer was right,
-    // since the child has had their go and the score can't change now.
-    const correctOption = isCorrect ? null : item.options?.find((o) => o.isCorrect)?.text ?? null;
-    return NextResponse.json({
-      ok: true,
-      isCorrect,
-      feedback: true,
-      recorded: false,
-      correctOption,
-      currentItemIndex: state.session.current_item_index,
-    });
-  }
 
   const { error: responseError } = await admin
     .from("responses")
@@ -121,12 +104,5 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ se
     .eq("id", sessionId);
   if (sessionError) return NextResponse.json({ error: sessionError.message }, { status: 500 });
 
-  // isCorrect only goes back when the child is meant to see it.
-  return NextResponse.json({
-    ok: true,
-    ...(givesFeedback ? { isCorrect } : {}),
-    feedback: givesFeedback,
-    recorded: true,
-    currentItemIndex: nextIndex,
-  });
+  return NextResponse.json({ ok: true, currentItemIndex: nextIndex });
 }

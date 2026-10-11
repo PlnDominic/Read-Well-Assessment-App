@@ -13,7 +13,7 @@ import { useEffect } from "react";
  * Plain <img>s rather than next/image for the same reason as SunnyAvatar:
  * the service worker precaches these files for offline use.
  */
-export type SunnyMood = "read" | "wave" | "think" | "listen" | "cheer" | "thumbs" | "trophy" | "oops" | "try" | "point";
+export type SunnyMood = "read" | "wave" | "think" | "listen" | "cheer" | "thumbs" | "trophy";
 
 export const SUNNY_MOOD_SRC: Record<SunnyMood, string> = {
   read: "/sunny.png",
@@ -23,9 +23,6 @@ export const SUNNY_MOOD_SRC: Record<SunnyMood, string> = {
   cheer: "/sunny/sunny-cheer.webp",
   thumbs: "/sunny/sunny-thumbs.webp",
   trophy: "/sunny/sunny-trophy.webp",
-  oops: "/sunny/sunny-oops.webp",
-  try: "/sunny/sunny-try.webp",
-  point: "/sunny/sunny-point.webp",
 };
 
 export const SUNNY_FACE_SRC = "/sunny/sunny-face.webp";

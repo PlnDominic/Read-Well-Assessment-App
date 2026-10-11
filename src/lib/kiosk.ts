@@ -58,9 +58,6 @@ export function evaluateResponse(item: AssessmentItem, answer: unknown): boolean
   return false;
 }
 
-// Lives with the other game-item rules, so the admin's preview can use it too.
-export { itemGivesFeedback } from "@/lib/gameItems";
-
 export function normalizeSessionCode(raw: string): string {
   return raw.trim().toUpperCase();
 }
@@ -80,7 +77,7 @@ export function generateSessionCode(): string {
 export async function loadSessionForKiosk(admin: AdminClient, sessionId: string) {
   const { data: session, error } = await admin
     .from("assessment_sessions")
-    .select("id, status, current_item_index, assessment_id, student_id, session_code, assessments(level, form, version, show_feedback)")
+    .select("id, status, current_item_index, assessment_id, student_id, session_code, assessments(level, form, version)")
     .eq("id", sessionId)
     .single();
   if (error || !session) return null;
@@ -103,11 +100,11 @@ export async function loadSessionForKiosk(admin: AdminClient, sessionId: string)
     .eq("id", session.student_id)
     .single();
 
-  const assessmentMeta = session.assessments as unknown as { level: number; form: AssessmentForm | null; version: number; show_feedback: boolean } | null;
+  const assessmentMeta = session.assessments as unknown as { level: number; form: AssessmentForm | null; version: number } | null;
   const items = assessment.items as AssessmentItem[];
   return {
     session,
-    assessment: assessmentMeta ?? { level: 0, form: null, version: 0, show_feedback: true },
+    assessment: assessmentMeta ?? { level: 0, form: null, version: 0 },
     items,
     responses: responses ?? [],
     studentName: student?.name ?? "Student",

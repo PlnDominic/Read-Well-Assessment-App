@@ -31,7 +31,6 @@ export function QuestionEditor({
   parts,
   skillAreas,
   problems,
-  showFeedback,
   canMoveUp,
   canMoveDown,
   onChange,
@@ -47,7 +46,6 @@ export function QuestionEditor({
   parts: readonly Part[];
   skillAreas: SkillArea[];
   problems: string[];
-  showFeedback: boolean;
   canMoveUp: boolean;
   canMoveDown: boolean;
   onChange: (patch: Partial<AssessmentItem>) => void;
@@ -312,7 +310,7 @@ export function QuestionEditor({
 
         <div className="min-w-0">
           <div className="text-xs font-bold uppercase tracking-wide text-[var(--color-muted)] mb-1.5">What the child sees</div>
-          <QuestionPreview item={item} part={part} showFeedback={showFeedback} />
+          <QuestionPreview item={item} part={part} />
         </div>
       </div>
     </div>

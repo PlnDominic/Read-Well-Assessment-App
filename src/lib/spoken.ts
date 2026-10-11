@@ -26,9 +26,5 @@ export function itemSpokenText(item: SpokenItem): string {
 
 /** Sunny's reactions: every line the game speaks that isn't an item's own. */
 export const REACTION_LINES = {
-  right: "That's right!",
-  solved: "You got it!",
-  wrong: "Not quite. Try again!",
-  revealed: "That's okay. It's this one!",
   missionComplete: "Mission complete! Great job!",
 } as const;

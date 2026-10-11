@@ -5,7 +5,6 @@ import { MicIcon, SpeakerIcon } from "@/components/icons";
 import type { AssessmentItem } from "@/lib/database.types";
 import type { Part } from "@/lib/gameParts";
 import { isWordCard, showAsTiles } from "@/lib/gameLayout";
-import { itemGivesFeedback } from "@/lib/gameItems";
 import { optionPicture, type OptionPicture } from "@/lib/optionPicture";
 import { itemSpokenText } from "@/lib/spoken";
 import { canSpeak, sayAloud } from "@/lib/voice";
@@ -19,17 +18,14 @@ import { recordedClip } from "@/lib/voiceClips";
 export function QuestionPreview({
   item,
   part,
-  showFeedback,
 }: {
   item: AssessmentItem;
   part: Part | null;
-  showFeedback: boolean;
 }) {
   const pictures = (item.options ?? []).map((o) => optionPicture(o.text));
   const tiles = showAsTiles(pictures);
   const spoken = itemSpokenText(item);
   const recorded = spoken ? recordedClip(spoken) !== null : false;
-  const marks = showFeedback && itemGivesFeedback(item);
 
   return (
     <div className="flex flex-col gap-3">
@@ -81,9 +77,7 @@ export function QuestionPreview({
       </div>
       <p className="text-xs text-[var(--color-muted)] m-0">
         {item.type === "choice"
-          ? marks
-            ? "Right answers are green here. Children find out when they answer."
-            : "Right answers are green here. Children are never told if they were right on this question."
+          ? "Right answers are green here, for you. Children never see which answer is right."
           : item.type === "mic"
             ? "The child taps the mic and reads. The app listens and checks the words."
             : "The child types their answer, which is checked for spelling."}

@@ -39,7 +39,7 @@ export default async function AdminContentPage({ searchParams }: { searchParams:
 
   const { data: levelAssessments } = await supabase
     .from("assessments")
-    .select("form, delivery, show_feedback, items, created_at")
+    .select("form, delivery, items, created_at")
     .eq("level", LEVEL)
     .eq("is_active", true)
     .not("form", "is", null);
@@ -145,7 +145,7 @@ function GameCell({
 }: {
   level: number;
   form: AssessmentForm;
-  game: { items: AssessmentItem[]; show_feedback: boolean; created_at: string } | null;
+  game: { items: AssessmentItem[]; created_at: string } | null;
 }) {
   const href = `/admin/content/game/${level}/${form}`;
   if (!game) {
@@ -179,7 +179,6 @@ function GameCell({
       </p>
       <ul className="m-0 p-0 list-none text-[13px] text-[var(--color-body)] flex flex-col gap-0.5">
         <li>{kinds}</li>
-        <li>{game.show_feedback ? "Shows children right and wrong" : "Doesn't show right or wrong"}</li>
         <li>Last published {updated}</li>
       </ul>
       <EditLink href={href}>Edit the game</EditLink>

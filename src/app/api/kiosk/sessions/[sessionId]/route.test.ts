@@ -3,9 +3,9 @@ import { NextRequest } from "next/server";
 import type { AssessmentItem } from "@/lib/database.types";
 
 /**
- * The game's answer endpoint: which answers it records, and what it tells
- * the child. The database is a recording stand-in; the scoring rules
- * (evaluateResponse, itemGivesFeedback) are the real ones.
+ * The game's answer endpoint: which answers it records, and that it never
+ * tells the child's device whether one was right. The database is a
+ * recording stand-in; the scoring rule (evaluateResponse) is the real one.
  */
 
 const upserts: { item_id: string; answer: unknown; is_correct: boolean }[] = [];
@@ -44,10 +44,10 @@ const choice = (id: string, skillAreaKey = "letterSounds"): AssessmentItem => ({
 
 const ITEMS = [choice("LS01"), choice("AT01", "readingAttitude")];
 
-function session(showFeedback: boolean, answered: string[] = []) {
+function session(answered: string[] = []) {
   return {
     session: { id: "s1", status: "in_progress", current_item_index: 0 },
-    assessment: { level: 1, form: "A", version: 1, show_feedback: showFeedback },
+    assessment: { level: 1, form: "A", version: 1 },
     items: ITEMS,
     responses: answered.map((item_id) => ({ item_id, answer: "x" })),
     studentName: "Kofi",
@@ -68,48 +68,32 @@ beforeEach(() => {
   upserts.length = 0;
 });
 
-describe("with feedback on", () => {
-  it("records and scores the first answer, and says whether it was right", async () => {
-    loaded = session(true);
-    const { status, body } = await answer("LS01", "b");
+describe("answering", () => {
+  it("records and scores the answer", async () => {
+    loaded = session();
+    const { status } = await answer("LS01", "b");
     expect(status).toBe(200);
     expect(upserts).toEqual([{ session_id: "s1", item_id: "LS01", answer: "b", is_correct: false }]);
-    expect(body).toMatchObject({ feedback: true, isCorrect: false, recorded: true });
   });
 
-  it("checks a retry without recording it, and names the right answer after a wrong one", async () => {
-    loaded = session(true, ["LS01"]);
-    const wrong = await answer("LS01", "c");
-    expect(upserts).toEqual([]);
-    expect(wrong.body).toMatchObject({ feedback: true, isCorrect: false, recorded: false, correctOption: "a" });
-
-    const right = await answer("LS01", "a");
-    expect(upserts).toEqual([]);
-    expect(right.body).toMatchObject({ isCorrect: true, recorded: false, correctOption: null });
-  });
-
-  it("never gives feedback on a reading-attitude question, and keeps the latest answer", async () => {
-    loaded = session(true, ["AT01"]);
-    const { body } = await answer("AT01", "c");
-    expect(upserts).toHaveLength(1);
-    expect(body).toMatchObject({ feedback: false, recorded: true });
-    expect(body).not.toHaveProperty("isCorrect");
-  });
-});
-
-describe("with feedback switched off", () => {
-  it("tells the child nothing about right or wrong", async () => {
-    loaded = session(false);
-    const { body } = await answer("LS01", "b");
-    expect(upserts).toHaveLength(1);
-    expect(body).toMatchObject({ feedback: false, recorded: true });
-    expect(body).not.toHaveProperty("isCorrect");
-    expect(body).not.toHaveProperty("correctOption");
-  });
-
-  it("scores the last pick, as before feedback existed", async () => {
-    loaded = session(false, ["LS01"]);
+  it("scores the latest pick when the child changes their mind", async () => {
+    loaded = session(["LS01"]);
     await answer("LS01", "a");
     expect(upserts).toEqual([{ session_id: "s1", item_id: "LS01", answer: "a", is_correct: true }]);
+  });
+
+  it("never tells the child's device whether the answer was right, or which one was", async () => {
+    loaded = session();
+    for (const pick of ["a", "b"]) {
+      const { body } = await answer("LS01", pick);
+      expect(body).toEqual({ ok: true, currentItemIndex: 1 });
+    }
+  });
+
+  it("records reading-attitude answers the same way", async () => {
+    loaded = session(["AT01"]);
+    const { body } = await answer("AT01", "c");
+    expect(upserts).toHaveLength(1);
+    expect(body).not.toHaveProperty("isCorrect");
   });
 });

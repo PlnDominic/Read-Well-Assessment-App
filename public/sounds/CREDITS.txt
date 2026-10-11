@@ -1,10 +1,10 @@
-The student game's sounds (tap, star, mission, quest, oops) are composed from
+The student game's sounds (tap, star, mission, quest) are composed from
 the sound of Ghanaian instruments by scripts/make-game-sounds.py, as plain
 synthesis, so they're original to this project and carry no licence:
 
-  talking drum  a gliding "dun" (tap, and the beat under mission, quest, oops)
+  talking drum  a gliding "dun" (tap, and the beat under mission and quest)
   gyil          the Ghanaian xylophone, in the C major pentatonic scale (star,
-                the melodies in mission and quest, and the falling pair in oops)
+                and the melodies in mission and quest)
   gankogui      the iron double bell keeping the 12/8 time of highlife (mission, quest)
   shekere       a beaded gourd shaker (star, mission, quest)
 

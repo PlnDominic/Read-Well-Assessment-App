@@ -8,9 +8,9 @@ import confetti from "canvas-confetti";
  * offline. A child can mute them with the speaker button; the choice is
  * kept on the device. Sunny's voice is separate (src/lib/voice.ts).
  */
-export type GameSound = "tap" | "star" | "mission" | "quest" | "oops";
+export type GameSound = "tap" | "star" | "mission" | "quest";
 
-const VOLUME: Record<GameSound, number> = { tap: 0.4, star: 0.5, mission: 0.55, quest: 0.6, oops: 0.5 };
+const VOLUME: Record<GameSound, number> = { tap: 0.4, star: 0.5, mission: 0.55, quest: 0.6 };
 const SOUND_KEY = "rw:sound";
 
 export function soundEnabled(): boolean {

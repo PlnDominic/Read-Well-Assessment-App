@@ -16,7 +16,7 @@ const KIND_LABEL: Record<string, string> = { choice: "👆 Tap", mic: "🎤 Read
 const FOLD_OVER = 24;
 const OTHER = "other";
 
-const snapshot = (items: AssessmentItem[], showFeedback: boolean) => JSON.stringify({ items, showFeedback });
+const snapshot = (items: AssessmentItem[]) => JSON.stringify(items);
 
 /**
  * Builds or edits one form's game: its questions grouped into the missions
@@ -29,7 +29,6 @@ export function GameEditor({
   form,
   parts,
   initialItems,
-  initialShowFeedback,
   publishedAt,
   skillAreas,
   copySources,
@@ -38,15 +37,13 @@ export function GameEditor({
   form: AssessmentForm;
   parts: Part[];
   initialItems: AssessmentItem[];
-  initialShowFeedback: boolean;
   publishedAt: string | null;
   skillAreas: SkillArea[];
   copySources: { form: AssessmentForm; items: AssessmentItem[] }[];
 }) {
   const router = useRouter();
   const [items, setItems] = useState(initialItems);
-  const [showFeedback, setShowFeedback] = useState(initialShowFeedback);
-  const [baseline, setBaseline] = useState(() => snapshot(initialItems, initialShowFeedback));
+  const [baseline, setBaseline] = useState(() => snapshot(initialItems));
   const [openId, setOpenId] = useState<string | null>(null);
   const [attempted, setAttempted] = useState(false);
   const [status, setStatus] = useState<{ ok: boolean; message: string } | null>(null);
@@ -57,7 +54,7 @@ export function GameEditor({
       : new Set()
   );
 
-  const dirty = snapshot(items, showFeedback) !== baseline;
+  const dirty = snapshot(items) !== baseline;
   const groups = useMemo(() => groupByPart(items, parts), [items, parts]);
   const numberOf = useMemo(() => {
     const numbers = new Map<number, number>();
@@ -139,9 +136,7 @@ export function GameEditor({
 
   function discard() {
     if (!window.confirm("Throw away every change since you last published?")) return;
-    const saved = JSON.parse(baseline) as { items: AssessmentItem[]; showFeedback: boolean };
-    setItems(saved.items);
-    setShowFeedback(saved.showFeedback);
+    setItems(JSON.parse(baseline) as AssessmentItem[]);
     setOpenId(null);
     setAttempted(false);
     setStatus(null);
@@ -163,12 +158,12 @@ export function GameEditor({
     }
     startTransition(async () => {
       try {
-        const result = await saveAssessmentItems(level, form, items, showFeedback);
+        const result = await saveAssessmentItems(level, form, items);
         if (!result.ok) {
           setStatus({ ok: false, message: result.message });
           return;
         }
-        setBaseline(snapshot(items, showFeedback));
+        setBaseline(snapshot(items));
         setAttempted(false);
         setStatus({ ok: true, message: "Published. Children get these questions from now on." });
         router.refresh();
@@ -206,44 +201,9 @@ export function GameEditor({
           ? `Last published ${published}. This is what children get when a teacher starts ${formLabel(form)} as a game.`
           : "Teachers can't start this game until you publish it."}
       </p>
-
-      <section className={`${cardClass} px-5 py-5 sm:px-7 mb-5`} aria-labelledby="feedback-heading">
-        <label className="flex items-start gap-3.5 cursor-pointer">
-          <input
-            type="checkbox"
-            role="switch"
-            checked={showFeedback}
-            onChange={(e) => {
-              setStatus(null);
-              setShowFeedback(e.target.checked);
-            }}
-            className="peer sr-only"
-          />
-          <span
-            aria-hidden="true"
-            className="relative mt-0.5 h-7 w-12 flex-none rounded-full transition-colors peer-focus-visible:outline peer-focus-visible:outline-3 peer-focus-visible:outline-[var(--color-orange-tint-border)]"
-            style={{ background: showFeedback ? "var(--color-orange)" : "var(--color-neutral-border-strong)" }}
-          >
-            <span
-              className="absolute top-1 size-5 rounded-full bg-white shadow transition-[left]"
-              style={{ left: showFeedback ? 24 : 4 }}
-            />
-          </span>
-          <span>
-            <span id="feedback-heading" className="block font-bold text-[var(--color-ink)]">
-              Show children right and wrong
-            </span>
-            <span className="block text-sm text-[var(--color-body)] mt-0.5">
-              {showFeedback
-                ? "On. A wrong answer shakes and Sunny says “try again”. The child gets one practice try, and only the first answer counts."
-                : "Off. The game never says if an answer was right. Use this when the form must be given strictly by the ReadWell guide."}
-            </span>
-          </span>
-        </label>
-        <p className="text-xs text-[var(--color-muted)] m-0 mt-2.5 sm:ml-[62px]">
-          Reading aloud, writing and how-do-you-feel questions never show right or wrong.
-        </p>
-      </section>
+      <p className="text-sm text-[var(--color-muted)] m-0 mb-5 -mt-3">
+        Children are never told whether an answer is right or wrong. Every answer earns a star, and the game moves on.
+      </p>
 
       {items.length === 0 && (
         <section className={`${cardClass} px-5 py-5 sm:px-7 mb-5`}>
@@ -348,7 +308,6 @@ export function GameEditor({
                               parts={parts}
                               skillAreas={skillAreas}
                               problems={itemProblems}
-                              showFeedback={showFeedback}
                               canMoveUp={position > 0}
                               canMoveDown={position < group.indexes.length - 1}
                               onChange={(patch) => update(index, patch)}

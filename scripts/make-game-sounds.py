@@ -130,6 +130,3 @@ ev += [((20 + k) * P, drum(200 + 40 * k, 150 + 30 * k, 0.25, 0.7 + 0.1 * k)) for
 ev += [(i * P, shaker(0.1, 0.7)) for i in range(0, 24, 2)]
 ev += [(24 * P, gyil(NOTE[n], 1.4, 1.0)) for n in ("C6", "E6", "G6")] + [(24 * P, bell(1420, 0.5, 1.0)), (24 * P, drum(180, 130, 0.6, 1.1, 0.2))]
 finish(mix(ev, 24 * P + 1.4), "quest")
-
-# oops: a soft falling gyil pair over a low drum: a friendly "aw".
-finish(mix([(0.00, gyil(NOTE["A5"], 0.6, 0.7)), (0.20, gyil(NOTE["E5"], 0.9, 0.65)), (0.20, drum(190, 150, 0.45, 0.6, 0.16))], 1.1), "oops")

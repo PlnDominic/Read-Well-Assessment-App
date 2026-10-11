@@ -30,9 +30,8 @@ const refresh = () => revalidatePath("/admin/content", "layout");
  * The items are saved in mission order (orderByPart), each part's
  * questions together, so the game never splits a part into two missions.
  *
- * `showFeedback` is whether the game tells children right from wrong, with
- * one practice retry (0019). It is saved with the version, like the items,
- * so a session's assessment always records which way it was given.
+ * show_feedback (0019) is saved false: the game no longer tells children
+ * right from wrong. Older versions keep the value they were given with.
  *
  * assessments has no client-facing write policy (see 0002_rls.sql) so this
  * needs the service role, gated by requireAdmin(). Saving creates a new version rather than
@@ -42,14 +41,10 @@ const refresh = () => revalidatePath("/admin/content", "layout");
 export async function saveAssessmentItems(
   level: number,
   form: string,
-  items: AssessmentItem[],
-  showFeedback: boolean = true
+  items: AssessmentItem[]
 ): Promise<{ ok: true; version: number } | { ok: false; message: string }> {
   await requireAdmin();
   if (!isValidLevel(level) || !isAssessmentForm(form)) return { ok: false, message: "Pick a level and form." };
-  if (typeof showFeedback !== "boolean") {
-    return { ok: false, message: "Pick whether the game tells children right from wrong." };
-  }
   const [problem] = validateGameItems(items);
   if (problem) {
     const where = problem.index >= 0 ? `Question ${items[problem.index].id}: ` : "";
@@ -79,7 +74,7 @@ export async function saveAssessmentItems(
     level,
     form,
     delivery: "game",
-    show_feedback: showFeedback,
+    show_feedback: false,
     version,
     items: ordered,
     is_active: true,

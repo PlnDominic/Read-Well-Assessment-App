@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   evaluateResponse,
-  itemGivesFeedback,
   generateSessionCode,
   normalizeSessionCode,
   normalizeSpokenText,
@@ -110,37 +109,5 @@ describe("generateSessionCode", () => {
     for (let i = 0; i < 50; i++) {
       expect(generateSessionCode()).not.toMatch(/[01OI]/);
     }
-  });
-});
-
-describe("itemGivesFeedback", () => {
-  const choice = (extra: Partial<AssessmentItem> = {}): AssessmentItem => ({
-    id: "LS01",
-    skillAreaKey: "letterSounds",
-    type: "choice",
-    prompt: "Which letter?",
-    options: [
-      { text: "a", isCorrect: true },
-      { text: "b", isCorrect: false },
-    ],
-    ...extra,
-  });
-
-  it("is true for a choice item with a wrong option", () => {
-    expect(itemGivesFeedback(choice())).toBe(true);
-  });
-
-  it("is false when every option is right (nothing to be wrong about)", () => {
-    expect(itemGivesFeedback(choice({ options: [{ text: "a", isCorrect: true }, { text: "b", isCorrect: true }] }))).toBe(false);
-  });
-
-  it("is false for reading-attitude questions however they were authored", () => {
-    expect(itemGivesFeedback(choice({ id: "AT01" }))).toBe(false);
-    expect(itemGivesFeedback(choice({ id: "feelings-1", skillAreaKey: "readingAttitude" }))).toBe(false);
-  });
-
-  it("is false for read-aloud and writing items", () => {
-    expect(itemGivesFeedback({ id: "RW01", skillAreaKey: "wordReading", type: "mic", prompt: "x", passage: "gap" })).toBe(false);
-    expect(itemGivesFeedback({ id: "WT01", skillAreaKey: "writing", type: "text", prompt: "x" })).toBe(false);
   });
 });

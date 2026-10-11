@@ -26,20 +26,6 @@ export function nextItemId(items: readonly { id: string }[], code: string): stri
   return `${code}${String(max + 1).padStart(2, "0")}`;
 }
 
-/**
- * Whether the game tells a child if their answer to this item was right: a
- * choice item that has a wrong option, other than the reading-attitude
- * questions ("How do you feel about reading?"), which have no wrong answer
- * however they were authored. Only the child's first answer to such an item
- * is recorded and scored (the kiosk route); a retry is practice. A form can
- * switch all of this off (assessments.show_feedback, 0019); the route
- * checks that too.
- */
-export function itemGivesFeedback(item: AssessmentItem): boolean {
-  if (item.type !== "choice" || !item.options?.some((o) => !o.isCorrect)) return false;
-  return item.skillAreaKey !== "readingAttitude" && !/^AT\d/i.test(item.id);
-}
-
 export interface PartGroup {
   /** null for questions whose id matches no part (made before ids carried one). */
   part: Part | null;
