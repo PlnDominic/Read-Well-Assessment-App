@@ -58,6 +58,18 @@ export function evaluateResponse(item: AssessmentItem, answer: unknown): boolean
   return false;
 }
 
+/**
+ * Whether the game tells a child if their answer to this item was right: a
+ * choice item that has a wrong option, other than the reading-attitude
+ * questions ("How do you feel about reading?"), which have no wrong answer
+ * however they were authored. Only the child's first answer to such an item
+ * is recorded and scored (the kiosk route); a retry is practice.
+ */
+export function itemGivesFeedback(item: AssessmentItem): boolean {
+  if (item.type !== "choice" || !item.options?.some((o) => !o.isCorrect)) return false;
+  return item.skillAreaKey !== "readingAttitude" && !/^AT\d/i.test(item.id);
+}
+
 export function normalizeSessionCode(raw: string): string {
   return raw.trim().toUpperCase();
 }

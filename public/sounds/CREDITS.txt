@@ -5,5 +5,6 @@ tap.mp3      Interface Sounds 1.0, pluck_001.ogg
 star.mp3     Interface Sounds 1.0, confirmation_001.ogg
 mission.mp3  Music Jingles, Pizzicato jingles/jingles_PIZZI10.ogg
 quest.mp3    Music Jingles, Steel jingles/jingles_STEEL02.ogg
+oops.mp3     Music Jingles, Pizzicato jingles/jingles_PIZZI00.ogg
 
 Converted to mono 64 kbps MP3 so every browser can play them.

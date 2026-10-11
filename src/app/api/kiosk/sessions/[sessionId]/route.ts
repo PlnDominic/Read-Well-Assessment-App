@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { evaluateResponse, loadSessionForKiosk } from "@/lib/kiosk";
+import { evaluateResponse, itemGivesFeedback, loadSessionForKiosk } from "@/lib/kiosk";
 
 /**
  * Kiosk endpoints (student-facing, no auth; see supabase/migrations/0002_rls.sql
@@ -79,6 +79,25 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ se
 
   const isCorrect = evaluateResponse(item, body.answer);
 
+  // A choice item with a wrong option gets right/wrong feedback in the game,
+  // so only the child's FIRST answer to it is recorded and scored: a retry
+  // is practice, and changing an answer later can't improve the score.
+  // Items with no wrong answer (reading attitude) just keep the latest.
+  const givesFeedback = itemGivesFeedback(item);
+  if (givesFeedback && state.responses.some((r) => r.item_id === item.id)) {
+    // Nothing is written. A wrong retry also says which answer was right,
+    // since the child has had their go and the score can't change now.
+    const correctOption = isCorrect ? null : item.options?.find((o) => o.isCorrect)?.text ?? null;
+    return NextResponse.json({
+      ok: true,
+      isCorrect,
+      feedback: true,
+      recorded: false,
+      correctOption,
+      currentItemIndex: state.session.current_item_index,
+    });
+  }
+
   const { error: responseError } = await admin
     .from("responses")
     .upsert(
@@ -100,5 +119,5 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ se
     .eq("id", sessionId);
   if (sessionError) return NextResponse.json({ error: sessionError.message }, { status: 500 });
 
-  return NextResponse.json({ ok: true, isCorrect, currentItemIndex: nextIndex });
+  return NextResponse.json({ ok: true, isCorrect, feedback: givesFeedback, recorded: true, currentItemIndex: nextIndex });
 }

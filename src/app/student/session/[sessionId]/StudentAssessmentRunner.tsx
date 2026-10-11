@@ -87,6 +87,24 @@ const MISSION_SIZE = 5;
 const MISSION_COLORS = ["#0f766e", "#2563eb", "#7c3aed", "#ea580c", "#db2777", "#ca8a04"];
 const PRAISE = ["Nice work!", "Super!", "You did it!", "Awesome!", "Way to go!", "High five!", "You're a star!", "Brilliant!"];
 
+/** What the server said about a child's first answer to a choice item. */
+interface Verdict { answer: string; correct: boolean; feedback: boolean }
+/** The retry: practice only, never scored (see the kiosk route). */
+interface Tries {
+  id: string;
+  /** Options already tried on the retry, and whether each was right. */
+  results: Record<string, boolean>;
+  /** The right option, once found. */
+  solved: string | null;
+  /** The right option, shown after a second miss. */
+  revealed: string | null;
+  checking: boolean;
+  /** The check failed (no connection), so the item goes neutral. */
+  gaveUp: boolean;
+}
+
+const RIGHT_WORDS = ["That's right!", "You got it!", "Yes! Super!", "Brilliant!", "Well done!"];
+
 interface Mission {
   key: string;
   title: string;
@@ -194,6 +212,12 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
   /** The mission just finished, while its celebration is showing. */
   const [celebrating, setCelebrating] = useState<number | null>(null);
   const [starBump, setStarBump] = useState(0);
+  const [verdicts, setVerdicts] = useState<Record<string, Verdict>>({});
+  const [tries, setTries] = useState<Tries | null>(null);
+  /** The item whose first answer is on its way to the server, so a second tap waits for the verdict. */
+  const [awaitingId, setAwaitingId] = useState<string | null>(null);
+  /** The wrong answer that has already had its "oops" moment, so Sunny moves on to encouraging. */
+  const [encouraged, setEncouraged] = useState<string | null>(null);
   const pendingRef = useRef<Record<string, unknown>>({});
   const storyTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const starsRef = useRef<HTMLSpanElement>(null);
@@ -268,6 +292,48 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
     burst("quest");
   }, [state?.status]);
 
+  // Right or wrong, for the choice item in front of the child (feedbackOn is
+  // false offline, for items with no wrong answer, and for everything else).
+  const itemId = item?.id;
+  const firstVerdict = itemId ? verdicts[itemId] : undefined;
+  const feedbackOn = !!firstVerdict && firstVerdict.feedback && firstVerdict.answer === savedString;
+  const mine = tries && itemId && tries.id === itemId ? tries : null;
+  type Phase = "none" | "right" | "wrong" | "checking" | "solved" | "revealed" | "gaveup";
+  let phase: Phase = "none";
+  if (feedbackOn && firstVerdict) {
+    if (firstVerdict.correct) phase = "right";
+    else if (mine?.solved) phase = "solved";
+    else if (mine?.revealed) phase = "revealed";
+    else if (mine?.gaveUp || (mine && !mine.checking)) phase = "gaveup";
+    else if (mine?.checking) phase = "checking";
+    else phase = "wrong";
+  }
+  const feedbackKey = feedbackOn && phase !== "checking" ? `${itemId}:${phase}` : null;
+
+  // Sound, speech and the star shower, once per change in how the item is going.
+  useEffect(() => {
+    if (!feedbackKey) return;
+    const kind = feedbackKey.slice(feedbackKey.lastIndexOf(":") + 1);
+    if (kind === "right") {
+      playSound("star");
+      burst("star", originOf(starsRef.current));
+      if (speechSupported) speak("That's right!");
+    } else if (kind === "solved") {
+      playSound("star");
+      burst("star");
+      if (speechSupported) speak("You got it!");
+    } else if (kind === "wrong") {
+      playSound("oops");
+      if (speechSupported) speak("Not quite. Try again!");
+      // Sunny's sheepish "oops" first, then the encouraging pose.
+      const timer = setTimeout(() => setEncouraged(feedbackKey), 1400);
+      return () => clearTimeout(timer);
+    } else if (kind === "revealed") {
+      playSound("oops");
+      if (speechSupported) speak("That's okay. It's this one!");
+    }
+  }, [feedbackKey, speechSupported]);
+
   const flushPending = useCallback(async () => {
     const entries = Object.entries(pendingRef.current);
     if (!entries.length) return true;
@@ -276,8 +342,16 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
     for (const [itemId, answer] of entries) {
       try {
         const response = await fetch(`/api/kiosk/sessions/${sessionId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ itemId, answer }) });
-        if (response.ok) delete pendingRef.current[itemId]; else ok = false;
+        if (response.ok) {
+          delete pendingRef.current[itemId];
+          // The server says whether a choice answer was right; the screen shows it only for the item in front of the child.
+          const body = await response.json().catch(() => null) as { isCorrect?: unknown; feedback?: unknown } | null;
+          if (body && typeof body.isCorrect === "boolean" && typeof answer === "string") {
+            setVerdicts((current) => ({ ...current, [itemId]: { answer, correct: body.isCorrect as boolean, feedback: body.feedback === true } }));
+          }
+        } else ok = false;
       } catch { ok = false; }
+      setAwaitingId((current) => (current === itemId ? null : current));
     }
     writeJson(pendingKey, pendingRef.current);
     setSyncing(false);
@@ -315,12 +389,55 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
       return next;
     });
     flushPending();
+    // A choice answer's sound waits for the verdict (a star for a right
+    // answer, a soft "oops" otherwise) unless there's no connection to get one.
+    const waitsForVerdict = item.type === "choice" && isOnline;
     if (firstAnswer) {
-      playSound("star");
-      burst("star", originOf(starsRef.current));
+      if (!waitsForVerdict) {
+        playSound("star");
+        burst("star", originOf(starsRef.current));
+      }
       setStarBump((n) => n + 1);
     } else if (item.type === "choice" || answer === SKIPPED) {
       playSound("tap");
+    }
+  }
+
+  /** A tap on a choice: the first answer is scored; after a wrong one, one practice retry. */
+  async function chooseOption(option: string) {
+    if (!item || item.type !== "choice" || !state) return;
+    const id = item.id;
+    if (awaitingId === id) return;
+    const first = verdicts[id];
+    const marked = first && first.feedback && first.answer === (typeof state.answersByItemId[id] === "string" ? state.answersByItemId[id] : "");
+    if (!marked) {
+      // The first answer (or, with no feedback, a change of mind).
+      if (isOnline) {
+        setAwaitingId(id);
+        setTimeout(() => setAwaitingId((current) => (current === id ? null : current)), 8000);
+      }
+      saveAnswer(option);
+      return;
+    }
+    const mine = tries?.id === id ? tries : null;
+    if (first.correct || mine?.solved || mine?.revealed || mine?.checking || mine?.gaveUp) return;
+    if (option === first.answer || (mine && option in mine.results)) return;
+    setTries({ id, results: mine?.results ?? {}, solved: null, revealed: null, checking: true, gaveUp: false });
+    try {
+      const response = await fetch(`/api/kiosk/sessions/${sessionId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ itemId: id, answer: option }) });
+      const body = await response.json() as { isCorrect?: unknown; correctOption?: unknown };
+      if (!response.ok || typeof body.isCorrect !== "boolean") throw new Error("check failed");
+      const correct = body.isCorrect;
+      setTries((current) => ({
+        id,
+        results: { ...(current?.id === id ? current.results : {}), [option]: correct },
+        solved: correct ? option : null,
+        revealed: !correct && typeof body.correctOption === "string" ? body.correctOption : null,
+        checking: false,
+        gaveUp: false,
+      }));
+    } catch {
+      setTries((current) => (current?.id === id ? { ...current, checking: false, gaveUp: true } : current));
     }
   }
 
@@ -437,6 +554,16 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
   // Pictures (and single letters or marks) show as big tiles a child can tap; anything wordier stays a list.
   const pictures = (item.options ?? []).map(optionPicture);
   const tiles = pictures.length > 0 && pictures.every((p) => (p.src ? !p.label : p.label.length <= 3));
+  /** How each option looks: still open, picked, or (when the game gives feedback) right, wrong, revealed or out of play. */
+  function optionState(option: string): "" | "selected" | "wrong" | "correct" | "reveal" | "dim" {
+    if (!feedbackOn || !firstVerdict) return savedString === option ? "selected" : "";
+    const tried = option === savedString || (!!mine && option in mine.results);
+    if (phase === "right") return option === savedString ? "correct" : "dim";
+    if (phase === "solved") return option === mine?.solved ? "correct" : tried ? "wrong" : "dim";
+    if (phase === "revealed") return option === mine?.revealed ? "reveal" : tried ? "wrong" : "dim";
+    if (phase === "gaveup") return tried ? "wrong" : "dim";
+    return tried ? "wrong" : "";
+  }
   // A single word to read aloud shows big, like a flash card.
   const wordCard = item.type === "mic" && !!item.passage && item.passage.length <= 14;
   const firstInMission = qIndex === mission.start;
@@ -448,6 +575,12 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
   let say: string;
   if (recording) { mood = "listen"; say = "I'm listening…"; }
   else if (savedString === SKIPPED) { mood = "thumbs"; say = "That's okay! On to the next one."; }
+  else if (phase === "right") { mood = qIndex % 2 ? "cheer" : "thumbs"; say = RIGHT_WORDS[qIndex % RIGHT_WORDS.length]; }
+  else if (phase === "solved") { mood = "cheer"; say = "You got it!"; }
+  else if (phase === "wrong") { mood = encouraged === feedbackKey ? "try" : "oops"; say = encouraged === feedbackKey ? "You can do it. Try again!" : "Oops! Not quite."; }
+  else if (phase === "checking") { mood = "think"; say = "Let's see…"; }
+  else if (phase === "revealed") { mood = "point"; say = "It's this one! On to the next."; }
+  else if (phase === "gaveup") { mood = "thumbs"; say = "That's okay! On to the next one."; }
   else if (item.type === "text" && canProceed) { mood = "thumbs"; say = "Looking good! Tap Next when you're done."; }
   else if (canProceed) { mood = qIndex % 2 ? "cheer" : "thumbs"; say = PRAISE[qIndex % PRAISE.length]; }
   else if (item.type === "mic") { mood = "read"; say = isStory ? "Read the story to me!" : "Tap the mic and read to me!"; }
@@ -483,13 +616,16 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
           <div className={`rw-options ${tiles ? `rw-tiles${item.options.length === 4 ? " four" : ""}` : ""}`} style={tiles ? { "--cols": Math.min(item.options.length, 4) } as CSSProperties : undefined}>
             {item.options.map((option, i) => {
               const picture = pictures[i];
-              const selected = savedString === option;
+              const state = optionState(option);
+              const note = state === "wrong" ? "not quite" : state === "correct" || state === "reveal" ? "the right answer" : "";
               return (
-                <button key={option} className={`rw-option ${tiles ? "rw-tile" : ""} ${selected ? "selected" : ""}`} onClick={() => saveAnswer(option)} aria-label={tiles && picture.src ? `Choice ${i + 1}` : undefined} aria-pressed={selected}>
-                  {!tiles && <span className="rw-option-letter">{String.fromCharCode(65 + i)}</span>}
+                <button key={option} className={`rw-option ${tiles ? "rw-tile" : ""} ${state}`} onClick={() => chooseOption(option)} aria-label={tiles && picture.src ? `Choice ${i + 1}${note ? `, ${note}` : ""}` : undefined} aria-pressed={state === "selected"}>
+                  {!tiles && <span className="rw-option-letter">{state === "wrong" ? "✕" : String.fromCharCode(65 + i)}</span>}
                   <OptionImage picture={picture} tile={tiles} />
                   {tiles ? !picture.src && <span className="rw-tile-glyph">{picture.label}</span> : <span>{picture.label}</span>}
-                  {selected && <span className="rw-check">✓</span>}
+                  {!tiles && note && <span className="sr-only">, {note}</span>}
+                  {(state === "selected" || state === "correct" || state === "reveal") && <span className="rw-check">✓</span>}
+                  {state === "wrong" && tiles && <span className="rw-check">✕</span>}
                 </button>
               );
             })}
