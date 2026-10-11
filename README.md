@@ -50,14 +50,17 @@ A few things the PRD/TRD left open that needed a concrete decision to ship:
   `src/app/manifest.ts` (the browser-chrome/PWA-install accent color),
   which CSS custom properties can't reach and would need updating by hand
   too.
-- **A form is either assessor-led or a student game.** ReadWell's assessor
-  guides call for a trained adult beside the child, so forms written from
-  a guide (Level 1 Form A) run on the assessor screen under the teacher's
-  or administrator's own login, scoped by RLS like every other staff page.
-  Forms built on the admin Content page are games the child plays on their
-  own device (the TRD's §6 kiosk, `/student`): starting one gives the
-  session a join code to type at `/student/join`, or **Play here** opens it
-  on the teacher's device. Sessions from before levels keep their reports:
+- **A form can be given two ways** (`assessments.delivery`, 0018), and a
+  level's form may have one of each; the teacher picks which when starting
+  it. Given by an adult: ReadWell's assessor guides call for a trained
+  adult beside the child, so the guide's version (Level 1 Form A) runs on
+  the assessor screen under the teacher's or administrator's own login,
+  scoped by RLS like every other staff page. As a game: the child plays it
+  on their own device (the TRD's §6 kiosk, `/student`); starting one gives
+  the session a join code to type at `/student/join`, or **Play here**
+  opens it on the teacher's device. A check keeps `delivery` in step with
+  the items (an adult-given form's items are all `assessor` items, a
+  game's never are). Sessions from before levels keep their reports:
   an active game becomes its level's Form A (0017), anything else is
   switched off with `form` null, and a teacher can still review read-aloud
   answers on the report page (`reviewSpokenAnswer`, 0012).
@@ -120,10 +123,36 @@ A few things the PRD/TRD left open that needed a concrete decision to ship:
 
 ## The student game
 
-Game forms (the ones built on the admin Content page) play as a quest the
-child goes through on their own device at `/student`
+The game version of a form plays as a quest the child goes through on
+their own device at `/student`
 (`src/app/student/session/[sessionId]/StudentAssessmentRunner.tsx`).
 
+- **Level 1 Form A as a game** (`src/lib/readwell/level1FormAGame.ts`,
+  seeded by 0018) uses the guide's own thirteen parts, story, letters and
+  words, adapted for a child playing alone: pointing becomes tapping a
+  picture or word; naming letters becomes finding them ("Tap the letter
+  s"), and letter sounds use a key word ("the first sound in sun"), since
+  speech recognition can't hear a lone letter or sound; reading parts use
+  the first row of each grid, read into the mic; writing is typed, with
+  the words dictated. Sound awareness items are written for the game (the
+  nine-rung ladder lives in a separate subtest script). The guide's
+  version, given by an adult, stays the full baseline with its gates and
+  bands; a game session is scored like any game, one result per skill
+  area, with the story lines in a "Story reading" skill area.
+- **Sunny talks a child through it.** An item's `say` is what Sunny reads
+  out instead of the prompt, never shown: the choices for a child who
+  can't read yet, or a word to spell. A read-aloud item never reads its
+  passage, so Sunny never tells the child the word they're meant to read
+  (`level1FormAGame.test.ts` checks every Level 1 item for this). A child
+  who can't read a word taps **I can't read this one yet**; that's scored
+  as wrong and earns no star. The game no longer sends `expectedText` to
+  the device, since for a dictated word it's the spelling.
+- **Pictures.** A choice that starts with an emoji shows it as a picture
+  from `public/pictures/` (Twemoji, CC-BY 4.0, so it looks the same on an
+  old tablet; `public/pictures/CREDITS.txt`), and `:mop:` shows
+  `public/pictures/mop.svg`, drawn for pictures the guide uses that have no
+  emoji. Pictures and single letters or marks show as big tiles; wordier
+  choices stay a list. The service worker precaches every picture.
 - **Missions and the quest map.** The questions are split into missions:
   one per ReadWell part when the item ids carry part codes (`LS01`, `SV03`,
   the Level 2 quest), otherwise every five questions. A map across a little
@@ -168,21 +197,23 @@ assessment**. The teacher picks which one a child takes each time.
 **Level 1 Form A** (the ReadWell Level 1 Baseline Assessment) is the first
 written; the others are added as their assessor guides arrive.
 
-A form is one of two kinds:
+Each form can come two ways, and Level 1 Form A has both:
 
-- **Assessor-led** (forms written from a ReadWell assessor guide, such as
-  Level 1 Form A): a trained adult sits beside the child, who reads from
-  the printed Learner Stimulus Book, and taps right or wrong for each item.
-  The device replaces the score sheet and the stopwatch, not the assessor.
-- **Student game** (forms built on the admin Content page): the child plays
-  it on their own device: multiple choice, read-aloud into the mic, and
-  typed writing, with Sunny cheering them on.
+- **Given by an adult** (from a ReadWell assessor guide): a trained adult
+  sits beside the child, who reads from the printed Learner Stimulus Book,
+  and taps right or wrong for each item. The device replaces the score
+  sheet and the stopwatch, not the assessor.
+- **As a game** (Level 1 Form A's is seeded; others are built on the admin
+  Content page): the child plays it on their own device, tapping pictures
+  and words, reading aloud into the mic and typing, with Sunny talking them
+  through it. See "The student game" above.
 
 - **Giving one.** On the class list, **Start assessment** opens a choice of
-  Form A, B, C and the Final assessment; forms not yet added for the
-  child's level are shown but can't be picked. A student game shows its
+  Form A, B, C and the Final assessment, each as "game the child plays"
+  or "given by an adult" where it has that version; forms not yet added
+  for the child's level are shown but can't be picked. A game shows its
   join code on the class list (and **Play here** to hand over this device).
-  An assessor-led form opens the assessor screen
+  The adult-given version opens the assessor screen
   (`/teacher/assess/[sessionId]`), which shows each part's script word for
   word (bold lines to say, plain lines to do), the practice item, notes and
   accept rules. Grids are tap once for right, twice for wrong. The story
@@ -203,9 +234,9 @@ A form is one of two kinds:
   band tables, registered in `forms.ts`. It's seeded into `assessments` by a
   migration and `setup.sql`, and `seedSql.test.ts` fails if the SQL copy
   drifts from the code. "Paper is the master": change the guide first, then
-  the module, then the SQL. The admin Content page lists assessor-led forms
-  read-only, since a free-form editor would break the item codes; every
-  other form slot can be built or edited there as a student game.
+  the module, then the SQL. The admin Content page shows each form's
+  adult-given version read-only, since a free-form editor would break the
+  item codes, and its game version, which can be built or edited there.
 - **Scoring** (`src/lib/readwell/score.ts`) reports each strand on its own
   as a raw score and a band (Emerging / Developing / Secure / Advanced, the
   guide's table, which equals its 30/70/95 percent rule; provisional until
@@ -235,9 +266,8 @@ A form is one of two kinds:
   rung rules aren't, so sound awareness has a raw score and no band, and
   the support level counts the other five foundation strands until those
   rules are added.
-- A child view of the letters and words on the device, the digital-led
-  (child taps) mode, and recommendation rules for each level (add them on
-  the Content page).
+- Game versions of the other forms as they're written, and recommendation
+  rules for each level (add them on the Content page).
 
 ## Getting started
 

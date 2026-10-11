@@ -5,7 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
 import { ROLE_AVATAR } from "@/lib/avatars";
 import { createClient } from "@/lib/supabase/server";
-import { formLabel, levelLabel, type AssessmentForm } from "@/lib/levels";
+import { formDeliveryLabel, formLabel, levelLabel, type AssessmentForm, type Delivery } from "@/lib/levels";
 import { cancelSession } from "./actions";
 import { AddStudentForm } from "./AddStudentForm";
 import { StartAssessmentMenu } from "./StartAssessmentMenu";
@@ -25,7 +25,7 @@ type SessionRow = {
   status: string;
   session_code: string | null;
   created_at: string;
-  assessments: { form: AssessmentForm | null; firstType: string | null } | null;
+  assessments: { form: AssessmentForm | null; delivery: Delivery } | null;
 };
 
 export default async function TeacherRosterPage() {
@@ -57,7 +57,7 @@ export default async function TeacherRosterPage() {
   const { data: sessionsRaw } = cycle && studentIds.length > 0
     ? await supabase
         .from("assessment_sessions")
-        .select("id, student_id, status, session_code, created_at, assessments(form, firstType:items->0->>type)")
+        .select("id, student_id, status, session_code, created_at, assessments(form, delivery)")
         .in("student_id", studentIds)
         .eq("cycle_id", cycle.id)
         .order("created_at", { ascending: false })
@@ -65,17 +65,18 @@ export default async function TeacherRosterPage() {
   const sessions = (sessionsRaw ?? []) as unknown as SessionRow[];
 
   // Which of A, B, C and the Final assessment have been added for each
-  // level: a teacher can only pick one that exists.
+  // level, and which ways (game, given by an adult): a teacher can only
+  // pick one that exists.
   const { data: activeForms } = await supabase
     .from("assessments")
-    .select("level, form")
+    .select("level, form, delivery")
     .eq("is_active", true)
     .not("form", "is", null);
-  const formsByLevel = new Map<number, Set<AssessmentForm>>();
+  const formsByLevel = new Map<number, { form: AssessmentForm; delivery: Delivery }[]>();
   for (const a of activeForms ?? []) {
-    const set = formsByLevel.get(a.level) ?? new Set<AssessmentForm>();
-    set.add(a.form as AssessmentForm);
-    formsByLevel.set(a.level, set);
+    const list = formsByLevel.get(a.level) ?? [];
+    list.push({ form: a.form as AssessmentForm, delivery: a.delivery });
+    formsByLevel.set(a.level, list);
   }
 
   // The latest session per student in this cycle. A kiosk session from
@@ -83,14 +84,14 @@ export default async function TeacherRosterPage() {
   // it's passed over; a finished one still links to its report.
   // A game form is played by the child on their own device: its session has
   // a code to type at /student/join, or the teacher hands over this device.
-  type LatestSession = { id: string; status: string; form: AssessmentForm | null; game: boolean; sessionCode: string | null };
+  type LatestSession = { id: string; status: string; form: AssessmentForm | null; delivery: Delivery; game: boolean; sessionCode: string | null };
   const latestSessionByStudent = new Map<string, LatestSession>();
   for (const s of sessions) {
     const form = s.assessments?.form ?? null;
     if (form === null && s.status !== "completed") continue;
     if (!latestSessionByStudent.has(s.student_id)) {
-      const game = (s.assessments?.firstType ?? "assessor") !== "assessor";
-      latestSessionByStudent.set(s.student_id, { id: s.id, status: s.status, form, game, sessionCode: s.session_code });
+      const delivery = s.assessments?.delivery ?? "assessor";
+      latestSessionByStudent.set(s.student_id, { id: s.id, status: s.status, form, delivery, game: delivery === "game", sessionCode: s.session_code });
     }
   }
   const hasCompletedReport = [...latestSessionByStudent.values()].some((s) => s.status === "completed");
@@ -156,7 +157,7 @@ export default async function TeacherRosterPage() {
                     style={{ background: style.bg, color: style.color }}
                   >
                     {latest ? style.label : "Not assessed yet"}
-                    {latest?.form ? ` · ${formLabel(latest.form)}` : ""}
+                    {latest?.form ? ` · ${formDeliveryLabel(latest.form, latest.delivery)}` : ""}
                   </span>
                   {unfinished && latest.game && latest.sessionCode && (
                     <span
@@ -186,7 +187,7 @@ export default async function TeacherRosterPage() {
                       <form action={cancelSession}>
                         <input type="hidden" name="sessionId" value={latest.id} />
                         <ConfirmSubmitButton
-                          confirmMessage={`Cancel ${s.name}'s unfinished ${latest.form ? formLabel(latest.form) : "assessment"}? The marks made so far are deleted.`}
+                          confirmMessage={`Cancel ${s.name}'s unfinished ${latest.form ? formLabel(latest.form) : "assessment"}? The answers given so far are deleted.`}
                           className="text-[var(--color-orange-dark)] text-xs font-bold bg-none border-none cursor-pointer"
                         >
                           Cancel
@@ -199,7 +200,7 @@ export default async function TeacherRosterPage() {
                       studentId={s.id}
                       studentName={s.name}
                       level={s.level}
-                      available={[...(formsByLevel.get(s.level) ?? [])]}
+                      available={formsByLevel.get(s.level) ?? []}
                       label={status === "completed" ? "Start another" : "Start assessment"}
                       primary={status !== "completed"}
                       hasCycle={!!cycle}

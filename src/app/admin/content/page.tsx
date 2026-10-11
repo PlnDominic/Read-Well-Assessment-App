@@ -8,7 +8,6 @@ import { SkillWeightsEditor } from "./SkillWeightsEditor";
 import { addRecommendationRule, deleteRecommendationRule } from "./actions";
 import { FORM_OPTIONS, LEVEL_OPTIONS, formLabel, levelLabel, type AssessmentForm } from "@/lib/levels";
 import { formForItems } from "@/lib/readwell/forms";
-import { isAssessorLed } from "@/lib/readwell/form";
 import { AssessmentItemsEditor } from "./AssessmentItemsEditor";
 
 type RuleRow = {
@@ -53,11 +52,12 @@ export default async function AdminContentPage({
 
   const { data: levelAssessments } = await supabase
     .from("assessments")
-    .select("form, version, items")
+    .select("form, delivery, version, items")
     .eq("level", LEVEL)
     .eq("is_active", true)
     .not("form", "is", null);
-  const assessmentByForm = new Map((levelAssessments ?? []).map((a) => [a.form as AssessmentForm, a]));
+  const activeVersion = (form: AssessmentForm, delivery: "assessor" | "game") =>
+    (levelAssessments ?? []).find((a) => a.form === form && a.delivery === delivery);
 
   const { data: rulesData } = await supabase
     .from("recommendation_rules")
@@ -120,43 +120,49 @@ export default async function AdminContentPage({
       <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-6">
         <div className="font-heading font-bold text-sm text-[var(--color-ink)] mb-1.5">{levelLabel(LEVEL)} assessments</div>
         <p className="text-[var(--color-muted)] text-sm mt-0 mb-4.5">
-          Each level has four assessments. Teachers pick which one a child takes when they start it. A form is
-          either given by an assessor from its ReadWell guide (the guide is the master copy, so it&apos;s shown
-          read-only here) or played by the child as a game on their own device, which you build and edit here.
+          Each level has four assessments, and each can be given two ways: by an adult on the assessor screen, from
+          its ReadWell guide (the guide is the master copy, so it&apos;s shown read-only here), or played by the child
+          as a game on their own device, which you build and edit here. Teachers pick the form and the way when they
+          start it.
         </p>
         <div className="flex flex-col gap-3">
           {FORM_OPTIONS.map((form) => {
-            const assessment = assessmentByForm.get(form);
+            const withAdult = activeVersion(form, "assessor");
+            const game = activeVersion(form, "game");
             return (
               <div key={form} className="bg-[var(--color-neutral)] rounded-xl px-4.5 py-3.5">
-                <div className="flex justify-between items-baseline gap-3 flex-wrap mb-1">
-                  <span className="font-extrabold text-[var(--color-ink)] text-sm">{formLabel(form)}</span>
-                  <span className="text-xs text-[var(--color-muted)]">
-                    {assessment ? `Version ${assessment.version}` : "Not added yet"}
-                  </span>
+                <div className="font-extrabold text-[var(--color-ink)] text-sm mb-2">{formLabel(form)}</div>
+                <div className="flex flex-col gap-2.5">
+                  <div>
+                    <div className="flex justify-between items-baseline gap-3 flex-wrap mb-0.5">
+                      <span className="text-xs font-bold uppercase text-[var(--color-muted)]">Given by an adult</span>
+                      <span className="text-xs text-[var(--color-muted)]">
+                        {withAdult ? `Version ${withAdult.version}` : "Not added yet"}
+                      </span>
+                    </div>
+                    {withAdult ? (
+                      <AssessorFormSummary items={withAdult.items} />
+                    ) : (
+                      <p className="text-sm text-[var(--color-muted)] m-0">Send its assessor guide to add it.</p>
+                    )}
+                  </div>
+                  <div className="border-t border-[var(--color-neutral-divider)] pt-2.5">
+                    <div className="flex justify-between items-baseline gap-3 flex-wrap mb-0.5">
+                      <span className="text-xs font-bold uppercase text-[var(--color-muted)]">Game the child plays</span>
+                      <span className="text-xs text-[var(--color-muted)]">
+                        {game ? `Version ${game.version}` : "Not added yet"}
+                      </span>
+                    </div>
+                    <details>
+                      <summary className="cursor-pointer text-sm font-bold text-[var(--color-orange-dark)]">
+                        {game ? `${game.items.length} questions. Edit` : "Build it as a game"}
+                      </summary>
+                      <div className="mt-3">
+                        <AssessmentItemsEditor level={LEVEL} form={form} initialItems={game?.items ?? []} skillAreas={skillAreas ?? []} />
+                      </div>
+                    </details>
+                  </div>
                 </div>
-                {assessment && isAssessorLed(assessment.items) ? (
-                  <AssessorFormSummary items={assessment.items} />
-                ) : assessment ? (
-                  <details>
-                    <summary className="cursor-pointer text-sm font-bold text-[var(--color-orange-dark)]">
-                      Student game: {assessment.items.length} questions. Edit
-                    </summary>
-                    <div className="mt-3">
-                      <AssessmentItemsEditor level={LEVEL} form={form} initialItems={assessment.items} skillAreas={skillAreas ?? []} />
-                    </div>
-                  </details>
-                ) : (
-                  <details>
-                    <summary className="cursor-pointer text-sm text-[var(--color-muted)]">
-                      Teachers can&apos;t pick this one yet. Send its assessor guide to add it, or{" "}
-                      <span className="font-bold text-[var(--color-orange-dark)]">build it as a student game</span>
-                    </summary>
-                    <div className="mt-3">
-                      <AssessmentItemsEditor level={LEVEL} form={form} initialItems={[]} skillAreas={skillAreas ?? []} />
-                    </div>
-                  </details>
-                )}
               </div>
             );
           })}

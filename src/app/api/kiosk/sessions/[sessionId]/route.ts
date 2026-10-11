@@ -28,15 +28,16 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ ses
     assessmentLevel: state.assessment.level,
     assessmentForm: state.assessment.form,
     assessmentVersion: state.assessment.version,
-    // Never send `isCorrect` on options to the client.
+    // Never send answers to the client: not `isCorrect` on options, and not
+    // expectedText, which for a dictated word is its spelling.
     items: state.items.map((item) => ({
       id: item.id,
       skillAreaKey: item.skillAreaKey,
       type: item.type,
       prompt: item.prompt,
       passage: item.passage ?? null,
+      say: item.say ?? null,
       options: item.options?.map((o) => o.text) ?? null,
-      expectedText: item.expectedText,
     })),
     answersByItemId,
   });

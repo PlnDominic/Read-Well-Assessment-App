@@ -1,6 +1,6 @@
 import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
 import { colors } from "@/lib/theme";
-import { formLabel, levelLabel, type AssessmentForm } from "@/lib/levels";
+import { formDeliveryLabel, formLabel, levelLabel, type AssessmentForm, type Delivery } from "@/lib/levels";
 import { isOnTrackLabel, type FormSummary } from "@/lib/readwell/score";
 
 const styles = StyleSheet.create({
@@ -44,6 +44,7 @@ export interface StudentReportPageProps {
   assessedLevel?: number;
   /** Form A, B, C or the Final assessment; null for kiosk sessions from before levels. */
   form?: AssessmentForm | null;
+  delivery?: Delivery | null;
   assessedDate: string;
   overallLabel: string;
   skills: { name: string; score: number; flagged: boolean }[];
@@ -63,6 +64,7 @@ export function StudentReportPage({
   level,
   assessedLevel,
   form,
+  delivery,
   assessedDate,
   overallLabel,
   skills,
@@ -77,7 +79,7 @@ export function StudentReportPage({
           <Text style={styles.name}>{studentName}</Text>
           <Text style={styles.meta}>
             {levelLabel(assessedLevel ?? level)}
-            {form ? ` · ${formLabel(form)}` : ""} · Assessed {assessedDate}
+            {form ? ` · ${delivery ? formDeliveryLabel(form, delivery) : formLabel(form)}` : ""} · Assessed {assessedDate}
           </Text>
           {assessedLevel !== undefined && assessedLevel !== level && (
             <Text style={[styles.meta, { color: colors.orangeDark, fontWeight: 700 }]}>Now in {levelLabel(level)}</Text>

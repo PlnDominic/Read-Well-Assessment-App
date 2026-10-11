@@ -49,6 +49,23 @@ const PRECACHE_ASSETS = [
   "/icons/icon-192.png",
   "/icons/icon-512.png",
 ];
+// Picture choices in the student game (src/lib/optionPicture.ts), by file
+// name under /pictures/. level1FormAGame.test.ts fails if one is missing.
+const PICTURES = [
+  "1f309.svg", "1f319.svg", "1f327.svg", "1f333.svg", "1f33f.svg", "1f34c.svg", "1f34d.svg",
+  "1f34e.svg", "1f372.svg", "1f373.svg", "1f392.svg", "1f3a9.svg", "1f3ca.svg", "1f3de.svg",
+  "1f3e0.svg", "1f408.svg", "1f40f.svg", "1f410.svg", "1f414.svg", "1f415.svg", "1f416.svg",
+  "1f41f.svg", "1f436.svg", "1f44b.svg", "1f44d.svg", "1f44e.svg", "1f44f.svg", "1f45c.svg",
+  "1f483.svg", "1f4a7.svg", "1f4d6.svg", "1f4e6.svg", "1f51f.svg", "1f578.svg", "1f58c.svg",
+  "1f5fa.svg", "1f600.svg", "1f610.svg", "1f622.svg", "1f634.svg", "1f642.svg", "1f645.svg",
+  "1f68c.svg", "1f695.svg", "1f697.svg", "1f6aa.svg", "1f6b0.svg", "1f6cf.svg", "1f6d6.svg",
+  "1f6e3.svg", "1f945.svg", "1f95b.svg", "1f963.svg", "1f96b.svg", "1f96d.svg", "1f9b5.svg",
+  "1f9d1-200d-1f33e.svg", "1f9d1-200d-1f3eb.svg", "1f9d1-200d-2695-fe0f.svg", "1f9e6.svg",
+  "1f9f1.svg", "1f9f4.svg", "1f9f9.svg", "1f9fa.svg", "1fa91.svg", "1fa9c.svg", "1fa9f.svg",
+  "1faa2.svg", "1faa3.svg", "1faba.svg", "2199.svg", "2600.svg", "2615.svg", "26fa.svg",
+  "27a1.svg", "2b05.svg", "2b06.svg", "book-back.svg", "book-front.svg", "book-upside-down.svg",
+  "gate.svg", "mop.svg", "roof.svg"
+];
 const STAFF_HOMES = ["/teacher", "/admin", "/specialist"];
 
 function isPublicPage(pathname) {
@@ -119,6 +136,7 @@ self.addEventListener("install", (event) => {
     Promise.all([
       ...PRECACHE_PAGES.map((p) => savePage(p).catch(() => undefined)),
       ...PRECACHE_ASSETS.map(precacheAsset),
+      ...PICTURES.map((f) => precacheAsset(`/pictures/${f}`)),
     ]).then(() => self.skipWaiting())
   );
 });
@@ -161,7 +179,7 @@ self.addEventListener("fetch", (event) => {
   // Build assets are content-hashed, so a cached copy is always correct.
   // The avatar images don't change without a new deploy either (a new image
   // would get a new filename), so they get the same cache-first treatment.
-  if (url.pathname.startsWith("/_next/static/") || PRECACHE_ASSETS.includes(url.pathname)) {
+  if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/pictures/") || PRECACHE_ASSETS.includes(url.pathname)) {
     event.respondWith(
       caches.open(CACHE).then(async (cache) => {
         const hit = await cache.match(request);

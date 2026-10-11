@@ -56,6 +56,11 @@ describe("evaluateResponse", () => {
     expect(evaluateResponse(micItem, "anything at all")).toBe(true);
   });
 
+  it("marks a skipped mic item as incorrect, with or without expectedText", () => {
+    expect(evaluateResponse(micItem, "skipped")).toBe(false);
+    expect(evaluateResponse(micItemWithExpectedText, "skipped")).toBe(false);
+  });
+
   it("marks an empty mic answer as incorrect even with no expectedText", () => {
     expect(evaluateResponse(micItem, "")).toBe(false);
   });

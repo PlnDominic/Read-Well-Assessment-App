@@ -15,7 +15,7 @@ import { formForItems } from "@/lib/readwell/forms";
 import { computeFlow } from "@/lib/readwell/flow";
 import { scoreForm } from "@/lib/readwell/score";
 import { ItemMarks, StoryAndAttitude, StrandTable, WritingScores } from "./Level1Report";
-import { formLabel, levelLabel, type AssessmentForm } from "@/lib/levels";
+import { formDeliveryLabel, levelLabel, type AssessmentForm, type Delivery } from "@/lib/levels";
 import { isOnTrackLabel } from "@/lib/readwell/score";
 
 type ResultRow = { score: number; flagged_as_difficulty: boolean; skill_areas: { id: string; name: string } };
@@ -23,7 +23,7 @@ type HistorySessionRow = {
   id: string;
   completed_at: string | null;
   assessment_cycles: { name: string } | null;
-  assessments: { form: AssessmentForm | null } | null;
+  assessments: { form: AssessmentForm | null; delivery: Delivery } | null;
   results: { score: number; flagged_as_difficulty: boolean; skill_areas: { id: string } }[];
 };
 
@@ -90,7 +90,7 @@ export default async function StudentReportPage({
 
   const { data: assessment } = await supabase
     .from("assessments")
-    .select("items, level, form")
+    .select("items, level, form, delivery")
     .eq("id", session.assessment_id)
     .single();
   const items = (assessment?.items ?? []) as AssessmentItem[];
@@ -146,14 +146,14 @@ export default async function StudentReportPage({
 
   const { data: historyRaw } = await supabase
     .from("assessment_sessions")
-    .select("id, completed_at, assessment_cycles(name), assessments(form), results(score, flagged_as_difficulty, skill_areas(id))")
+    .select("id, completed_at, assessment_cycles(name), assessments(form, delivery), results(score, flagged_as_difficulty, skill_areas(id))")
     .eq("student_id", studentId)
     .eq("status", "completed")
     .order("completed_at", { ascending: true });
   const history = ((historyRaw ?? []) as unknown as HistorySessionRow[]).map((s) => {
     return {
       sessionId: s.id,
-      cycleName: (s.assessment_cycles?.name ?? "Unknown cycle") + (s.assessments?.form ? ` · ${formLabel(s.assessments.form)}` : ""),
+      cycleName: (s.assessment_cycles?.name ?? "Unknown cycle") + (s.assessments?.form ? ` · ${formDeliveryLabel(s.assessments.form, s.assessments.delivery)}` : ""),
       completedAt: s.completed_at
         ? new Date(s.completed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
         : "N/A",
@@ -196,7 +196,7 @@ export default async function StudentReportPage({
               </h1>
               <p className="text-[var(--color-muted)] text-sm m-0">
                 {levelLabel(assessedLevel)}
-                {assessedForm ? ` · ${formLabel(assessedForm)}` : ""} · Assessed {assessedDate}
+                {assessedForm && assessment ? ` · ${formDeliveryLabel(assessedForm, assessment.delivery)}` : ""} · Assessed {assessedDate}
               </p>
               {assessedLevel !== student.level && (
                 <p className="text-[var(--color-orange-dark)] text-xs font-bold m-0 mt-1">Now in {levelLabel(student.level)}</p>

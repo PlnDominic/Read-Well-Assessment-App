@@ -4,7 +4,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { ROLE_AVATAR } from "@/lib/avatars";
 import { createClient } from "@/lib/supabase/server";
-import { formLabel, levelLabel, type AssessmentForm } from "@/lib/levels";
+import { formDeliveryLabel, levelLabel, type AssessmentForm, type Delivery } from "@/lib/levels";
 
 // completed is solid black/white rather than the orange used everywhere
 // else: orange is reserved for "needs attention" states, so a finished
@@ -40,16 +40,16 @@ export default async function SpecialistPage() {
   const { data: sessions } = cycle && studentIds.length > 0
     ? await supabase
         .from("assessment_sessions")
-        .select("id, student_id, status, created_at, assessments(form)")
+        .select("id, student_id, status, created_at, assessments(form, delivery)")
         .in("student_id", studentIds)
         .eq("cycle_id", cycle.id)
         .order("created_at", { ascending: false })
     : { data: [] };
 
-  const latestByStudent = new Map<string, { id: string; status: string; form: AssessmentForm | null }>();
-  for (const s of (sessions ?? []) as unknown as { id: string; student_id: string; status: string; assessments: { form: AssessmentForm | null } | null }[]) {
+  const latestByStudent = new Map<string, { id: string; status: string; form: AssessmentForm | null; delivery: Delivery }>();
+  for (const s of (sessions ?? []) as unknown as { id: string; student_id: string; status: string; assessments: { form: AssessmentForm | null; delivery: Delivery } | null }[]) {
     if (!latestByStudent.has(s.student_id)) {
-      latestByStudent.set(s.student_id, { id: s.id, status: s.status, form: s.assessments?.form ?? null });
+      latestByStudent.set(s.student_id, { id: s.id, status: s.status, form: s.assessments?.form ?? null, delivery: s.assessments?.delivery ?? "assessor" });
     }
   }
 
@@ -93,7 +93,7 @@ export default async function SpecialistPage() {
                     style={{ background: style.bg, color: style.color }}
                   >
                     {style.label}
-                    {latest?.form ? ` · ${formLabel(latest.form)}` : ""}
+                    {latest?.form ? ` · ${formDeliveryLabel(latest.form, latest.delivery)}` : ""}
                   </span>
                   {status === "completed" && latest && (
                     <Link

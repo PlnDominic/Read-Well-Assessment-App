@@ -2,7 +2,9 @@
  * Students are placed in ReadWell levels (students.level), and each level
  * has four assessments: Form A, Form B, Form C and the Final assessment
  * (assessments.level + assessments.form). The teacher picks which of the
- * four a child takes each time.
+ * four a child takes each time. A form can be given two ways
+ * (assessments.delivery): by an adult on the assessor screen, or played
+ * by the child as a game; a form may have one of each.
  */
 
 export const MAX_LEVEL = 6;
@@ -13,6 +15,23 @@ export const LEVEL_OPTIONS: readonly number[] = Array.from({ length: MAX_LEVEL }
 export type AssessmentForm = "A" | "B" | "C" | "Final";
 
 export const FORM_OPTIONS: readonly AssessmentForm[] = ["A", "B", "C", "Final"];
+
+export type Delivery = "assessor" | "game";
+
+export const DELIVERY_OPTIONS: readonly Delivery[] = ["game", "assessor"];
+
+export function deliveryLabel(delivery: Delivery): string {
+  return delivery === "game" ? "game" : "with an adult";
+}
+
+export function isDelivery(value: unknown): value is Delivery {
+  return value === "assessor" || value === "game";
+}
+
+/** "Form A · game" or "Form A · with an adult". */
+export function formDeliveryLabel(form: AssessmentForm, delivery: Delivery): string {
+  return `${formLabel(form)} · ${deliveryLabel(delivery)}`;
+}
 
 export function levelLabel(level: number): string {
   return `Level ${level}`;

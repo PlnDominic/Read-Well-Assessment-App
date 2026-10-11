@@ -11,7 +11,7 @@ import type { AssessmentItem } from "@/lib/database.types";
 import { isAssessorLed } from "@/lib/readwell/form";
 import { formForItems } from "@/lib/readwell/forms";
 import { scoreForm, type FormSummary } from "@/lib/readwell/score";
-import { levelLabel, type AssessmentForm } from "@/lib/levels";
+import { levelLabel, type AssessmentForm, type Delivery } from "@/lib/levels";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
@@ -33,6 +33,8 @@ export async function buildStudentReportPageData(
     /** The level and form of the assessment this session used (form is null for kiosk sessions from before levels). */
     assessmentLevel: number;
     form: AssessmentForm | null;
+    /** How it was given: by an adult, or played as a game. */
+    delivery: Delivery | null;
     completedAt: string | null;
   }
 ): Promise<StudentReportPageProps> {
@@ -59,6 +61,7 @@ export async function buildStudentReportPageData(
     level: params.studentLevel,
     assessedLevel: params.assessmentLevel,
     form: params.form,
+    delivery: params.delivery,
     assessedDate: new Date(params.completedAt ?? Date.now()).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
@@ -113,7 +116,7 @@ export async function generateStudentReport(
 
   const { data: session, error: sessionError } = await admin
     .from("assessment_sessions")
-    .select("id, student_id, completed_at, assessments(level, form)")
+    .select("id, student_id, completed_at, assessments(level, form, delivery)")
     .eq("id", sessionId)
     .single();
   if (sessionError || !session) throw new Error(`Session ${sessionId} not found`);
@@ -125,13 +128,14 @@ export async function generateStudentReport(
     .single();
   if (studentError || !student) throw new Error(`Student for session ${sessionId} not found`);
 
-  const assessment = (session as unknown as { assessments: { level: number; form: AssessmentForm | null } | null }).assessments;
+  const assessment = (session as unknown as { assessments: { level: number; form: AssessmentForm | null; delivery: Delivery } | null }).assessments;
   const pageData = await buildStudentReportPageData(admin, {
     sessionId,
     studentName: student.name,
     studentLevel: student.level,
     assessmentLevel: assessment?.level ?? student.level,
     form: assessment?.form ?? null,
+    delivery: assessment?.delivery ?? null,
     completedAt: session.completed_at,
   });
 

@@ -18,6 +18,9 @@ export function normalizeSpokenText(s: string): string {
     .replace(/\s+/g, " ");
 }
 
+/** What the game sends when a child skips a read-aloud item they can't read. */
+export const SKIPPED = "skipped";
+
 /**
  * Evaluates a single response against its item definition.
  *
@@ -40,6 +43,8 @@ export function evaluateResponse(item: AssessmentItem, answer: unknown): boolean
   }
   if (item.type === "mic") {
     if (typeof answer !== "string" || answer.length === 0) return false;
+    // The child tapped "skip" instead of reading.
+    if (answer === SKIPPED) return false;
     if (answer === "attempted") return true;
     if (!item.expectedText) return true;
     const spoken = normalizeSpokenText(answer);

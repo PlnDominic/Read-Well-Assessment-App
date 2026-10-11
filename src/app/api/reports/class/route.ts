@@ -48,7 +48,7 @@ export async function GET() {
 
     const { data: assessment } = await admin
       .from("assessments")
-      .select("level, form")
+      .select("level, form, delivery")
       .eq("id", session.assessment_id)
       .single();
 
@@ -59,6 +59,7 @@ export async function GET() {
         studentLevel: student.level,
         assessmentLevel: assessment?.level ?? student.level,
         form: assessment?.form ?? null,
+        delivery: assessment?.delivery ?? null,
         completedAt: session.completed_at,
       })
     );

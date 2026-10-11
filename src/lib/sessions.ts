@@ -4,7 +4,7 @@ import { after } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/database.types";
-import type { AssessmentForm } from "@/lib/levels";
+import type { AssessmentForm, Delivery } from "@/lib/levels";
 import { generateSessionCode } from "@/lib/kiosk";
 import { scoreSession } from "@/lib/scoring";
 import { generateSchoolReport, generateStudentReport, markSchoolReportFailed, markStudentReportFailed } from "@/lib/reports";
@@ -18,8 +18,8 @@ export type CreateSessionResult =
 
 /**
  * Creates a not-yet-started session for a student at their level, for the
- * form the teacher picked (A, B, C or the Final assessment), in the
- * school's current cycle. Returns `ok: false` rather than throwing when
+ * form the teacher picked (A, B, C or the Final assessment) and the way
+ * it's given (by an adult, or as a game), in the school's current cycle. Returns `ok: false` rather than throwing when
  * there's no current cycle or that form hasn't been added for the level
  * yet: normal, fixable setup gaps, not errors.
  *
@@ -29,7 +29,7 @@ export type CreateSessionResult =
  */
 export async function createSessionForStudent(
   supabase: SupabaseClient<Database>,
-  params: { studentId: string; schoolId: string; level: number; form: AssessmentForm; createdBy: string }
+  params: { studentId: string; schoolId: string; level: number; form: AssessmentForm; delivery: Delivery; createdBy: string }
 ): Promise<CreateSessionResult> {
   const { data: cycle } = await supabase
     .from("assessment_cycles")
@@ -41,14 +41,14 @@ export async function createSessionForStudent(
 
   const { data: assessment } = await supabase
     .from("assessments")
-    .select("id, firstType:items->0->>type")
+    .select("id")
     .eq("level", params.level)
     .eq("form", params.form)
+    .eq("delivery", params.delivery)
     .eq("is_active", true)
     .maybeSingle();
   if (!assessment) return { ok: false, reason: "no_assessment" };
-  // Only the first item's type is read, not the whole item bank.
-  const game = (assessment as unknown as { firstType: string | null }).firstType !== "assessor";
+  const game = params.delivery === "game";
 
   // A game session gets a code the child types on their own device; a
   // collision with an existing code (unique) just draws another.

@@ -1,14 +1,19 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { FORM_OPTIONS, formLabel, levelLabel, type AssessmentForm } from "@/lib/levels";
+import { DELIVERY_OPTIONS, FORM_OPTIONS, formLabel, levelLabel, type AssessmentForm, type Delivery } from "@/lib/levels";
 import { startAssessment } from "./actions";
 
+const ITEM_CLASS =
+  "w-full text-left text-sm font-bold px-2.5 py-2 rounded-xl border-none cursor-pointer bg-transparent text-[var(--color-ink)] hover:bg-[var(--color-neutral)] disabled:cursor-default disabled:hover:bg-transparent disabled:text-[var(--color-muted-light)]";
+
 /**
- * The teacher's pick of Form A, B, C or the Final assessment. Each choice
- * is its own form posting to startAssessment. Forms not yet added for the
- * student's level show but can't be picked. The menu closes on Escape or a
- * click anywhere else, so an open one never sits over the rows below it.
+ * The teacher's pick of Form A, B, C or the Final assessment, and for a
+ * form that comes both ways, whether the child plays it as a game or an
+ * adult gives it. Each choice is its own form posting to startAssessment.
+ * Forms not yet added for the student's level show but can't be picked.
+ * The menu closes on Escape or a click anywhere else, so an open one never
+ * sits over the rows below it.
  */
 export function StartAssessmentMenu({
   studentId,
@@ -22,7 +27,7 @@ export function StartAssessmentMenu({
   studentId: string;
   studentName: string;
   level: number;
-  available: AssessmentForm[];
+  available: { form: AssessmentForm; delivery: Delivery }[];
   label: string;
   primary: boolean;
   hasCycle: boolean;
@@ -76,19 +81,25 @@ export function StartAssessmentMenu({
             </p>
           )}
           {FORM_OPTIONS.map((form) => {
-            const added = available.includes(form);
-            return (
-              <form key={form} action={startAssessment.bind(null, studentId, form)}>
-                <button
-                  type="submit"
-                  disabled={!hasCycle || !added}
-                  className="w-full text-left text-sm font-bold px-2.5 py-2 rounded-xl border-none cursor-pointer bg-transparent text-[var(--color-ink)] hover:bg-[var(--color-neutral)] disabled:cursor-default disabled:hover:bg-transparent disabled:text-[var(--color-muted-light)]"
-                >
+            const ways = DELIVERY_OPTIONS.filter((d) => available.some((a) => a.form === form && a.delivery === d));
+            if (ways.length === 0) {
+              return (
+                <button key={form} type="button" disabled className={ITEM_CLASS}>
                   {formLabel(form)}
-                  {!added && <span className="font-normal text-xs"> · not added yet</span>}
+                  <span className="font-normal text-xs"> · not added yet</span>
+                </button>
+              );
+            }
+            return ways.map((delivery) => (
+              <form key={form + delivery} action={startAssessment.bind(null, studentId, form, delivery)}>
+                <button type="submit" disabled={!hasCycle} className={ITEM_CLASS}>
+                  {formLabel(form)}
+                  <span className="font-normal text-xs">
+                    {delivery === "game" ? " · game the child plays" : " · given by an adult"}
+                  </span>
                 </button>
               </form>
-            );
+            ));
           })}
         </div>
       )}

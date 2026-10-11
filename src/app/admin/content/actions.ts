@@ -5,7 +5,6 @@ import { requireAdmin } from "@/lib/authz";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { AssessmentItem } from "@/lib/database.types";
 import { isAssessmentForm, isValidLevel } from "@/lib/levels";
-import { isAssessorLed } from "@/lib/readwell/form";
 
 const GAME_ITEM_TYPES = ["choice", "mic", "text"];
 
@@ -34,8 +33,10 @@ function validateItems(items: AssessmentItem[]) {
 }
 
 /**
- * Saves a student game form (choice, read-aloud and writing items the child
- * answers on their own device) for one level and form. assessments has no
+ * Saves the game version of a form (choice, read-aloud and writing items
+ * the child answers on their own device) for one level and form. A form
+ * given by an adult from its ReadWell guide is a separate row (delivery
+ * 'assessor', 0018) managed from its item bank, so this never touches it. assessments has no
  * client-facing write policy (see 0002_rls.sql) so this needs the service
  * role, gated by requireAdmin(). Saving creates a new version rather than
  * mutating in place, so past sessions keep pointing at the exact content
@@ -49,18 +50,14 @@ export async function saveAssessmentItems(level: number, form: string, items: As
   const admin = createAdminClient();
   const { data: versions } = await admin
     .from("assessments")
-    .select("id, version, items, is_active")
+    .select("id, version, is_active")
     .eq("level", level)
     .eq("form", form)
+    .eq("delivery", "game")
     .order("version", { ascending: false });
   const current = (versions ?? []).find((v) => v.is_active);
-  // An assessor-led form (from a ReadWell guide) is managed from its item
-  // bank, never replaced from this editor.
-  if (current && isAssessorLed(current.items)) {
-    throw new Error("This form is given by an assessor from its guide, so it isn't edited here");
-  }
 
-  // At most one active version per level and form (0017's unique index),
+  // At most one active version per level, form and delivery (0018),
   // so the old one is switched off before the new one goes in, and back
   // on if the insert fails.
   if (current) {
@@ -70,6 +67,7 @@ export async function saveAssessmentItems(level: number, form: string, items: As
   const { error: insertError } = await admin.from("assessments").insert({
     level,
     form,
+    delivery: "game",
     version: (versions?.[0]?.version ?? 0) + 1,
     items,
     is_active: true,

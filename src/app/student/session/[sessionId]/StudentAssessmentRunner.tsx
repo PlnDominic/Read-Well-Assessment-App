@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { MicIcon, SpeakerIcon } from "@/components/icons";
 import { AnimatedSunny, SUNNY_FACE_SRC, type SunnyMood } from "@/components/AnimatedSunny";
 import { burst, originOf, playSound, setSoundEnabled, soundEnabled } from "@/lib/gameFx";
+import { optionPicture, type OptionPicture } from "@/lib/optionPicture";
 
 interface KioskItem {
   id: string;
@@ -12,8 +13,9 @@ interface KioskItem {
   type: "choice" | "mic" | "text";
   prompt: string;
   passage: string | null;
+  /** What Sunny says instead of reading the prompt; never shown. */
+  say: string | null;
   options: string[] | null;
-  expectedText?: string;
 }
 
 interface KioskState {
@@ -28,22 +30,51 @@ interface KioskState {
   answersByItemId: Record<string, unknown>;
 }
 
-const PARTS = [
-  { code: "LS", number: 1, title: "Letter sounds", subtitle: "Find the sounds hiding in letters", sitting: 1, color: "#0f766e" },
-  { code: "SV", number: 2, title: "Short vowel words", subtitle: "Read the little words", sitting: 1, color: "#0f766e" },
-  { code: "LC", number: 3, title: "Story listening", subtitle: "Listen like a story detective", sitting: 1, color: "#2563eb" },
-  { code: "VO", number: 4, title: "Vocabulary", subtitle: "Match words to pictures", sitting: 1, color: "#2563eb" },
-  { code: "CP", number: 5, title: "Print concepts", subtitle: "Explore how stories work", sitting: 1, color: "#2563eb" },
-  { code: "SA", number: 6, title: "Sound awareness", subtitle: "Climb the sound ladder", sitting: 1, color: "#7c3aed" },
-  { code: "BL", number: 7, title: "Blend sounds", subtitle: "Slide sounds together", sitting: 2, color: "#ea580c" },
-  { code: "RW", number: 8, title: "Real blend words", subtitle: "Read words with blends", sitting: 2, color: "#ea580c" },
-  { code: "NW", number: 9, title: "Made-up words", subtitle: "Be a word inventor", sitting: 2, color: "#ea580c" },
-  { code: "HW", number: 10, title: "Heart words", subtitle: "Words you know by heart", sitting: 2, color: "#db2777" },
-  { code: "ST", number: 11, title: "Story reading", subtitle: "Read a story aloud", sitting: 2, color: "#db2777" },
-  { code: "AT", number: 12, title: "Reading attitude", subtitle: "Tell us how reading feels", sitting: 2, color: "#db2777" },
-  { code: "WT", number: 13, title: "Writing", subtitle: "Show what you can write", sitting: 3, color: "#ca8a04" },
-] as const;
-const PART_CODE = /^(LS|SV|LC|VO|CP|SA|BL|RW|NW|HW|ST|AT|WT)/i;
+interface Part {
+  code: string;
+  number: number;
+  title: string;
+  subtitle: string;
+  /** The ReadWell sitting: 1, 2, or 3 for the writing. */
+  sitting: number;
+  color: string;
+}
+
+// Each level's parts, in order, by the item-code prefix its game items use.
+const LEVEL_PARTS: Record<number, Part[]> = {
+  1: [
+    { code: "LC", number: 1, title: "Story listening", subtitle: "Listen to Sunny's story", sitting: 1, color: "#2563eb" },
+    { code: "VO", number: 2, title: "Vocabulary", subtitle: "Find the picture", sitting: 1, color: "#2563eb" },
+    { code: "CP", number: 3, title: "Print concepts", subtitle: "Show how books work", sitting: 1, color: "#2563eb" },
+    { code: "SA", number: 4, title: "Sound awareness", subtitle: "Play with sounds", sitting: 1, color: "#7c3aed" },
+    { code: "LN", number: 5, title: "Letter names", subtitle: "Find the letters", sitting: 1, color: "#0f766e" },
+    { code: "LS", number: 6, title: "Letter sounds", subtitle: "Match sounds to letters", sitting: 1, color: "#0f766e" },
+    { code: "CV", number: 7, title: "CV blending", subtitle: "Slide two sounds together", sitting: 2, color: "#ea580c" },
+    { code: "RW", number: 8, title: "Real words", subtitle: "Read the little words", sitting: 2, color: "#ea580c" },
+    { code: "NW", number: 9, title: "Made up words", subtitle: "Be a word inventor", sitting: 2, color: "#ea580c" },
+    { code: "HW", number: 10, title: "Heart words", subtitle: "Words you know by heart", sitting: 2, color: "#db2777" },
+    { code: "ST", number: 11, title: "Story reading", subtitle: "Read a story aloud", sitting: 2, color: "#db2777" },
+    { code: "AT", number: 12, title: "Reading attitude", subtitle: "Tell Sunny how reading feels", sitting: 2, color: "#db2777" },
+    { code: "WT", number: 13, title: "Writing", subtitle: "Show what you can write", sitting: 3, color: "#ca8a04" },
+  ],
+  2: [
+    { code: "LS", number: 1, title: "Letter sounds", subtitle: "Find the sounds hiding in letters", sitting: 1, color: "#0f766e" },
+    { code: "SV", number: 2, title: "Short vowel words", subtitle: "Read the little words", sitting: 1, color: "#0f766e" },
+    { code: "LC", number: 3, title: "Story listening", subtitle: "Listen like a story detective", sitting: 1, color: "#2563eb" },
+    { code: "VO", number: 4, title: "Vocabulary", subtitle: "Match words to pictures", sitting: 1, color: "#2563eb" },
+    { code: "CP", number: 5, title: "Print concepts", subtitle: "Explore how stories work", sitting: 1, color: "#2563eb" },
+    { code: "SA", number: 6, title: "Sound awareness", subtitle: "Climb the sound ladder", sitting: 1, color: "#7c3aed" },
+    { code: "BL", number: 7, title: "Blend sounds", subtitle: "Slide sounds together", sitting: 2, color: "#ea580c" },
+    { code: "RW", number: 8, title: "Real blend words", subtitle: "Read words with blends", sitting: 2, color: "#ea580c" },
+    { code: "NW", number: 9, title: "Made-up words", subtitle: "Be a word inventor", sitting: 2, color: "#ea580c" },
+    { code: "HW", number: 10, title: "Heart words", subtitle: "Words you know by heart", sitting: 2, color: "#db2777" },
+    { code: "ST", number: 11, title: "Story reading", subtitle: "Read a story aloud", sitting: 2, color: "#db2777" },
+    { code: "AT", number: 12, title: "Reading attitude", subtitle: "Tell us how reading feels", sitting: 2, color: "#db2777" },
+    { code: "WT", number: 13, title: "Writing", subtitle: "Show what you can write", sitting: 3, color: "#ca8a04" },
+  ],
+};
+// Levels without their own list yet use Level 2's.
+function partsFor(level: number | undefined): Part[] { return LEVEL_PARTS[level ?? 2] ?? LEVEL_PARTS[2]; }
 
 /**
  * The game is split into missions: one per ReadWell part when the items
@@ -72,7 +103,7 @@ interface Mission {
 function storageKey(prefix: string, id: string) { return `rw:${prefix}:${id}`; }
 function readJson<T>(key: string, fallback: T): T { try { return JSON.parse(localStorage.getItem(key) ?? "null") ?? fallback; } catch { return fallback; } }
 function writeJson(key: string, value: unknown) { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* best effort */ } }
-function partFor(item?: KioskItem) { return PARTS.find((part) => item?.id.toUpperCase().startsWith(part.code)) ?? PARTS[0]; }
+function partFor(parts: Part[], item?: KioskItem) { return parts.find((part) => item?.id.toUpperCase().startsWith(part.code)); }
 function speak(text: string) {
   if (typeof window === "undefined" || !window.speechSynthesis) return;
   window.speechSynthesis.cancel();
@@ -81,14 +112,34 @@ function speak(text: string) {
   utterance.rate = 0.86;
   window.speechSynthesis.speak(utterance);
 }
-function itemSpokenText(item: KioskItem) { return [item.passage, item.prompt].filter(Boolean).join(". "); }
+/**
+ * What Sunny reads out: the item's `say` if it has one, otherwise the
+ * passage and prompt. A read-aloud item never reads its passage, which is
+ * what the child is meant to read themselves.
+ */
+function itemSpokenText(item: KioskItem) {
+  if (item.say) return item.say;
+  return item.type === "mic" ? item.prompt : [item.passage, item.prompt].filter(Boolean).join(". ");
+}
 function isAnswered(answer: unknown) { return typeof answer === "string" ? answer.trim().length > 0 : answer !== undefined && answer !== null; }
+// What a read-aloud item records when the child skips it; scored as wrong (evaluateResponse in src/lib/kiosk.ts).
+const SKIPPED = "skipped";
+/** An answer that earns a star: anything but a skip. */
+function earnsStar(answer: unknown) { return isAnswered(answer) && answer !== SKIPPED; }
 
-function buildMissions(items: KioskItem[]): Mission[] {
-  const byPart = items.length > 0 && items.every((item) => PART_CODE.test(item.id));
+/** An option's picture, falling back to the emoji itself if the file is missing. */
+function OptionImage({ picture, tile }: { picture: OptionPicture; tile: boolean }) {
+  const [failed, setFailed] = useState(false);
+  if (!picture.src || failed) return picture.emoji ? <span className={tile ? "rw-tile-emoji" : "rw-option-emoji"}>{picture.emoji}</span> : null;
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={picture.src} alt="" draggable={false} className={tile ? "rw-tile-img" : "rw-option-img"} onError={() => setFailed(true)} />;
+}
+
+function buildMissions(items: KioskItem[], parts: Part[]): Mission[] {
+  const byPart = items.length > 0 && items.every((item) => partFor(parts, item));
   const missions: Mission[] = [];
   items.forEach((item, index) => {
-    const part = partFor(item);
+    const part = partFor(parts, item) ?? parts[0];
     const key = byPart ? part.code : String(Math.floor(index / MISSION_SIZE));
     const last = missions[missions.length - 1];
     if (last && last.key === key) { last.end = index + 1; return; }
@@ -186,14 +237,14 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
   }, [load, pendingKey]);
 
   const item = state?.items[qIndex];
-  const missions = state ? buildMissions(state.items) : [];
+  const missions = state ? buildMissions(state.items, partsFor(state.assessmentLevel)) : [];
   const missionIndexOf = (index: number) => Math.max(0, missions.findIndex((m) => index >= m.start && index < m.end));
   const missionIndex = missionIndexOf(qIndex);
   const mission = missions[missionIndex];
   const savedAnswer = item ? state?.answersByItemId[item.id] : undefined;
   const savedString = typeof savedAnswer === "string" ? savedAnswer : "";
-  const isStory = item?.id.toUpperCase().startsWith("ST");
-  const stars = state ? state.items.filter((entry) => isAnswered(state.answersByItemId[entry.id])).length : 0;
+  const isStory = item?.type === "mic" && item.id.toUpperCase().startsWith("ST");
+  const stars = state ? state.items.filter((entry) => earnsStar(state.answersByItemId[entry.id])).length : 0;
 
   useEffect(() => {
     if (!started || !item || !isStory || state?.status === "completed") return;
@@ -254,7 +305,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
 
   function saveAnswer(answer: unknown) {
     if (!item) return;
-    const firstAnswer = !isAnswered(state?.answersByItemId[item.id]) && isAnswered(answer);
+    const firstAnswer = !earnsStar(state?.answersByItemId[item.id]) && earnsStar(answer);
     pendingRef.current[item.id] = answer;
     writeJson(pendingKey, pendingRef.current);
     setState((current) => {
@@ -268,7 +319,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
       playSound("star");
       burst("star", originOf(starsRef.current));
       setStarBump((n) => n + 1);
-    } else if (item.type === "choice") {
+    } else if (item.type === "choice" || answer === SKIPPED) {
       playSound("tap");
     }
   }
@@ -362,7 +413,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
   if (celebrating !== null) {
     const done = missions[celebrating];
     const upNext = missions[celebrating + 1];
-    const earned = state.items.slice(done.start, done.end).filter((entry) => isAnswered(state.answersByItemId[entry.id])).length;
+    const earned = state.items.slice(done.start, done.end).filter((entry) => earnsStar(state.answersByItemId[entry.id])).length;
     const breakTime = !!upNext && done.sitting !== null && upNext.sitting !== null && upNext.sitting !== done.sitting;
     return (
       <div className="rw-assessment-shell">
@@ -383,6 +434,11 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
   }
 
   const canProceed = item.type === "choice" ? !!savedString : item.type === "text" ? savedString.trim().length > 0 : !!savedString;
+  // Pictures (and single letters or marks) show as big tiles a child can tap; anything wordier stays a list.
+  const pictures = (item.options ?? []).map(optionPicture);
+  const tiles = pictures.length > 0 && pictures.every((p) => (p.src ? !p.label : p.label.length <= 3));
+  // A single word to read aloud shows big, like a flash card.
+  const wordCard = item.type === "mic" && !!item.passage && item.passage.length <= 14;
   const firstInMission = qIndex === mission.start;
   const leftInMission = mission.end - (qIndex + 1);
   const lastQuestion = qIndex === state.items.length - 1;
@@ -391,6 +447,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
   let mood: SunnyMood;
   let say: string;
   if (recording) { mood = "listen"; say = "I'm listening…"; }
+  else if (savedString === SKIPPED) { mood = "thumbs"; say = "That's okay! On to the next one."; }
   else if (item.type === "text" && canProceed) { mood = "thumbs"; say = "Looking good! Tap Next when you're done."; }
   else if (canProceed) { mood = qIndex % 2 ? "cheer" : "thumbs"; say = PRAISE[qIndex % PRAISE.length]; }
   else if (item.type === "mic") { mood = "read"; say = isStory ? "Read the story to me!" : "Tap the mic and read to me!"; }
@@ -416,12 +473,30 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
       <main className="rw-mission-card">
         <div className="rw-mission-top"><div className="rw-part-badge" style={{ background: mission.color }}>{mission.partLabel ?? `MISSION ${missionIndex + 1}`}</div>{speechSupported && <button className="rw-listen" onClick={() => speak(itemSpokenText(item))}><SpeakerIcon size={17} color="currentColor" /> Listen</button>}</div>
         {firstInMission && <div className="rw-part-intro"><strong>{mission.title}</strong><span>{mission.subtitle}</span></div>}
-        {item.passage && <div className="rw-passage">{item.passage}</div>}
+        {item.passage && (wordCard
+          ? <div className="rw-word-card">{item.passage}</div>
+          : <div className={`rw-passage ${item.type === "mic" ? "rw-passage-read" : ""}`}>{item.passage}</div>)}
         <h1 className="rw-prompt">{item.prompt}</h1>
+        {item.say && speechSupported && <p className="rw-say-hint">Tap Listen to hear Sunny again.</p>}
         {isStory && <div className="rw-timer"><span className="rw-timer-dot" /> Story time {Math.floor(storySeconds / 60)}:{String(storySeconds % 60).padStart(2, "0")}</div>}
-        {item.type === "choice" && item.options && <div className="rw-options">{item.options.map((option) => <button key={option} className={`rw-option ${savedString === option ? "selected" : ""}`} onClick={() => saveAnswer(option)}><span className="rw-option-letter">{String.fromCharCode(65 + item.options!.indexOf(option))}</span>{option}{savedString === option && <span className="rw-check">✓</span>}</button>)}</div>}
+        {item.type === "choice" && item.options && (
+          <div className={`rw-options ${tiles ? `rw-tiles${item.options.length === 4 ? " four" : ""}` : ""}`} style={tiles ? { "--cols": Math.min(item.options.length, 4) } as CSSProperties : undefined}>
+            {item.options.map((option, i) => {
+              const picture = pictures[i];
+              const selected = savedString === option;
+              return (
+                <button key={option} className={`rw-option ${tiles ? "rw-tile" : ""} ${selected ? "selected" : ""}`} onClick={() => saveAnswer(option)} aria-label={tiles && picture.src ? `Choice ${i + 1}` : undefined} aria-pressed={selected}>
+                  {!tiles && <span className="rw-option-letter">{String.fromCharCode(65 + i)}</span>}
+                  <OptionImage picture={picture} tile={tiles} />
+                  {tiles ? !picture.src && <span className="rw-tile-glyph">{picture.label}</span> : <span>{picture.label}</span>}
+                  {selected && <span className="rw-check">✓</span>}
+                </button>
+              );
+            })}
+          </div>
+        )}
         {item.type === "text" && <textarea className="rw-writing-input" value={savedString} onChange={(event) => saveAnswer(event.target.value)} placeholder="Write your answer here…" rows={3} autoFocus />}
-        {item.type === "mic" && <div className="rw-mic-wrap"><button className={`rw-mic ${savedString ? "done" : recording ? "recording" : ""}`} onClick={recordMic} aria-label="Read aloud"><MicIcon /></button><strong>{savedString ? "Nice reading! ✓" : recording ? "Sunny is listening…" : "Tap to read aloud"}</strong><small>Take your time. You can try once.</small></div>}
+        {item.type === "mic" && <div className="rw-mic-wrap"><button className={`rw-mic ${savedString ? "done" : recording ? "recording" : ""}`} onClick={recordMic} aria-label="Read aloud"><MicIcon /></button><strong>{savedString === SKIPPED ? "Skipped" : savedString ? "Nice reading! ✓" : recording ? "Sunny is listening…" : "Tap to read aloud"}</strong><small>Take your time. You can try once.</small>{!savedString && !recording && <button className="rw-skip" onClick={() => saveAnswer(SKIPPED)}>I can&apos;t read this one yet</button>}</div>}
       </main>
     </div>
     <div className="rw-actions">

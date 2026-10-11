@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createSessionForStudent } from "@/lib/sessions";
-import { formLabel, isAssessmentForm, isValidLevel, levelLabel } from "@/lib/levels";
+import { formDeliveryLabel, isAssessmentForm, isDelivery, isValidLevel, levelLabel } from "@/lib/levels";
 
 export interface AddStudentState {
   error: string | null;
@@ -54,16 +54,17 @@ export async function addStudentToOwnRoster(
 
 /**
  * Starts the assessment the teacher picked (Form A, B, C or the Final
- * assessment) at the student's level, in the school's current cycle, and
- * opens it (Assessment Service, TRD §4.1): the student game or the
- * assessor screen, depending on the form. If the student
+ * assessment, given by an adult or played as a game) at the student's
+ * level, in the school's current cycle, and opens it (Assessment Service,
+ * TRD §4.1): the student game or the assessor screen. If the student
  * already has an unfinished ReadWell session in this cycle, that one opens
  * instead: finish or cancel it before starting another. Runs as the
  * signed-in teacher's own session, so RLS limits it to students they can
  * already access.
  */
-export async function startAssessment(studentId: string, form: string) {
+export async function startAssessment(studentId: string, form: string, delivery: string) {
   if (!isAssessmentForm(form)) throw new Error("Pick Form A, B, C or the Final assessment");
+  if (!isDelivery(delivery)) throw new Error("Pick the game or the version given by an adult");
 
   const supabase = await createClient();
   const {
@@ -90,7 +91,7 @@ export async function startAssessment(studentId: string, form: string) {
   // so they don't block a new assessment.
   const { data: unfinished } = await supabase
     .from("assessment_sessions")
-    .select("id, assessments!inner(form, firstType:items->0->>type)")
+    .select("id, assessments!inner(form, delivery)")
     .eq("student_id", studentId)
     .eq("cycle_id", cycle.id)
     .neq("status", "completed")
@@ -99,8 +100,8 @@ export async function startAssessment(studentId: string, form: string) {
     .limit(1)
     .maybeSingle();
   if (unfinished) {
-    const firstType = (unfinished as unknown as { assessments: { firstType: string | null } }).assessments.firstType;
-    redirect(sessionPath(unfinished.id, firstType !== "assessor"));
+    const { delivery: unfinishedDelivery } = (unfinished as unknown as { assessments: { delivery: string } }).assessments;
+    redirect(sessionPath(unfinished.id, unfinishedDelivery === "game"));
   }
 
   const session = await createSessionForStudent(supabase, {
@@ -108,13 +109,14 @@ export async function startAssessment(studentId: string, form: string) {
     schoolId: student.school_id,
     level: student.level,
     form,
+    delivery,
     createdBy: user.id,
   });
   if (!session.ok) {
     throw new Error(
       session.reason === "no_cycle"
         ? "No active assessment cycle for this school"
-        : `${formLabel(form)} hasn't been added for ${levelLabel(student.level)} yet`
+        : `${formDeliveryLabel(form, delivery)} hasn't been added for ${levelLabel(student.level)} yet`
     );
   }
 

@@ -317,6 +317,24 @@ body[data-offline] form button:not([type="button"]) {
 .rw-stamps { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 0 0 18px; }
 .rw-stamp { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--node-color); color: #fff; font-size: 13px; font-weight: 900; animation: rw-star-in .45s cubic-bezier(.34, 1.56, .64, 1) both; }
 
+/* Picture and letter choices as big tiles, read-aloud words as flash cards. */
+.rw-tiles { grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr)); }
+.rw-option.rw-tile { position: relative; flex-direction: column; justify-content: center; gap: 6px; min-height: 116px; padding: 14px 8px; text-align: center; }
+.rw-tile .rw-check { position: absolute; top: 8px; right: 10px; margin: 0; }
+.rw-tile-img { width: 76px; height: 76px; pointer-events: none; }
+.rw-tile-emoji { font-size: 60px; line-height: 1; }
+.rw-tile-glyph { font: 800 50px/1 var(--font-heading); }
+.rw-option-img { width: 36px; height: 36px; flex: none; pointer-events: none; }
+.rw-option-emoji { font-size: 28px; line-height: 1; }
+.rw-passage { white-space: pre-line; }
+.rw-passage-read { font-size: 24px; line-height: 1.5; }
+.rw-word-card {
+  width: max-content; max-width: 100%; margin: 18px auto 4px; padding: 16px 30px; border-radius: 22px;
+  background: var(--color-neutral); color: var(--color-ink); font: 800 clamp(46px, 12vw, 76px)/1.1 var(--font-heading); letter-spacing: .03em;
+}
+.rw-say-hint { margin: -14px 0 16px; color: var(--color-muted); font-size: 13px; text-align: center; }
+.rw-skip { margin-top: 4px; border: 0; background: none; color: var(--color-muted); font: 700 14px var(--font-body); text-decoration: underline; cursor: pointer; }
+
 /* Night sky in dark mode. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .rw-map { background: linear-gradient(180deg, #1c3048 0%, #18222f 70%, var(--color-surface) 100%); }
@@ -336,6 +354,8 @@ body[data-offline] form button:not([type="button"]) {
   .rw-node.current { width: 22px; height: 22px; }
   .rw-node.goal { width: 24px; height: 24px; font-size: 13px; }
   .rw-celebrate-card { padding: 20px 16px 24px; border-radius: 22px; }
+  .rw-tiles.four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rw-option.rw-tile { min-height: 104px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,0 +1,11 @@
+Picture choices in the student game.
+
+<codepoints>.svg  Twemoji 15.1.0 (github.com/jdecked/twemoji), by Twitter, Inc
+                  and other contributors, licensed CC-BY 4.0:
+                  https://creativecommons.org/licenses/by/4.0/
+                  Unchanged; named by their emoji's code points.
+
+mop.svg, gate.svg, roof.svg, book-front.svg, book-back.svg,
+book-upside-down.svg
+                  Drawn for Read Well in the same style, for pictures the
+                  ReadWell Level 1 guide uses that have no emoji.

@@ -6,7 +6,7 @@
  *   supabase gen types typescript --linked > src/lib/database.types.ts
  */
 
-import type { AssessmentForm } from "@/lib/levels";
+import type { AssessmentForm, Delivery } from "@/lib/levels";
 
 export type UserRole = "teacher" | "reading_specialist" | "administrator";
 export type SessionStatus = "not_started" | "in_progress" | "completed";
@@ -31,6 +31,13 @@ export interface AssessmentItem {
   prompt: string;
   passage?: string;
   options?: AssessmentItemOption[];
+  /**
+   * Game items: what Sunny says aloud instead of reading the prompt and
+   * passage, never shown. Used to read choices to a child who can't read
+   * yet, to dictate a word without showing it, and so a read-aloud item
+   * never speaks the word the child is meant to read.
+   */
+  say?: string;
   /**
    * The exact word/phrase a mic item expects the student to read aloud,
    * used to score the browser's speech-to-text transcript (or a typed
@@ -134,6 +141,8 @@ export interface Database {
           level: number;
           /** null only for content from before levels that wasn't kept (switched off). */
           form: AssessmentForm | null;
+          /** How it's given: by an adult on the assessor screen, or played by the child (0018). */
+          delivery: Delivery;
           version: number;
           items: AssessmentItem[];
           is_active: boolean;
@@ -143,6 +152,7 @@ export interface Database {
           id?: string;
           level: number;
           form?: AssessmentForm | null;
+          delivery: Delivery;
           version?: number;
           items: AssessmentItem[];
           is_active?: boolean;

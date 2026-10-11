@@ -156,6 +156,21 @@ export function AssessmentItemsEditor({
             </label>
 
             <label className="flex flex-col gap-1.5 text-sm mb-3">
+              <span className="font-bold text-[var(--color-muted)] text-xs uppercase">Sunny says (optional)</span>
+              <textarea
+                value={item.say ?? ""}
+                onChange={(e) => updateItem(i, { say: e.target.value || undefined })}
+                rows={2}
+                placeholder="Read aloud instead of the prompt, never shown. E.g. the choices for a child who can't read yet, or a word to spell."
+                className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3.5 py-2.5"
+              />
+              <span className="text-[var(--color-muted)] text-xs">
+                Leave blank to have Sunny read the passage and prompt. A read-aloud item never reads its passage, so
+                the child isn&apos;t told the words they&apos;re meant to read.
+              </span>
+            </label>
+
+            <label className="flex flex-col gap-1.5 text-sm mb-3">
               <span className="font-bold text-[var(--color-muted)] text-xs uppercase">Prompt</span>
               <input
                 value={item.prompt}
