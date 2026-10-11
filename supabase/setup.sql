@@ -279,6 +279,24 @@ grant execute on function public.can_access_session(uuid) to authenticated;
 -- off (its sessions keep their reports).
 -- ===========================================================================
 
+-- A stray level column added by hand (say, in the table editor, after the
+-- app reported it missing) would block the renames below; it's set aside as
+-- level_unused rather than dropped, so nothing in it is lost.
+do $$
+declare r record;
+begin
+  for r in
+    select * from (values ('students', 'grade'), ('assessments', 'grade_level'), ('recommendation_rules', 'grade_level')) as v(tbl, old_col)
+  loop
+    if exists (select 1 from information_schema.columns
+               where table_schema = 'public' and table_name = r.tbl and column_name = r.old_col)
+       and exists (select 1 from information_schema.columns
+                   where table_schema = 'public' and table_name = r.tbl and column_name = 'level') then
+      execute format('alter table public.%I rename column level to level_unused', r.tbl);
+    end if;
+  end loop;
+end $$;
+
 do $$ begin
   if exists (select 1 from information_schema.columns
              where table_schema = 'public' and table_name = 'students' and column_name = 'grade') then

@@ -19,6 +19,25 @@
 -- 5. Only game sessions need a join code; assessor-led ones have none.
 -- 6. The grade-match guard (0006, 0014) becomes a level-match guard.
 
+-- A stray level column that someone added by hand before this migration
+-- (say, in the table editor, after the app reported it missing) would block
+-- the renames below. It's set aside as level_unused rather than dropped, so
+-- nothing in it is lost; drop it once you've checked it's empty.
+do $$
+declare r record;
+begin
+  for r in
+    select * from (values ('students', 'grade'), ('assessments', 'grade_level'), ('recommendation_rules', 'grade_level')) as v(tbl, old_col)
+  loop
+    if exists (select 1 from information_schema.columns
+               where table_schema = 'public' and table_name = r.tbl and column_name = r.old_col)
+       and exists (select 1 from information_schema.columns
+                   where table_schema = 'public' and table_name = r.tbl and column_name = 'level') then
+      execute format('alter table public.%I rename column level to level_unused', r.tbl);
+    end if;
+  end loop;
+end $$;
+
 alter table public.students rename column grade to level;
 alter table public.assessments rename column grade_level to level;
 alter table public.recommendation_rules rename column grade_level to level;
@@ -92,3 +111,5 @@ $$;
 create trigger assessment_sessions_level_match
   before insert or update of student_id, assessment_id, grade_override on public.assessment_sessions
   for each row execute function public.check_session_level_match();
+
+notify pgrst, 'reload schema';

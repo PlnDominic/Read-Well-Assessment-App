@@ -139,3 +139,5 @@ select 1, 'A', 'game', 1, '[
     {"id":"WT11","skillAreaKey":"writing","type":"text","prompt":"Write the sentence you hear.","say":"Write this sentence. The red bus is big. The... red... bus... is... big. The red bus is big.","expectedText":"The red bus is big."}
   ]'::jsonb, true
 where not exists (select 1 from public.assessments where level = 1 and form = 'A' and delivery = 'game');
+
+notify pgrst, 'reload schema';
