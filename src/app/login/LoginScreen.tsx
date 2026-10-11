@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { SunnyAvatar } from "@/components/SunnyAvatar";
 import { clearStaffOfflineData, savedStaffHome } from "@/lib/offline";
@@ -27,7 +26,6 @@ const ROLE_COPY: Record<Exclude<Mode, "select">, { title: string; subtitle: stri
 export function LoginScreen() {
   const [mode, setMode] = useState<Mode>("select");
   const [offlineHome, setOfflineHome] = useState<string | null>(null);
-  const router = useRouter();
 
   // Offline, this screen is the saved signed-out copy even for someone who
   // is still signed in, so offer the way back to their saved dashboard.
@@ -54,7 +52,7 @@ export function LoginScreen() {
         Read Well
       </h1>
       <span className="inline-block bg-[var(--color-orange-tint)] text-[var(--color-orange-dark)] text-sm font-bold px-4 py-1.5 rounded-full mb-9">
-        Grade 1 Reading Assessment
+        Early Reading Assessment
       </span>
 
       {offlineHome && (
@@ -67,13 +65,6 @@ export function LoginScreen() {
       )}
 
       <div className="flex flex-col gap-4">
-        <RoleTile
-          avatarSrc="/avatars/student.png"
-          tint="var(--color-orange-tint)"
-          title="I'm a Student"
-          subtitle="Take my reading assessment"
-          onClick={() => router.push("/student/join")}
-        />
         <RoleTile
           avatarSrc="/avatars/teacher.png"
           tint="var(--color-orange-tint)"

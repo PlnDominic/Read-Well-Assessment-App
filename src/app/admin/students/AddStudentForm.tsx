@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { addStudent, type AddStudentState } from "./actions";
-import { GRADE_OPTIONS, gradeLabel } from "@/lib/grades";
+import { LEVEL_OPTIONS, levelLabel } from "@/lib/levels";
 
 const initialState: AddStudentState = { error: null, result: null };
 
@@ -17,16 +17,16 @@ export function AddStudentForm({ teachers }: { teachers: { id: string; name: str
           <input name="name" required className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3.5 py-2.5" />
         </label>
         <label className="flex flex-col gap-1.5 text-sm w-28">
-          <span className="font-bold text-[var(--color-muted)] text-xs uppercase">Grade</span>
+          <span className="font-bold text-[var(--color-muted)] text-xs uppercase">Level</span>
           <select
-            name="grade"
+            name="level"
             defaultValue={1}
             required
             className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3.5 py-2.5"
           >
-            {GRADE_OPTIONS.map((g) => (
-              <option key={g} value={g}>
-                {gradeLabel(g)}
+            {LEVEL_OPTIONS.map((l) => (
+              <option key={l} value={l}>
+                {levelLabel(l)}
               </option>
             ))}
           </select>
@@ -60,15 +60,7 @@ export function AddStudentForm({ teachers }: { teachers: { id: string; name: str
 
       {state.result && (
         <div className="mt-4 bg-[var(--color-orange-tint)] rounded-xl px-4.5 py-3.5 text-sm text-[var(--color-ink-soft)]">
-          <strong>{state.result.name}</strong> added.{" "}
-          {state.result.sessionCode ? (
-            <>
-              Kiosk code (give this to the student to enter at /student/join):{" "}
-              <code className="bg-[var(--color-surface)] px-2 py-1 rounded font-bold">{state.result.sessionCode}</code>
-            </>
-          ) : (
-            state.result.note
-          )}
+          <strong>{state.result.name}</strong> added. Their teacher starts each assessment from the class list.
         </div>
       )}
     </div>

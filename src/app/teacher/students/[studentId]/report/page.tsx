@@ -15,13 +15,15 @@ import { formForItems } from "@/lib/readwell/forms";
 import { computeFlow } from "@/lib/readwell/flow";
 import { scoreForm } from "@/lib/readwell/score";
 import { ItemMarks, StoryAndAttitude, StrandTable, WritingScores } from "./Level1Report";
-import { gradeLabel } from "@/lib/grades";
+import { formLabel, levelLabel, type AssessmentForm } from "@/lib/levels";
+import { isOnTrackLabel } from "@/lib/readwell/score";
 
 type ResultRow = { score: number; flagged_as_difficulty: boolean; skill_areas: { id: string; name: string } };
 type HistorySessionRow = {
   id: string;
   completed_at: string | null;
   assessment_cycles: { name: string } | null;
+  assessments: { form: AssessmentForm | null } | null;
   results: { score: number; flagged_as_difficulty: boolean; skill_areas: { id: string } }[];
 };
 
@@ -54,7 +56,7 @@ export default async function StudentReportPage({
 
   const { data: student, error: studentError } = await supabase
     .from("students")
-    .select("id, name, grade, school_id")
+    .select("id, name, level, school_id")
     .eq("id", studentId)
     .single();
   if (studentError || !student) notFound();
@@ -88,16 +90,16 @@ export default async function StudentReportPage({
 
   const { data: assessment } = await supabase
     .from("assessments")
-    .select("items, grade_level")
+    .select("items, level, form")
     .eq("id", session.assessment_id)
     .single();
   const items = (assessment?.items ?? []) as AssessmentItem[];
-  // The assessment this specific session actually used, not the student's
-  // own enrolled grade -- these differ after a grade override
-  // (GradeOverrideControl.tsx / overrideStudentGrade in lib/kiosk.ts), and
-  // recommendation_rules is keyed by the content's grade, not the
-  // student's. Matches contentGradeLevel in lib/reports.ts's PDF path.
-  const contentGradeLevel = assessment?.grade_level ?? student.grade;
+  // The level and form of the assessment this session used. The level
+  // differs from the student's only if they've since moved level, and
+  // recommendation_rules are keyed by the assessment's level. form is null
+  // for kiosk sessions from before levels.
+  const assessedLevel = assessment?.level ?? student.level;
+  const assessedForm = (assessment?.form ?? null) as AssessmentForm | null;
 
   const { data: responses } = await supabase
     .from("responses")
@@ -133,7 +135,7 @@ export default async function StudentReportPage({
         .from("recommendation_rules")
         .select("recommendation_text, skill_areas(name)")
         .in("skill_area_id", flaggedIds)
-        .eq("grade_level", contentGradeLevel)
+        .eq("level", assessedLevel)
     : { data: [] };
 
   const { data: report } = await supabase
@@ -144,14 +146,14 @@ export default async function StudentReportPage({
 
   const { data: historyRaw } = await supabase
     .from("assessment_sessions")
-    .select("id, completed_at, assessment_cycles(name), results(score, flagged_as_difficulty, skill_areas(id))")
+    .select("id, completed_at, assessment_cycles(name), assessments(form), results(score, flagged_as_difficulty, skill_areas(id))")
     .eq("student_id", studentId)
     .eq("status", "completed")
     .order("completed_at", { ascending: true });
   const history = ((historyRaw ?? []) as unknown as HistorySessionRow[]).map((s) => {
     return {
       sessionId: s.id,
-      cycleName: s.assessment_cycles?.name ?? "Unknown cycle",
+      cycleName: (s.assessment_cycles?.name ?? "Unknown cycle") + (s.assessments?.form ? ` · ${formLabel(s.assessments.form)}` : ""),
       completedAt: s.completed_at
         ? new Date(s.completed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
         : "N/A",
@@ -174,7 +176,7 @@ export default async function StudentReportPage({
   });
 
   const overallLabel = formSummary?.supportLevel ?? computeOverallLabel(flaggedIds.length);
-  const isOnTrack = overallLabel === "On Track" || overallLabel === "On track for Level 1";
+  const isOnTrack = isOnTrackLabel(overallLabel);
   const assessedDate = session.completed_at
     ? new Date(session.completed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
     : "N/A";
@@ -193,12 +195,11 @@ export default async function StudentReportPage({
                 {student.name}
               </h1>
               <p className="text-[var(--color-muted)] text-sm m-0">
-                {gradeLabel(student.grade)} · Assessed {assessedDate}
+                {levelLabel(assessedLevel)}
+                {assessedForm ? ` · ${formLabel(assessedForm)}` : ""} · Assessed {assessedDate}
               </p>
-              {contentGradeLevel !== student.grade && (
-                <p className="text-[var(--color-orange-dark)] text-xs font-bold m-0 mt-1">
-                  Assessed with {gradeLabel(contentGradeLevel)} content (grade override)
-                </p>
+              {assessedLevel !== student.level && (
+                <p className="text-[var(--color-orange-dark)] text-xs font-bold m-0 mt-1">Now in {levelLabel(student.level)}</p>
               )}
             </div>
             <div className="flex items-center gap-2.5">
@@ -458,7 +459,7 @@ export default async function StudentReportPage({
             <div className="flex flex-col gap-3.5">
               {(recRows ?? []).length === 0 ? (
                 <p className="text-[var(--color-body)] text-sm m-0">
-                  No flagged areas this cycle. Continue with grade-level independent reading.
+                  No flagged areas this cycle. Continue with level-appropriate independent reading.
                 </p>
               ) : (
                 (recRows ?? []).map((rec, i) => (

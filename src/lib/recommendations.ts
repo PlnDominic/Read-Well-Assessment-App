@@ -11,7 +11,7 @@ export interface Recommendation {
 }
 
 /**
- * Recommendation Engine (TRD §4.3): given flagged skill areas + a grade
+ * Recommendation Engine (TRD §4.3): given flagged skill areas + a
  * level, looks up RecommendationRule rows. Rules are data (see
  * supabase/seed.sql), so the program team can update them without a
  * deploy; this function just reads whatever is in the table.
@@ -19,7 +19,7 @@ export interface Recommendation {
 export async function getRecommendations(
   admin: AdminClient,
   flaggedSkillAreaIds: string[],
-  gradeLevel: number
+  level: number
 ): Promise<Recommendation[]> {
   if (flaggedSkillAreaIds.length === 0) return [];
 
@@ -27,7 +27,7 @@ export async function getRecommendations(
     .from("recommendation_rules")
     .select("skill_area_id, recommendation_text, program_reference, skill_areas(name)")
     .in("skill_area_id", flaggedSkillAreaIds)
-    .eq("grade_level", gradeLevel);
+    .eq("level", level);
   if (error) throw error;
 
   return data.map((row) => ({

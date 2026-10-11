@@ -4,24 +4,12 @@ import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/authz";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createSessionForStudent } from "@/lib/kiosk";
-import { gradeLabel, isValidGrade, parseGrade } from "@/lib/grades";
+import { isValidLevel, parseLevel } from "@/lib/levels";
 
 export interface AddStudentState {
   error: string | null;
-  result: { name: string; sessionCode: string | null; note: string | null } | null;
+  result: { name: string } | null;
 }
-
-// KG 1 (ReadWell Level 1) has no kiosk code to hand out.
-const ASSESSOR_LED_NOTE =
-  "Given one to one by a teacher: use Start Assessment on the class roster to open the assessor screen.";
-
-const NO_SESSION_NOTES: Record<"no_cycle" | "no_assessment", (grade: number) => string> = {
-  no_cycle: () =>
-    "No active assessment cycle yet. Start one on the Cycles tab first, then use Start Assessment on the Teacher roster once that's done.",
-  no_assessment: (grade) =>
-    `No active assessment configured for ${gradeLabel(grade)} yet. Set one up on the Content tab first, then use Start Assessment on the Teacher roster once that's done.`,
-};
 
 export async function addStudent(
   _prevState: AddStudentState,
@@ -30,38 +18,23 @@ export async function addStudent(
   const { supabase, profile } = await requireAdmin();
 
   const name = String(formData.get("name") ?? "").trim();
-  const grade = Number(formData.get("grade") ?? 1);
+  const level = Number(formData.get("level") ?? 1);
   const teacherId = String(formData.get("teacherId") ?? "");
   if (!name || !teacherId) return { error: "Name and teacher are required", result: null };
-  if (!isValidGrade(grade)) return { error: "Pick a grade from the list", result: null };
+  if (!isValidLevel(level)) return { error: "Pick a level from the list", result: null };
 
   // Generating the id ourselves (rather than chaining .select() to read it
   // back via RETURNING) sidesteps a Postgres RLS quirk verified on this
   // project: INSERT ... RETURNING can fail the students SELECT policy even
   // though the identical row is immediately selectable via a plain,
   // separate SELECT through that same policy.
-  const studentId = randomUUID();
   const { error } = await supabase
     .from("students")
-    .insert({ id: studentId, school_id: profile.school_id, teacher_id: teacherId, name, grade });
+    .insert({ id: randomUUID(), school_id: profile.school_id, teacher_id: teacherId, name, level });
   if (error) return { error: error.message, result: null };
 
-  const session = await createSessionForStudent(supabase, {
-    studentId,
-    schoolId: profile.school_id,
-    grade,
-    createdBy: profile.id,
-  });
-
   revalidatePath("/admin/students");
-  return {
-    error: null,
-    result: {
-      name,
-      sessionCode: session.ok && !session.assessorLed ? session.sessionCode : null,
-      note: !session.ok ? NO_SESSION_NOTES[session.reason](grade) : session.assessorLed ? ASSESSOR_LED_NOTE : null,
-    },
-  };
+  return { error: null, result: { name } };
 }
 
 export async function updateStudent(formData: FormData) {
@@ -69,14 +42,14 @@ export async function updateStudent(formData: FormData) {
 
   const id = String(formData.get("id") ?? "");
   const name = String(formData.get("name") ?? "").trim();
-  const grade = Number(formData.get("grade") ?? 1);
+  const level = Number(formData.get("level") ?? 1);
   const teacherId = String(formData.get("teacherId") ?? "");
   if (!id || !name || !teacherId) throw new Error("Name and teacher are required");
-  if (!isValidGrade(grade)) throw new Error("Pick a grade from the list");
+  if (!isValidLevel(level)) throw new Error("Pick a level from the list");
 
   const { error } = await supabase
     .from("students")
-    .update({ name, grade, teacher_id: teacherId })
+    .update({ name, level, teacher_id: teacherId })
     .eq("id", id)
     .eq("school_id", profile.school_id);
   if (error) throw new Error(error.message);
@@ -121,7 +94,7 @@ export async function listDeletedStudents() {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("students")
-    .select("id, name, grade, deleted_at")
+    .select("id, name, level, deleted_at")
     .eq("school_id", profile.school_id)
     .not("deleted_at", "is", null)
     .order("deleted_at", { ascending: false });
@@ -157,7 +130,7 @@ const MAX_CSV_BYTES = 2 * 1024 * 1024;
 const MAX_CSV_ROWS = 2000;
 
 /**
- * Expects a CSV with a header row: name,grade,teacher_email
+ * Expects a CSV with a header row: name,level,teacher_email
  * (a simple comma split, fields containing commas aren't supported).
  */
 export async function importStudentsCsv(
@@ -192,18 +165,18 @@ export async function importStudentsCsv(
   const teacherIdByEmail = new Map((teachers ?? []).map((t) => [t.email.toLowerCase(), t.id]));
 
   const rowErrors: string[] = [];
-  const rowsToInsert: { school_id: string; teacher_id: string; name: string; grade: number }[] = [];
+  const rowsToInsert: { school_id: string; teacher_id: string; name: string; level: number }[] = [];
 
   dataLines.forEach((line, i) => {
     const rowNum = i + (first.startsWith("name,") ? 2 : 1);
-    const [name, gradeRaw, teacherEmail] = line.split(",").map((v) => v?.trim());
-    if (!name || !gradeRaw || !teacherEmail) {
-      rowErrors.push(`Row ${rowNum}: expected "name,grade,teacher_email"`);
+    const [name, levelRaw, teacherEmail] = line.split(",").map((v) => v?.trim());
+    if (!name || !levelRaw || !teacherEmail) {
+      rowErrors.push(`Row ${rowNum}: expected "name,level,teacher_email"`);
       return;
     }
-    const grade = parseGrade(gradeRaw);
-    if (grade === null) {
-      rowErrors.push(`Row ${rowNum}: invalid grade "${gradeRaw}" (use KG1, KG2 or 1-12)`);
+    const level = parseLevel(levelRaw);
+    if (level === null) {
+      rowErrors.push(`Row ${rowNum}: invalid level "${levelRaw}" (use a level number, e.g. 1 or Level 1)`);
       return;
     }
     const teacherId = teacherIdByEmail.get(teacherEmail.toLowerCase());
@@ -211,7 +184,7 @@ export async function importStudentsCsv(
       rowErrors.push(`Row ${rowNum}: no teacher found with email ${teacherEmail}`);
       return;
     }
-    rowsToInsert.push({ school_id: profile.school_id, teacher_id: teacherId, name, grade });
+    rowsToInsert.push({ school_id: profile.school_id, teacher_id: teacherId, name, level });
   });
 
   let inserted = 0;

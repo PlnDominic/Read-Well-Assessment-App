@@ -5,45 +5,26 @@ import { AppShell } from "@/components/AppShell";
 import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
 import { ROLE_AVATAR } from "@/lib/avatars";
 import { createClient } from "@/lib/supabase/server";
-import { cancelSession, overrideAssessmentGrade, startOrResumeAssessment } from "./actions";
+import { formLabel, levelLabel, type AssessmentForm } from "@/lib/levels";
+import { cancelSession } from "./actions";
 import { AddStudentForm } from "./AddStudentForm";
-import { GradeOverrideControl } from "./GradeOverrideControl";
-import { gradeLabel } from "@/lib/grades";
+import { StartAssessmentMenu } from "./StartAssessmentMenu";
 
-const STATUS_STYLE: Record<
-  string,
-  { label: string; bg: string; color: string; actionBg: string; actionColor: string; actionBorder: string; actionLabel: string }
-> = {
+const STATUS_STYLE: Record<string, { label: string; bg: string; color: string }> = {
   // Solid black/white rather than the orange used everywhere else: orange
   // is reserved for "needs attention" states (in progress, not started),
   // so a finished assessment reads as the neutral, no-action-needed one.
-  completed: {
-    label: "Completed",
-    bg: "var(--color-ink)",
-    color: "var(--color-surface)",
-    actionBg: "var(--color-surface)",
-    actionColor: "var(--color-ink)",
-    actionBorder: "var(--color-ink)",
-    actionLabel: "View Report",
-  },
-  in_progress: {
-    label: "In Progress",
-    bg: "var(--color-orange-tint)",
-    color: "var(--color-orange-dark)",
-    actionBg: "var(--color-surface)",
-    actionColor: "var(--color-orange-dark)",
-    actionBorder: "var(--color-orange-tint-border)",
-    actionLabel: "Resume",
-  },
-  not_started: {
-    label: "Not Started",
-    bg: "var(--color-neutral)",
-    color: "var(--color-muted)",
-    actionBg: "var(--color-orange)",
-    actionColor: "white",
-    actionBorder: "var(--color-orange)",
-    actionLabel: "Start Assessment",
-  },
+  completed: { label: "Completed", bg: "var(--color-ink)", color: "var(--color-surface)" },
+  in_progress: { label: "In Progress", bg: "var(--color-orange-tint)", color: "var(--color-orange-dark)" },
+  not_started: { label: "Not Started", bg: "var(--color-neutral)", color: "var(--color-muted)" },
+};
+
+type SessionRow = {
+  id: string;
+  student_id: string;
+  status: string;
+  created_at: string;
+  assessments: { form: AssessmentForm | null } | null;
 };
 
 export default async function TeacherRosterPage() {
@@ -55,10 +36,13 @@ export default async function TeacherRosterPage() {
 
   const { data: profile } = await supabase.from("profiles").select("name, school_id, role").eq("id", user.id).single();
   if (!profile) redirect(NO_PROFILE_LOGIN);
+  // Reading specialists see this list read-only; only teachers and
+  // administrators give assessments (assessment_sessions_insert_staff, 0004).
+  const canAssess = profile.role === "teacher" || profile.role === "administrator";
 
   const { data: students } = await supabase
     .from("students")
-    .select("id, name, grade")
+    .select("id, name, level")
     .order("name");
 
   const { data: cycle } = await supabase
@@ -69,40 +53,43 @@ export default async function TeacherRosterPage() {
     .maybeSingle();
 
   const studentIds = (students ?? []).map((s) => s.id);
-  const { data: sessions } = cycle && studentIds.length > 0
+  const { data: sessionsRaw } = cycle && studentIds.length > 0
     ? await supabase
         .from("assessment_sessions")
-        .select("id, student_id, status, session_code, created_at, assessment_id")
+        .select("id, student_id, status, created_at, assessments(form)")
         .in("student_id", studentIds)
         .eq("cycle_id", cycle.id)
         .order("created_at", { ascending: false })
     : { data: [] };
+  const sessions = (sessionsRaw ?? []) as unknown as SessionRow[];
 
-  // Assessor-led forms (KG 1) are given by the teacher on the assessor
-  // screen, so their sessions have no code for a student to type. Only the
-  // first item's type is read, not the whole item bank.
-  const assessmentIds = [...new Set((sessions ?? []).map((s) => s.assessment_id))];
-  const { data: assessmentKinds } = assessmentIds.length
-    ? await supabase.from("assessments").select("id, firstType:items->0->>type").in("id", assessmentIds)
-    : { data: [] };
-  const assessorLedIds = new Set(
-    ((assessmentKinds ?? []) as unknown as { id: string; firstType: string | null }[])
-      .filter((a) => a.firstType === "assessor")
-      .map((a) => a.id)
-  );
+  // Which of A, B, C and the Final assessment have been added for each
+  // level: a teacher can only pick one that exists.
+  const { data: activeForms } = await supabase
+    .from("assessments")
+    .select("level, form")
+    .eq("is_active", true)
+    .not("form", "is", null);
+  const formsByLevel = new Map<number, Set<AssessmentForm>>();
+  for (const a of activeForms ?? []) {
+    const set = formsByLevel.get(a.level) ?? new Set<AssessmentForm>();
+    set.add(a.form as AssessmentForm);
+    formsByLevel.set(a.level, set);
+  }
 
-  const latestSessionByStudent = new Map<string, { id: string; status: string; sessionCode: string; assessorLed: boolean }>();
-  for (const s of sessions ?? []) {
+  // The latest session per student in this cycle. A kiosk session from
+  // before levels (form null) that was never finished can't be resumed, so
+  // it's passed over; a finished one still links to its report.
+  const latestSessionByStudent = new Map<string, { id: string; status: string; form: AssessmentForm | null }>();
+  for (const s of sessions) {
+    const form = s.assessments?.form ?? null;
+    if (form === null && s.status !== "completed") continue;
     if (!latestSessionByStudent.has(s.student_id)) {
-      latestSessionByStudent.set(s.student_id, {
-        id: s.id,
-        status: s.status,
-        sessionCode: s.session_code,
-        assessorLed: assessorLedIds.has(s.assessment_id),
-      });
+      latestSessionByStudent.set(s.student_id, { id: s.id, status: s.status, form });
     }
   }
   const hasCompletedReport = [...latestSessionByStudent.values()].some((s) => s.status === "completed");
+  const classLevels = [...new Set((students ?? []).map((s) => s.level))].sort((a, b) => a - b);
 
   return (
     <AppShell avatarSrc={ROLE_AVATAR[profile.role]}>
@@ -121,11 +108,7 @@ export default async function TeacherRosterPage() {
           )}
         </div>
         <p className="text-[var(--color-muted)] text-[15px] m-0 mb-6">
-          {[...new Set((students ?? []).map((s) => s.grade))]
-            .sort((a, b) => a - b)
-            .map(gradeLabel)
-            .concat(cycle?.name ?? "No active assessment cycle")
-            .join(" · ")}
+          {classLevels.map(levelLabel).concat(cycle?.name ?? "No active assessment cycle").join(" · ")}
         </p>
 
         {profile.role === "teacher" && (
@@ -134,7 +117,7 @@ export default async function TeacherRosterPage() {
           </div>
         )}
 
-        <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] overflow-hidden">
+        <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)]">
           {(students ?? []).length === 0 && (
             <div className="px-6 py-8 text-[var(--color-muted)] text-center">No students yet.</div>
           )}
@@ -142,6 +125,7 @@ export default async function TeacherRosterPage() {
             const latest = latestSessionByStudent.get(s.id);
             const status = latest?.status ?? "not_started";
             const style = STATUS_STYLE[status];
+            const unfinished = latest && status !== "completed";
             const initials = s.name
               .split(" ")
               .map((n) => n[0])
@@ -158,84 +142,54 @@ export default async function TeacherRosterPage() {
                   </div>
                   <div>
                     <div className="font-extrabold text-[var(--color-ink)] text-base">{s.name}</div>
-                    <div className="text-[13px] text-[var(--color-muted-light)]">{gradeLabel(s.grade)}</div>
+                    <div className="text-[13px] text-[var(--color-muted-light)]">{levelLabel(s.level)}</div>
                   </div>
                 </div>
-                <div className="flex items-center gap-4 flex-wrap">
+                <div className="flex items-center gap-3 flex-wrap">
                   <span
                     className="font-bold text-[13px] px-3.5 py-1.5 rounded-full"
                     style={{ background: style.bg, color: style.color }}
                   >
-                    {style.label}
+                    {latest ? style.label : "Not assessed yet"}
+                    {latest?.form ? ` · ${formLabel(latest.form)}` : ""}
                   </span>
-                  {status !== "completed" && latest && !latest.assessorLed && (
-                    <span
-                      className="text-xs font-bold text-[var(--color-muted)]"
-                      title="Enter this at /student/join on the student's device"
+                  {status === "completed" && latest && (
+                    <Link
+                      href={`/teacher/students/${s.id}/report?session=${latest.id}`}
+                      className="font-bold text-sm px-4.5 py-2.25 rounded-full no-underline bg-[var(--color-surface)] text-[var(--color-ink)] border-[1.5px] border-[var(--color-ink)]"
                     >
-                      Code: <code className="bg-[var(--color-neutral)] px-2 py-1 rounded font-bold">{latest.sessionCode}</code>
-                    </span>
+                      View Report
+                    </Link>
                   )}
-                  {status === "completed" && latest ? (
+                  {canAssess && unfinished && (
                     <>
                       <Link
-                        href={`/teacher/students/${s.id}/report?session=${latest.id}`}
-                        className="font-bold text-sm px-4.5 py-2.25 rounded-full no-underline"
-                        style={{
-                          background: style.actionBg,
-                          color: style.actionColor,
-                          border: `1.5px solid ${style.actionBorder}`,
-                        }}
+                        href={`/teacher/assess/${latest.id}`}
+                        className="font-bold text-sm px-4.5 py-2.25 rounded-full no-underline bg-[var(--color-orange)] text-white"
                       >
-                        {style.actionLabel}
+                        {status === "in_progress" ? "Resume" : "Open"}
                       </Link>
-                      <form action={startOrResumeAssessment.bind(null, s.id)}>
-                        <button
-                          type="submit"
-                          className="font-bold text-sm px-4.5 py-2.25 rounded-full cursor-pointer bg-[var(--color-neutral)] border-none text-[var(--color-orange-dark)] transition-colors hover:bg-[var(--color-neutral-divider)]"
+                      <form action={cancelSession}>
+                        <input type="hidden" name="sessionId" value={latest.id} />
+                        <ConfirmSubmitButton
+                          confirmMessage={`Cancel ${s.name}'s unfinished ${latest.form ? formLabel(latest.form) : "assessment"}? The marks made so far are deleted.`}
+                          className="text-[var(--color-orange-dark)] text-xs font-bold bg-none border-none cursor-pointer"
                         >
-                          Start New Assessment
-                        </button>
+                          Cancel
+                        </ConfirmSubmitButton>
                       </form>
                     </>
-                  ) : (
-                    <>
-                      <form action={startOrResumeAssessment.bind(null, s.id)}>
-                        <button
-                          type="submit"
-                          className="font-bold text-sm px-4.5 py-2.25 rounded-full cursor-pointer"
-                          style={{
-                            background: style.actionBg,
-                            color: style.actionColor,
-                            border: `1.5px solid ${style.actionBorder}`,
-                          }}
-                        >
-                          {style.actionLabel}
-                        </button>
-                      </form>
-                      {profile.role === "teacher" && latest && (
-                        <form action={cancelSession}>
-                          <input type="hidden" name="sessionId" value={latest.id} />
-                          <ConfirmSubmitButton
-                            confirmMessage={`Cancel ${s.name}'s in-progress session? They'll need a new code to start over.`}
-                            className="text-[var(--color-orange-dark)] text-xs font-bold bg-none border-none cursor-pointer"
-                          >
-                            Cancel
-                          </ConfirmSubmitButton>
-                        </form>
-                      )}
-                      {/* Only before the assessment starts: overriding one
-                          already in progress would discard answers already
-                          recorded against the original assessment's items. */}
-                      {profile.role === "teacher" && status === "not_started" && (
-                        <GradeOverrideControl
-                          studentId={s.id}
-                          studentName={s.name}
-                          currentGrade={s.grade}
-                          action={overrideAssessmentGrade}
-                        />
-                      )}
-                    </>
+                  )}
+                  {canAssess && !unfinished && (
+                    <StartAssessmentMenu
+                      studentId={s.id}
+                      studentName={s.name}
+                      level={s.level}
+                      available={[...(formsByLevel.get(s.level) ?? [])]}
+                      label={status === "completed" ? "Start another" : "Start assessment"}
+                      primary={status !== "completed"}
+                      hasCycle={!!cycle}
+                    />
                   )}
                 </div>
               </div>

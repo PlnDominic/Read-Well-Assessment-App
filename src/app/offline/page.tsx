@@ -25,16 +25,10 @@ export default function OfflinePage() {
         </h1>
         <p className="text-[var(--color-body)] text-base leading-relaxed m-0 mb-8">
           This page hasn&apos;t been opened on this device yet, so there&apos;s no saved copy to show. Pages you
-          open while online are saved for offline use. Students who already started their assessment on this
-          device can keep going with their code.
+          open while online are saved for offline use, and an assessment you&apos;ve already started keeps its marks
+          on this device until it can save them.
         </p>
         <div className="flex flex-col items-center gap-3">
-          <Link
-            href="/student/join"
-            className="bg-[var(--color-orange)] text-white rounded-full font-heading font-bold text-lg px-10 py-4 no-underline shadow-[0_10px_24px_rgba(201,123,95,0.35)] transition-transform hover:-translate-y-0.5"
-          >
-            I&apos;m a Student
-          </Link>
           <Link href="/login" className="text-[var(--color-orange)] font-bold text-sm no-underline hover:underline">
             Back to sign in
           </Link>

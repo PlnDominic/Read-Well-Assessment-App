@@ -4,9 +4,8 @@
  * previous build's caches.
  *
  * Two caches:
- * - rw-<v>: public pages (login, student code screen, /offline, assessment
- *   pages). Their HTML carries no staff or student data (assessment pages
- *   are a shell; questions come from /api/kiosk and are kept in localStorage).
+ * - rw-<v>: public pages (login, /offline). Their HTML carries no staff or
+ *   student data.
  * - rw-staff-<v>: staff pages (roster, reports, admin), which DO contain
  *   student data. Wiped on logout and on every sign-in (src/lib/offline.ts)
  *   so the next person on a shared device can't read them.
@@ -20,7 +19,7 @@ const VERSION = new URL(self.location.href).searchParams.get("v") || "dev";
 const CACHE = `rw-${VERSION}`;
 const STAFF_CACHE = `rw-staff-${VERSION}`;
 const STAFF_HOME_KEY = "/__staff-home";
-const PRECACHE_PAGES = ["/login", "/student/join", "/offline"];
+const PRECACHE_PAGES = ["/login", "/offline"];
 // Sunny's avatar, the login screen's role avatars, and the PWA manifest's
 // icons: plain <img src>s (or, for the manifest itself, the OS's own install
 // prompt) the browser fetches on its own, not something cacheAssetsFrom()
@@ -41,9 +40,7 @@ function isPublicPage(pathname) {
   return (
     pathname === "/login" ||
     pathname === "/login/forgot" ||
-    pathname === "/student/join" ||
-    pathname === "/offline" ||
-    pathname.startsWith("/student/session/")
+    pathname === "/offline"
   );
 }
 

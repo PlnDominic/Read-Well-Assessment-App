@@ -6,6 +6,8 @@
  *   supabase gen types typescript --linked > src/lib/database.types.ts
  */
 
+import type { AssessmentForm } from "@/lib/levels";
+
 export type UserRole = "teacher" | "reading_specialist" | "administrator";
 export type SessionStatus = "not_started" | "in_progress" | "completed";
 export type ReportStatus = "pending" | "ready" | "failed";
@@ -19,7 +21,8 @@ export interface AssessmentItem {
   id: string;
   skillAreaKey: string;
   /**
-   * "choice" and "mic" are answered by the student on the kiosk.
+   * "choice" and "mic" were answered by the student on the kiosk, which
+   * levels retired; they remain only in assessments from before that.
    * "assessor" items are scored by a trained adult on the assessor screen
    * (ReadWell Level 1, src/lib/readwell/); an assessment is one or the
    * other, never a mix (see isAssessorLed in src/lib/readwell/form.ts).
@@ -31,8 +34,8 @@ export interface AssessmentItem {
   /**
    * The exact word/phrase a mic item expects the student to read aloud,
    * used to score the browser's speech-to-text transcript in
-   * evaluateResponse (src/lib/kiosk.ts). Optional: a mic item with no
-   * expectedText configured falls back to "any attempt counts."
+   * the retired kiosk. Optional: a mic item with no expectedText
+   * configured fell back to "any attempt counts."
    */
   expectedText?: string;
 
@@ -95,7 +98,7 @@ export interface Database {
           school_id: string;
           teacher_id: string;
           name: string;
-          grade: number;
+          level: number;
           created_at: string;
           deleted_at: string | null;
         },
@@ -104,7 +107,7 @@ export interface Database {
           school_id: string;
           teacher_id: string;
           name: string;
-          grade: number;
+          level: number;
           deleted_at?: string | null;
         }
       >;
@@ -128,7 +131,9 @@ export interface Database {
       assessments: Table<
         {
           id: string;
-          grade_level: number;
+          level: number;
+          /** null only for kiosk content from before levels (switched off). */
+          form: AssessmentForm | null;
           version: number;
           items: AssessmentItem[];
           is_active: boolean;
@@ -136,7 +141,8 @@ export interface Database {
         },
         {
           id?: string;
-          grade_level: number;
+          level: number;
+          form?: AssessmentForm | null;
           version?: number;
           items: AssessmentItem[];
           is_active?: boolean;
@@ -146,7 +152,7 @@ export interface Database {
         {
           id: string;
           skill_area_id: string;
-          grade_level: number;
+          level: number;
           recommendation_text: string;
           program_reference: string | null;
           created_at: string;
@@ -154,7 +160,7 @@ export interface Database {
         {
           id?: string;
           skill_area_id: string;
-          grade_level: number;
+          level: number;
           recommendation_text: string;
           program_reference?: string | null;
         }
@@ -185,7 +191,8 @@ export interface Database {
           assessment_id: string;
           cycle_id: string;
           status: SessionStatus;
-          session_code: string;
+          /** Only kiosk sessions from before levels have one. */
+          session_code: string | null;
           current_item_index: number;
           started_at: string | null;
           completed_at: string | null;
@@ -199,7 +206,7 @@ export interface Database {
           assessment_id: string;
           cycle_id: string;
           status?: SessionStatus;
-          session_code: string;
+          session_code?: string | null;
           current_item_index?: number;
           started_at?: string | null;
           completed_at?: string | null;

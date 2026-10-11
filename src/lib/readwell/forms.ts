@@ -2,7 +2,12 @@ import type { AssessmentItem } from "@/lib/database.types";
 import type { FormDef } from "./form";
 import { LEVEL1_FORM_A } from "./level1FormA";
 
-/** Every assessor-led form the app knows how to give, by item code prefix. Form B joins this list when it's written. */
+/**
+ * Every assessor-led form the app knows how to give, by item code prefix:
+ * L{level}{A|B|C|F}, F being the Final assessment (L1A is Level 1 Form A).
+ * Each new guide becomes a module like level1FormA.ts, listed here, plus
+ * the SQL that seeds its items.
+ */
 const FORMS: FormDef[] = [LEVEL1_FORM_A];
 
 /**

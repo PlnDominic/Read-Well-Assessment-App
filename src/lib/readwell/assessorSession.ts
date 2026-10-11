@@ -33,7 +33,7 @@ export interface AssessorSession {
   status: SessionStatus;
   studentId: string;
   studentName: string;
-  studentGrade: number;
+  studentLevel: number;
   items: AssessmentItem[];
   form: FormDef;
   answers: Answers;
@@ -57,7 +57,7 @@ export async function loadAssessorSession(
   const form = formForItems(items);
   if (!form) return null;
 
-  const { data: student } = await supabase.from("students").select("name, grade").eq("id", session.student_id).maybeSingle();
+  const { data: student } = await supabase.from("students").select("name, level").eq("id", session.student_id).maybeSingle();
   const { data: responses } = await supabase.from("responses").select("item_id, answer").eq("session_id", sessionId);
 
   return {
@@ -65,7 +65,7 @@ export async function loadAssessorSession(
     status: session.status,
     studentId: session.student_id,
     studentName: student?.name ?? "Student",
-    studentGrade: student?.grade ?? form.gradeLevel,
+    studentLevel: student?.level ?? form.level,
     items,
     form,
     answers: Object.fromEntries((responses ?? []).map((r) => [r.item_id, r.answer])),

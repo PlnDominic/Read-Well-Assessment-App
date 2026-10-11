@@ -41,7 +41,7 @@ export interface StoryReading {
   outOf: number;
 }
 
-export type SupportLevel = "On track for Level 1" | "Needs support" | "Needs urgent support";
+export type SupportLevel = `On track for Level ${number}` | "Needs support" | "Needs urgent support";
 
 export interface FormSummary {
   strands: StrandScore[];
@@ -56,10 +56,15 @@ export interface FormSummary {
   rulesApplied: string[];
 }
 
-export function supportLevelFor(emergingFoundation: number): SupportLevel {
+export function supportLevelFor(emergingFoundation: number, level: number): SupportLevel {
   if (emergingFoundation >= 5) return "Needs urgent support";
   if (emergingFoundation >= 2) return "Needs support";
-  return "On track for Level 1";
+  return `On track for Level ${level}`;
+}
+
+/** The support level that counts as on track, or the kiosk-era "On Track". */
+export function isOnTrackLabel(label: string): boolean {
+  return label === "On Track" || label.startsWith("On track for Level");
 }
 
 export function scoreForm(form: FormDef, answers: Answers, flows: PartFlow[] = computeFlow(form, answers)): FormSummary {
@@ -140,7 +145,7 @@ export function scoreForm(form: FormDef, answers: Answers, flows: PartFlow[] = c
     strands,
     storyReading,
     attitude,
-    supportLevel: supportLevelFor(emergingFoundation),
+    supportLevel: supportLevelFor(emergingFoundation, form.level),
     emergingFoundation,
     bandedFoundation,
     rulesApplied,

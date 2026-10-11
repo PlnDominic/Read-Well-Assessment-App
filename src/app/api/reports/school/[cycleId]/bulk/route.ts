@@ -10,7 +10,7 @@ type SessionRow = {
   id: string;
   completed_at: string | null;
   assessment_id: string;
-  students: { id: string; name: string; grade: number } | null;
+  students: { id: string; name: string; level: number } | null;
 };
 
 /**
@@ -35,7 +35,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ cyc
 
   const { data: sessionsRaw, error: sessionsError } = await supabase
     .from("assessment_sessions")
-    .select("id, completed_at, assessment_id, students(id, name, grade)")
+    .select("id, completed_at, assessment_id, students(id, name, level)")
     .eq("cycle_id", cycleId)
     .eq("status", "completed");
   if (sessionsError) return NextResponse.json({ error: sessionsError.message }, { status: 500 });
@@ -48,7 +48,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ cyc
 
     const { data: assessment } = await admin
       .from("assessments")
-      .select("grade_level")
+      .select("level, form")
       .eq("id", session.assessment_id)
       .single();
 
@@ -56,8 +56,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ cyc
       await buildStudentReportPageData(admin, {
         sessionId: session.id,
         studentName: session.students.name,
-        displayGrade: session.students.grade,
-        contentGradeLevel: assessment?.grade_level ?? session.students.grade,
+        studentLevel: session.students.level,
+        assessmentLevel: assessment?.level ?? session.students.level,
+        form: assessment?.form ?? null,
         completedAt: session.completed_at,
       })
     );

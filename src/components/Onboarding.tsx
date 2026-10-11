@@ -10,7 +10,7 @@ export interface OnboardingSlide {
 
 /**
  * A one-time, full-screen slideshow shown before someone's first sign-in or
- * first kiosk use on a device (localStorage[storageKey] tracks that it's
+ * first use on a device (localStorage[storageKey] tracks that it's
  * been seen). Skippable at any point. Renders nothing until after mount, so
  * the server-rendered page underneath never has to guess whether this
  * visitor has seen it -- avoiding a hydration mismatch -- and nothing shows

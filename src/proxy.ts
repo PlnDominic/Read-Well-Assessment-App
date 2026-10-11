@@ -1,11 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// /api/kiosk serves the unauthenticated student flow (authorized by session
-// id/code in the route itself); /api/cron is authorized by CRON_SECRET.
-// Redirecting either to /login breaks them: the kiosk fetch would get the
-// login page's HTML instead of JSON.
-const PUBLIC_PATHS = ["/login", "/student", "/offline", "/sw.js", "/api/kiosk", "/api/cron"];
+// /api/cron is authorized by CRON_SECRET in the route itself; redirecting
+// it to /login would hand Vercel's cron the login page instead of JSON.
+const PUBLIC_PATHS = ["/login", "/offline", "/sw.js", "/api/cron"];
 
 /**
  * A `NextResponse.redirect()` is a brand-new response object; it does not

@@ -1,8 +1,10 @@
 import type { AssessmentItem } from "@/lib/database.types";
+import type { AssessmentForm } from "@/lib/levels";
 
 /**
- * Shape of a ReadWell assessor-led form (the Level 1 baseline, Form A, is
- * the first: src/lib/readwell/level1FormA.ts). The item bank is the flat
+ * Shape of a ReadWell assessor-led form. Each level has four: Form A,
+ * Form B, Form C and the Final assessment. Level 1 Form A (the baseline)
+ * is the first written: src/lib/readwell/level1FormA.ts. The item bank is the flat
  * `items` list, which is also what the database stores in
  * assessments.items; everything else here is the guide's structure around
  * those items (scripts, rules, strands, bands), keyed by part number.
@@ -71,8 +73,9 @@ export interface FormDef {
   /** Prefix of every item code, e.g. "L1A" (Level 1, Form A). */
   id: string;
   title: string;
-  /** The students.grade / assessments.grade_level this form is for. */
-  gradeLevel: number;
+  /** The assessments.level and assessments.form this is. */
+  level: number;
+  form: AssessmentForm;
   /** Baseline forms band only the strands Level 1 has taught (see StrandDef.bandedAtBaseline). */
   baseline: boolean;
   intro: {

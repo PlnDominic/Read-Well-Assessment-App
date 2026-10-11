@@ -12,7 +12,7 @@ import {
 } from "./actions";
 import { AddStudentForm } from "./AddStudentForm";
 import { ImportCsvForm } from "./ImportCsvForm";
-import { GRADE_OPTIONS, gradeLabel } from "@/lib/grades";
+import { LEVEL_OPTIONS, levelLabel } from "@/lib/levels";
 
 export default async function AdminStudentsPage() {
   const supabase = await createClient();
@@ -34,7 +34,7 @@ export default async function AdminStudentsPage() {
 
   const { data: students } = await supabase
     .from("students")
-    .select("id, name, grade, teacher_id")
+    .select("id, name, level, teacher_id")
     .order("name");
 
   const { data: assignments } = await supabase
@@ -83,14 +83,14 @@ export default async function AdminStudentsPage() {
                   className="font-extrabold text-[var(--color-ink)] text-base border-2 border-transparent hover:border-[var(--color-neutral-border)] focus:border-[var(--color-orange)] rounded-lg px-2 py-1 flex-1 min-w-[140px]"
                 />
                 <select
-                  name="grade"
-                  aria-label="Grade"
-                  defaultValue={s.grade}
+                  name="level"
+                  aria-label="Level"
+                  defaultValue={s.level}
                   className="border-2 border-[var(--color-neutral-border)] rounded-lg px-2 py-1 text-sm w-20"
                 >
-                  {GRADE_OPTIONS.map((g) => (
-                    <option key={g} value={g}>
-                      {gradeLabel(g)}
+                  {LEVEL_OPTIONS.map((l) => (
+                    <option key={l} value={l}>
+                      {levelLabel(l)}
                     </option>
                   ))}
                 </select>
@@ -185,7 +185,7 @@ export default async function AdminStudentsPage() {
               <div>
                 <div className="font-extrabold text-[var(--color-ink)] text-base">{s.name}</div>
                 <div className="text-[13px] text-[var(--color-muted-light)]">
-                  {gradeLabel(s.grade)} · Deleted {new Date(s.deleted_at!).toLocaleDateString()}
+                  {levelLabel(s.level)} · Deleted {new Date(s.deleted_at!).toLocaleDateString()}
                 </div>
               </div>
               <form action={restoreStudent}>
