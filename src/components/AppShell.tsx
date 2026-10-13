@@ -2,6 +2,7 @@ import { ReadWellMark } from "@/components/icons";
 import { LogoutButton } from "@/components/LogoutButton";
 import { NotificationBell } from "@/components/NotificationBell";
 import { StaffOfflineBanner } from "@/components/StaffOfflineBanner";
+import { StaffOutboxSync } from "@/components/StaffOutboxSync";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function AppShell({
@@ -58,6 +59,7 @@ export function AppShell({
         </div>
       )}
       {showTopBar && <StaffOfflineBanner />}
+      {showTopBar && <StaffOutboxSync />}
       <main id="main-content" className="w-full flex flex-col items-center">
         {children}
       </main>

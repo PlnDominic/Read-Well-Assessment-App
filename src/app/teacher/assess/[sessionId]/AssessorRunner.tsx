@@ -6,6 +6,7 @@ import type { AssessmentItem } from "@/lib/database.types";
 import { formForItems } from "@/lib/readwell/forms";
 import { computeFlow, isOneToOneComplete, nextPart, ONE_TO_ONE_PARTS, previousPart, type Answers, type PartFlow } from "@/lib/readwell/flow";
 import { scoreForm } from "@/lib/readwell/score";
+import { FINISH_PREFIX, OPEN_PREFIX, PENDING_PREFIX, SCREEN_PREFIX } from "@/lib/staffOutbox";
 import { PartView } from "./PartView";
 import { Card } from "./ui";
 
@@ -17,8 +18,12 @@ type Screen = "intro" | number | "finish" | "done";
 // connection or a reload loses nothing. null in the queue means "clear
 // this mark".
 
-const pendingKey = (id: string) => `rw:assess:pending:${id}`;
-const screenKey = (id: string) => `rw:assess:screen:${id}`;
+const pendingKey = (id: string) => PENDING_PREFIX + id;
+const screenKey = (id: string) => SCREEN_PREFIX + id;
+// Finishing offline is queued too: the staff outbox (src/lib/staffOutbox.ts)
+// finishes it from any page once the device is back online.
+const finishKey = (id: string) => FINISH_PREFIX + id;
+const openKey = (id: string) => OPEN_PREFIX + id;
 
 function readJson<T>(key: string, fallback: T): T {
   try {
@@ -84,6 +89,8 @@ export function AssessorRunner({
   const [online, setOnline] = useState(true);
   const [finishError, setFinishError] = useState<string | null>(null);
   const [finishing, setFinishing] = useState(false);
+  /** "Finish and score" was tapped without a connection; the outbox finishes it later. */
+  const [finishQueued, setFinishQueued] = useState(false);
   const pendingRef = useRef<Answers>({});
 
   const flows = useMemo(() => computeFlow(form, answers), [form, answers]);
@@ -100,6 +107,18 @@ export function AssessorRunner({
       setAnswers((prev) => applyPending(prev, pendingRef.current));
     }
     if (typeof savedScreen === "number" || savedScreen === "finish") setScreen(savedScreen);
+    if (readJson<string | null>(finishKey(sessionId), null) !== null) {
+      setFinishQueued(true);
+      setScreen("finish");
+    }
+  }, [sessionId]);
+
+  // While this screen is open it does its own syncing; the outbox leaves it alone.
+  useEffect(() => {
+    const stamp = () => writeJson(openKey(sessionId), Date.now());
+    stamp();
+    const interval = setInterval(stamp, 5000);
+    return () => { clearInterval(interval); removeKey(openKey(sessionId)); };
   }, [sessionId]);
 
   useEffect(() => {
@@ -166,13 +185,26 @@ export function AssessorRunner({
     [sessionId, flush]
   );
 
+  // Without a connection, "Finish and score" is saved on the device and done later.
+  function queueFinish() {
+    writeJson(finishKey(sessionId), 1);
+    setFinishQueued(true);
+    setFinishError(null);
+  }
+
   async function finish() {
     setFinishing(true);
     setFinishError(null);
+    if (!navigator.onLine) {
+      queueFinish();
+      setFinishing(false);
+      return;
+    }
     const flushed = await flush();
     if (!flushed) {
       setFinishing(false);
-      setFinishError("Some marks haven't reached the server yet. Check the connection and try again.");
+      if (!navigator.onLine) queueFinish();
+      else setFinishError("Some marks haven't reached the server yet. Check the connection and try again.");
       return;
     }
     try {
@@ -184,17 +216,32 @@ export function AssessorRunner({
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         setFinishError(body.error ?? "Couldn't finish the assessment. Try again.");
+        removeKey(finishKey(sessionId));
+        setFinishQueued(false);
         return;
       }
       removeKey(pendingKey(sessionId));
       removeKey(screenKey(sessionId));
+      removeKey(finishKey(sessionId));
+      setFinishQueued(false);
       setScreen("done");
     } catch {
-      setFinishError("This device is offline. Reconnect, then finish.");
+      // The connection dropped mid-way: keep it, and finish when it's back.
+      queueFinish();
     } finally {
       setFinishing(false);
     }
   }
+
+  // A finish queued offline goes through as soon as the connection is back.
+  const finishRef = useRef(finish);
+  useEffect(() => {
+    finishRef.current = finish;
+  });
+  useEffect(() => {
+    if (finishQueued && online && !finishing) finishRef.current();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finishQueued, online]);
 
   const reachable = (n: number) => {
     const open = firstOpenPart(flows);
@@ -296,6 +343,12 @@ export function AssessorRunner({
               </p>
               <RulesApplied answers={answers} form={form} />
               {finishError && <p className="text-[var(--color-orange-dark)] text-sm font-bold m-0 mb-3">{finishError}</p>}
+              {finishQueued && (
+                <p role="status" className="bg-[var(--color-orange-tint)] text-[var(--color-orange-dark)] text-sm font-bold rounded-xl px-4 py-3 m-0 mb-3">
+                  Saved on this device. {studentName}&apos;s assessment will be scored automatically as soon as there&apos;s a
+                  connection, from any page. You can go back to the class and start the next child.
+                </p>
+              )}
               <div className="flex gap-3 flex-wrap">
                 <button
                   type="button"
@@ -307,10 +360,10 @@ export function AssessorRunner({
                 <button
                   type="button"
                   onClick={finish}
-                  disabled={finishing}
+                  disabled={finishing || finishQueued}
                   className="bg-[var(--color-orange)] text-white border-none rounded-full font-bold text-sm px-5 py-2.5 cursor-pointer disabled:opacity-60"
                 >
-                  {finishing ? "Finishing…" : "Finish and score"}
+                  {finishing ? "Finishing…" : finishQueued ? "Waiting for a connection" : "Finish and score"}
                 </button>
               </div>
             </>

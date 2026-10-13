@@ -1,3 +1,4 @@
+import { PrepareOffline } from "@/components/PrepareOffline";
 import { redirect } from "next/navigation";
 import { NO_PROFILE_LOGIN } from "@/lib/staffRouting";
 import Link from "next/link";
@@ -121,6 +122,15 @@ export default async function TeacherRosterPage() {
           <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-6 py-5 mb-5">
             <AddStudentForm />
           </div>
+        )}
+
+        {canAssess && (
+          <PrepareOffline
+            sessions={(students ?? []).flatMap((s) => {
+              const latest = latestSessionByStudent.get(s.id);
+              return latest && latest.status !== "completed" ? [{ id: latest.id, game: latest.game }] : [];
+            })}
+          />
         )}
 
         <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)]">

@@ -414,12 +414,25 @@ there's no connection.
   that change data are greyed out (`body[data-offline]` in
   `globals.css`), and `src/app/error.tsx` explains a change that couldn't
   be saved. Offline, `/` goes to the staff member's saved dashboard, and
-  the login screen links back to it. Signing in still needs a connection.
+  the login screen links back to it. Signing in still needs a connection (Supabase checks the password), so
+  sign in once while online; the session then lasts through an offline day.
 - **Privacy on shared devices:** staff pages are kept in a separate cache
   (`rw-staff-*`) that's wiped on logout and on every sign-in
   (`src/lib/offline.ts`), so the next person can't open the previous staff
   member's pages. Logout works offline too (ends the session locally).
   Public pages are saved without cookies so they never hold staff data.
+- **Giving assessments offline.** Start the day's assessments while online,
+  then tap **Get this device ready for offline** on the class list
+  (`src/components/PrepareOffline.tsx`): it saves the assessor screen of
+  every unfinished adult-given assessment, and the game screen and
+  questions of every unfinished game, on the device. After that the
+  assessments can be given with no signal. Marks are kept on the device,
+  and **Finish and score** works offline too: it is saved and sent as
+  soon as the device is back online, from any staff page
+  (`src/lib/staffOutbox.ts`, run by `StaffOutboxSync` in the page shell,
+  which also says how many assessments are waiting). The stop rule works
+  offline for a run of "I can't read this one yet" taps; the server
+  applies the full rule when the answers arrive.
 - **Not available offline:** anything that changes data, report PDF
   export, and pages never opened on the device (these show `/offline`).
 
