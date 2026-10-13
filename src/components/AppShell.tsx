@@ -26,7 +26,7 @@ export function AppShell({
           (the first Tab press), same convention as most sites' skip links. */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:bg-[var(--color-orange)] focus:text-white focus:font-bold focus:text-sm focus:px-4 focus:py-2.5 focus:rounded-full"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:bg-[var(--color-orange)] focus:text-[var(--color-on-orange)] focus:font-bold focus:text-sm focus:px-4 focus:py-2.5 focus:rounded-full"
       >
         Skip to main content
       </a>

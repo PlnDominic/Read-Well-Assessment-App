@@ -378,7 +378,7 @@ export function GameEditor({
           type="button"
           onClick={publish}
           disabled={!dirty || isPending}
-          className="rounded-full border-0 bg-[var(--color-orange)] px-5 py-2.5 text-sm font-bold text-white shadow-[0_6px_16px_rgba(234,88,12,0.25)] cursor-pointer disabled:opacity-50 disabled:cursor-default disabled:shadow-none"
+          className="rounded-full border-0 bg-[var(--color-orange)] px-5 py-2.5 text-sm font-bold text-[var(--color-on-orange)] shadow-[0_6px_16px_rgba(234,88,12,0.25)] cursor-pointer disabled:opacity-50 disabled:cursor-default disabled:shadow-none"
         >
           {isPending ? "Publishing…" : "Publish"}
         </button>

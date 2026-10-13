@@ -46,7 +46,7 @@ export default async function AdminSettingsPage() {
           </label>
           <button
             type="submit"
-            className="bg-[var(--color-orange)] text-white border-none rounded-full font-bold text-sm shadow-[0_6px_16px_rgba(74,107,82,0.25)] transition-transform hover:-translate-y-0.5 px-5 py-2.75 cursor-pointer"
+            className="bg-[var(--color-orange)] text-[var(--color-on-orange)] border-none rounded-full font-bold text-sm shadow-[0_6px_16px_rgba(74,107,82,0.25)] transition-transform hover:-translate-y-0.5 px-5 py-2.75 cursor-pointer"
           >
             Save
           </button>

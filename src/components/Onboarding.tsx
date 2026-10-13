@@ -126,7 +126,7 @@ export function Onboarding({ slides, storageKey }: { slides: OnboardingSlide[]; 
         ref={nextButtonRef}
         type="button"
         onClick={() => (isLast ? finish() : setStep((s) => s + 1))}
-        className="w-full max-w-[420px] mx-auto bg-[var(--color-orange)] text-white rounded-full font-heading font-bold text-lg py-4 shadow-[0_10px_24px_rgba(201,123,95,0.35)] transition-transform hover:-translate-y-0.5"
+        className="w-full max-w-[420px] mx-auto bg-[var(--color-orange)] text-[var(--color-on-orange)] rounded-full font-heading font-bold text-lg py-4 shadow-[0_10px_24px_rgba(201,123,95,0.35)] transition-transform hover:-translate-y-0.5"
       >
         {isLast ? "Get Started" : "Next"}
       </button>

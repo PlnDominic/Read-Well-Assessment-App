@@ -111,7 +111,7 @@ export function PartView({ form, part, flow, flows, answers, setMarks, onBack, o
           onClick={onNext}
           disabled={!done}
           title={done ? undefined : "Mark every item in this part first"}
-          className="bg-[var(--color-orange)] text-white border-none rounded-full font-bold text-sm px-5 py-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-default"
+          className="bg-[var(--color-orange)] text-[var(--color-on-orange)] border-none rounded-full font-bold text-sm px-5 py-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-default"
         >
           {nextLabel}
         </button>

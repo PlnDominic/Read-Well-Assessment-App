@@ -100,7 +100,7 @@ export function StoryPart({
           <button
             type="button"
             onClick={start}
-            className="bg-[var(--color-orange)] text-white border-none rounded-full font-bold text-sm px-5 py-2.5 cursor-pointer"
+            className="bg-[var(--color-orange)] text-[var(--color-on-orange)] border-none rounded-full font-bold text-sm px-5 py-2.5 cursor-pointer"
           >
             {seconds === 0 ? "Start timer (first word)" : "Continue timer"}
           </button>
@@ -193,7 +193,7 @@ export function StoryPart({
           type="button"
           disabled={running || !unsaved}
           onClick={() => setMarks({ [recordItem.id]: draft })}
-          className="bg-[var(--color-orange)] text-white border-none rounded-full font-bold text-sm px-5 py-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-default"
+          className="bg-[var(--color-orange)] text-[var(--color-on-orange)] border-none rounded-full font-bold text-sm px-5 py-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-default"
         >
           {saved ? (unsaved ? "Save changes to the record" : "Record saved") : "Save reading record"}
         </button>

@@ -212,7 +212,7 @@ function StaffLoginForm({ mode, onBack }: { mode: Exclude<Mode, "select">; onBac
           <button
             type="submit"
             disabled={isPending}
-            className="mt-2 bg-[var(--color-orange)] text-white border-none rounded-full font-heading font-bold text-lg py-4 cursor-pointer shadow-[0_10px_24px_rgba(74,107,82,0.3)] transition-transform hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0"
+            className="mt-2 bg-[var(--color-orange)] text-[var(--color-on-orange)] border-none rounded-full font-heading font-bold text-lg py-4 cursor-pointer shadow-[0_10px_24px_rgba(74,107,82,0.3)] transition-transform hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0"
           >
             {isPending ? "Signing in…" : "Sign In"}
           </button>

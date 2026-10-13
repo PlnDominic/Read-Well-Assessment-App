@@ -28,7 +28,7 @@ export default function AppError({ reset }: { error: Error & { digest?: string }
       </p>
       <button
         onClick={() => reset()}
-        className="bg-[var(--color-orange)] text-white border-none rounded-full font-bold text-base px-8 py-3 cursor-pointer"
+        className="bg-[var(--color-orange)] text-[var(--color-on-orange)] border-none rounded-full font-bold text-base px-8 py-3 cursor-pointer"
       >
         Back to the page
       </button>

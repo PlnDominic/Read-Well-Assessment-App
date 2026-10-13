@@ -602,9 +602,8 @@ changes go through a PR rather than a direct push to `main`*.
 
 ### Accessibility
 
-Manual passes (not a full automated audit — no axe-core/Lighthouse run,
-since there's no browser available to drive one in this environment) have
-found and fixed, across a few rounds:
+Manual passes, then an automated axe-core audit (below), have found and
+fixed, across a few rounds:
 
 - **Contrast.** `--color-orange-dark` (`#c2410c`) cleared AA (4.5:1) against
   white (5.2:1) but fell short against its own `--color-orange-tint`
@@ -636,19 +635,34 @@ found and fixed, across a few rounds:
   `aria-modal` enforces by itself in every browser/screen-reader
   combination.
 
-**Known, deliberately unfixed**: white button text on the primary orange
-background (`--color-orange`, `#ea580c`) measures 3.56:1 — enough for the
-large 18px+/20px+ bold text on the biggest CTAs (student "Let's Start!",
-"I'm Done!", etc.) but short of the 4.5:1 normal text needs, which several
-smaller (`text-sm`, 14px bold) admin buttons using the same background
-don't clear either. Fixing it means
-either darkening the brand's primary accent color or resizing that text,
-both of which change the approved visual design rather than just
-correcting an oversight, so it's left as a flagged decision rather than
-something changed unilaterally. A full audit (every color pairing,
-keyboard navigation order end-to-end, real screen-reader testing) is still
-open; see the CI note above about no browser/AT tooling being available
-here.
+**Automated audit.** `npm run a11y` (`scripts/a11y-audit.mjs`) drives a
+real Chromium over the login, student-code and offline pages and every
+screen of the student game (welcome, picture question, "Stop here" break
+card, read-aloud question, mission complete, writing), in light and dark
+mode, on a phone and a desktop screen. It runs axe-core (WCAG 2.1 A and AA)
+and tabs through each page to check every control shows a focus ring. The
+script stands in for Supabase's one session lookup on `localhost:54399`, so
+start the app with `NEXT_PUBLIC_SUPABASE_URL=http://localhost:54399` and any
+other values for the keys; it is not part of CI yet (it needs Chromium).
+`src/lib/contrast.test.ts` is the part that does run in CI: it reads
+`globals.css` and checks every text-on-background pairing in the light and
+both dark palettes clears 4.5:1, plus the game's mission colours.
+
+**The primary orange was darkened, and this is the call to sign off.** White
+text on `#ea580c` measured 3.56:1, so every button, pill and badge failed
+AA. `--color-orange` is now `#c2410c` (5.18:1 with white, also as text on
+white), the mission colours for orange, yellow and pink were darkened to
+match (`#c2410c`, `#a16207`, `#be185d`), and text on an orange fill uses the
+new `--color-on-orange` token (white in light mode; near-black in dark mode,
+where the orange is bright and white on it was 2.6:1). Going back to the
+brighter orange means changing those tokens and accepting the contrast
+failure, or giving buttons their own darker fill. It's one place to change.
+
+**Still open:** the staff and admin pages (they need a signed-in session, so
+the script can't reach them without a seeded Supabase) have not been run
+through axe, though they use the same tokens the contrast test covers; real
+screen-reader testing (VoiceOver, TalkBack, NVDA) by a person; and the brand
+sign-off itself.
 
 ## Deploying
 

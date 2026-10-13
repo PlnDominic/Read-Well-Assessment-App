@@ -154,7 +154,7 @@ export function WritingScores({ form, answers, sessionId, canEdit }: { form: For
           })}
           <button
             type="submit"
-            className="self-start bg-[var(--color-orange)] text-white border-none rounded-full font-bold text-sm px-5 py-2.5 cursor-pointer mt-2"
+            className="self-start bg-[var(--color-orange)] text-[var(--color-on-orange)] border-none rounded-full font-bold text-sm px-5 py-2.5 cursor-pointer mt-2"
           >
             Save writing scores
           </button>

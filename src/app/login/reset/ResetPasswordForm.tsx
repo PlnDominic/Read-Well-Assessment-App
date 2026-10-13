@@ -102,7 +102,7 @@ export function ResetPasswordForm() {
         <button
           type="submit"
           disabled={isPending}
-          className="bg-[var(--color-orange)] text-white border-none rounded-full font-heading font-bold text-lg py-3.5 cursor-pointer disabled:opacity-60"
+          className="bg-[var(--color-orange)] text-[var(--color-on-orange)] border-none rounded-full font-heading font-bold text-lg py-3.5 cursor-pointer disabled:opacity-60"
         >
           {isPending ? "Saving…" : "Set new password"}
         </button>

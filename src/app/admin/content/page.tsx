@@ -190,7 +190,7 @@ function EditLink({ href, children }: { href: string; children: React.ReactNode 
   return (
     <Link
       href={href}
-      className="self-start mt-1 inline-flex items-center gap-1.5 bg-[var(--color-orange)] text-white no-underline rounded-full font-bold text-sm shadow-[0_6px_16px_rgba(74,107,82,0.25)] transition-transform hover:-translate-y-0.5 px-4 py-2"
+      className="self-start mt-1 inline-flex items-center gap-1.5 bg-[var(--color-orange)] text-[var(--color-on-orange)] no-underline rounded-full font-bold text-sm shadow-[0_6px_16px_rgba(74,107,82,0.25)] transition-transform hover:-translate-y-0.5 px-4 py-2"
     >
       {children} <span aria-hidden="true">→</span>
     </Link>

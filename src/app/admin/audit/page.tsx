@@ -120,7 +120,7 @@ export default async function AdminAuditPage({
         </label>
         <button
           type="submit"
-          className="bg-[var(--color-orange)] text-white border-none rounded-full font-bold text-sm px-5 py-2.75 cursor-pointer"
+          className="bg-[var(--color-orange)] text-[var(--color-on-orange)] border-none rounded-full font-bold text-sm px-5 py-2.75 cursor-pointer"
         >
           Filter
         </button>

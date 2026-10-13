@@ -31,7 +31,7 @@ export default function OfflinePage() {
         <div className="flex flex-col items-center gap-3">
           <Link
             href="/student/join"
-            className="bg-[var(--color-orange)] text-white rounded-full font-heading font-bold text-lg px-10 py-4 no-underline shadow-[0_10px_24px_rgba(201,123,95,0.35)] transition-transform hover:-translate-y-0.5"
+            className="bg-[var(--color-orange)] text-[var(--color-on-orange)] rounded-full font-heading font-bold text-lg px-10 py-4 no-underline shadow-[0_10px_24px_rgba(201,123,95,0.35)] transition-transform hover:-translate-y-0.5"
           >
             I&apos;m a Student
           </Link>

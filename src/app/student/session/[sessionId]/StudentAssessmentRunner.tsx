@@ -42,7 +42,7 @@ interface KioskState {
  * correctness: the child mustn't be able to tell right from wrong, or the
  * assessment stops measuring what they know.
  */
-const MISSION_COLORS = ["#0f766e", "#2563eb", "#7c3aed", "#ea580c", "#db2777", "#ca8a04"];
+const MISSION_COLORS = ["#0f766e", "#2563eb", "#7c3aed", "#c2410c", "#be185d", "#a16207"];
 /** How long a tapped choice stays on screen, with its star and Sunny's cheer, before the next question. */
 const AUTO_NEXT_MS = 1500;
 const PRAISE = ["Nice work!", "Super!", "You did it!", "Awesome!", "Way to go!", "High five!", "You're a star!", "Brilliant!"];
@@ -467,7 +467,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
           <AnimatedSunny mood="cheer" size={160} say="Mission complete!" className="rw-celebrate-sunny" />
           <div className="rw-eyebrow">MISSION {celebrating + 1} OF {missions.length}</div>
           <h1>{done.title}: done!</h1>
-          <div className="rw-earned" aria-label={`${earned} stars`}>
+          <div className="rw-earned" role="img" aria-label={`${earned} stars`}>
             {Array.from({ length: Math.min(earned, 10) }, (_, i) => <span key={i} style={{ animationDelay: `${150 + i * 90}ms` }}>⭐</span>)}
           </div>
           {breakTime && <div className="rw-break-note"><span className="rw-stop-here">✋ Stop here</span>Great work! Time for a little break. Your teacher will tell you when to start the next part.</div>}

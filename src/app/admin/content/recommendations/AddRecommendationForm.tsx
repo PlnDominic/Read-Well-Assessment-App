@@ -64,7 +64,7 @@ export function AddRecommendationForm({ level, skillAreas }: { level: number; sk
         <button
           type="submit"
           disabled={adding}
-          className="rounded-full border-0 bg-[var(--color-orange)] px-5 py-2 text-sm font-bold text-white cursor-pointer shadow-[0_6px_16px_rgba(234,88,12,0.25)] disabled:opacity-60"
+          className="rounded-full border-0 bg-[var(--color-orange)] px-5 py-2 text-sm font-bold text-[var(--color-on-orange)] cursor-pointer shadow-[0_6px_16px_rgba(234,88,12,0.25)] disabled:opacity-60"
         >
           {adding ? "Adding…" : "Add next step"}
         </button>

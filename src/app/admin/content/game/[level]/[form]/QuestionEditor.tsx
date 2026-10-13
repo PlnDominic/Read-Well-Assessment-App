@@ -105,7 +105,7 @@ export function QuestionEditor({
           </button>
           <button
             type="button"
-            className="rounded-full border-0 bg-[var(--color-orange)] px-3.5 py-1 text-xs font-bold text-white cursor-pointer"
+            className="rounded-full border-0 bg-[var(--color-orange)] px-3.5 py-1 text-xs font-bold text-[var(--color-on-orange)] cursor-pointer"
             onClick={onClose}
           >
             Done

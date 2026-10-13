@@ -361,7 +361,7 @@ export function AssessorRunner({
                   type="button"
                   onClick={finish}
                   disabled={finishing || finishQueued}
-                  className="bg-[var(--color-orange)] text-white border-none rounded-full font-bold text-sm px-5 py-2.5 cursor-pointer disabled:opacity-60"
+                  className="bg-[var(--color-orange)] text-[var(--color-on-orange)] border-none rounded-full font-bold text-sm px-5 py-2.5 cursor-pointer disabled:opacity-60"
                 >
                   {finishing ? "Finishing…" : finishQueued ? "Waiting for a connection" : "Finish and score"}
                 </button>
@@ -385,7 +385,7 @@ export function AssessorRunner({
           <div className="flex gap-3 flex-wrap">
             <Link
               href={`/teacher/students/${studentId}/report?session=${sessionId}`}
-              className="bg-[var(--color-orange)] text-white rounded-full font-bold text-sm px-5 py-2.5 no-underline"
+              className="bg-[var(--color-orange)] text-[var(--color-on-orange)] rounded-full font-bold text-sm px-5 py-2.5 no-underline"
             >
               View report
             </Link>
@@ -497,7 +497,7 @@ function Intro({
       <button
         type="button"
         onClick={onStart}
-        className="bg-[var(--color-orange)] text-white border-none rounded-full font-bold text-base px-6 py-3 cursor-pointer mt-2"
+        className="bg-[var(--color-orange)] text-[var(--color-on-orange)] border-none rounded-full font-bold text-base px-6 py-3 cursor-pointer mt-2"
       >
         {resuming ? "Resume" : "Start Part 1"}
       </button>

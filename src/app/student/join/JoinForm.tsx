@@ -78,7 +78,7 @@ export function JoinForm() {
         <button
           type="submit"
           disabled={isPending}
-          className="bg-[var(--color-orange)] text-white border-none rounded-full font-heading font-bold text-xl px-14 py-5 cursor-pointer shadow-[0_10px_24px_rgba(201,123,95,0.35)] transition-transform hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0"
+          className="bg-[var(--color-orange)] text-[var(--color-on-orange)] border-none rounded-full font-heading font-bold text-xl px-14 py-5 cursor-pointer shadow-[0_10px_24px_rgba(201,123,95,0.35)] transition-transform hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0"
         >
           {isPending ? "Checking…" : "Let's Go!"}
         </button>

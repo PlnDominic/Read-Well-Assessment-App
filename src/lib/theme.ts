@@ -4,7 +4,8 @@
 // light-mode values: a generated PDF is a printed page, not a themeable
 // surface.
 export const colors = {
-  orange: "#EA580C",
+  // 5.18:1 with white text (the old #EA580C was 3.56:1); mirrors --color-orange in globals.css.
+  orange: "#C2410C",
   // 5.7:1 against white, 4.7:1 against orangeTint -- see the matching
   // comment on --color-orange-dark in globals.css, which this mirrors.
   orangeDark: "#B83D0B",

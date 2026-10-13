@@ -79,7 +79,7 @@ export function SkillAreaRow({
         <button
           type="submit"
           disabled={!changed || saving}
-          className="rounded-full border-0 bg-[var(--color-orange)] px-4 py-1.5 text-sm font-bold text-white cursor-pointer disabled:opacity-40 disabled:cursor-default"
+          className="rounded-full border-0 bg-[var(--color-orange)] px-4 py-1.5 text-sm font-bold text-[var(--color-on-orange)] cursor-pointer disabled:opacity-40 disabled:cursor-default"
         >
           {saving ? "Saving…" : "Save"}
         </button>
@@ -134,7 +134,7 @@ export function AddSkillAreaForm() {
       <button
         type="submit"
         disabled={adding}
-        className="rounded-full border-0 bg-[var(--color-orange)] px-5 py-2 text-sm font-bold text-white cursor-pointer shadow-[0_6px_16px_rgba(234,88,12,0.25)] disabled:opacity-60"
+        className="rounded-full border-0 bg-[var(--color-orange)] px-5 py-2 text-sm font-bold text-[var(--color-on-orange)] cursor-pointer shadow-[0_6px_16px_rgba(234,88,12,0.25)] disabled:opacity-60"
       >
         {adding ? "Adding…" : "Add skill area"}
       </button>

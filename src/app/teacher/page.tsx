@@ -190,7 +190,7 @@ export default async function TeacherRosterPage() {
                       <Link
                         href={latest.game ? `/student/session/${latest.id}` : `/teacher/assess/${latest.id}`}
                         title={latest.game ? "Opens the game on this device for the student to play" : undefined}
-                        className="font-bold text-sm px-4.5 py-2.25 rounded-full no-underline bg-[var(--color-orange)] text-white"
+                        className="font-bold text-sm px-4.5 py-2.25 rounded-full no-underline bg-[var(--color-orange)] text-[var(--color-on-orange)]"
                       >
                         {latest.game ? "Play here" : status === "in_progress" ? "Resume" : "Open"}
                       </Link>
