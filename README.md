@@ -643,7 +643,10 @@ mode, on a phone and a desktop screen. It runs axe-core (WCAG 2.1 A and AA)
 and tabs through each page to check every control shows a focus ring. The
 script stands in for Supabase's one session lookup on `localhost:54399`, so
 start the app with `NEXT_PUBLIC_SUPABASE_URL=http://localhost:54399` and any
-other values for the keys; it is not part of CI yet (it needs Chromium).
+other values for the keys; it runs in CI as the `a11y` job (`.github/workflows/ci.yml`), which
+builds the app, starts it, installs Chromium and fails the build on any
+violation. Run it locally with `npm run a11y -- http://localhost:3000`
+against a running copy of the app.
 `src/lib/contrast.test.ts` is the part that does run in CI: it reads
 `globals.css` and checks every text-on-background pairing in the light and
 both dark palettes clears 4.5:1, plus the game's mission colours.

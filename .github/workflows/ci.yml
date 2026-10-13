@@ -61,3 +61,56 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check SQL
         run: bash supabase/test/check-sql.sh
+
+  # Drives a real Chromium over the pages that render without a database and
+  # every screen of the student game, in light and dark mode on a phone and a
+  # desktop, with axe-core (WCAG 2.1 A and AA) and a keyboard focus check
+  # (scripts/a11y-audit.mjs). The script answers the one Supabase lookup the
+  # game page makes on localhost:54399, so no real project is touched. A
+  # violation fails the build, so a colour or markup change that breaks
+  # accessibility can't merge.
+  a11y:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: "http://localhost:54399"
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "audit"
+      SUPABASE_SERVICE_ROLE_KEY: "audit"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Cache Chromium
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: chromium-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Chromium
+        run: npx playwright-core install --with-deps chromium
+
+      - name: Build
+        run: npm run build
+
+      - name: Start the app
+        run: |
+          nohup npm start -- -p 3000 > start.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf -o /dev/null http://localhost:3000/login && exit 0
+            sleep 1
+          done
+          cat start.log
+          exit 1
+
+      - name: Accessibility audit
+        run: npm run a11y -- http://localhost:3000
+
+      - name: App log
+        if: failure()
+        run: cat start.log
