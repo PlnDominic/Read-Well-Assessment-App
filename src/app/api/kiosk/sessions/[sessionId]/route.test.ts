@@ -90,6 +90,21 @@ describe("answering", () => {
     }
   });
 
+  it("moves a child on from a part they plainly can't do yet, without saying why", async () => {
+    const run = ["LN01", "LN02", "LN03", "LN04", "LN05"].map((id) => choice(id, "letterNames"));
+    loaded = {
+      ...session(),
+      session: { id: "s1", status: "in_progress", current_item_index: 2 },
+      items: [...run, choice("LS01")],
+      responses: [{ item_id: "LN01", answer: "b", is_correct: false }, { item_id: "LN02", answer: "b", is_correct: false }],
+    } as unknown as typeof loaded;
+    const { body } = await answer("LN03", "b");
+    expect(body).toEqual({ ok: true, currentItemIndex: 5, skipTo: 5 });
+    // A right answer keeps the child in the part, and the reply is the usual one.
+    const { body: carryOn } = await answer("LN03", "a");
+    expect(carryOn).toEqual({ ok: true, currentItemIndex: 3 });
+  });
+
   it("records reading-attitude answers the same way", async () => {
     loaded = session(["AT01"]);
     const { body } = await answer("AT01", "c");

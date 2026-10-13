@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { evaluateResponse, loadSessionForKiosk } from "@/lib/kiosk";
+import { partsFor } from "@/lib/gameParts";
+import { stopReachedAt } from "@/lib/gameStop";
 
 /**
  * Kiosk endpoints (student-facing, no auth; see supabase/migrations/0002_rls.sql
@@ -92,7 +94,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ se
   if (responseError) return NextResponse.json({ error: responseError.message }, { status: 500 });
 
   const itemIndex = state.items.findIndex((i) => i.id === item.id);
-  const nextIndex = Math.max(state.session.current_item_index, itemIndex + 1);
+
+  // The stop rule (gameStop.ts): a part the child plainly can't do yet ends
+  // early. The reply carries only where to go next, never why, so it still
+  // doesn't say whether an answer was right. Only the question the child is
+  // on can stop a part, not a changed answer to an earlier one.
+  const correctById = new Map<string, boolean>();
+  for (const r of state.responses) if (typeof r.is_correct === "boolean") correctById.set(r.item_id, r.is_correct);
+  correctById.set(item.id, isCorrect);
+  const stop = itemIndex + 1 >= state.session.current_item_index
+    ? stopReachedAt(state.items, partsFor(state.assessment.level), correctById, itemIndex)
+    : null;
+
+  const nextIndex = Math.max(state.session.current_item_index, stop?.resumeAt ?? itemIndex + 1);
 
   const { error: sessionError } = await admin
     .from("assessment_sessions")
@@ -104,5 +118,5 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ se
     .eq("id", sessionId);
   if (sessionError) return NextResponse.json({ error: sessionError.message }, { status: 500 });
 
-  return NextResponse.json({ ok: true, currentItemIndex: nextIndex });
+  return NextResponse.json(stop ? { ok: true, currentItemIndex: nextIndex, skipTo: stop.resumeAt } : { ok: true, currentItemIndex: nextIndex });
 }

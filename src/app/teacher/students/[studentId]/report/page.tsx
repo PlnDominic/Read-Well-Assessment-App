@@ -8,6 +8,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { computeOverallLabel, computeWeightedAverage } from "@/lib/scoring";
 import { FLAGGED_SCORE_THRESHOLD } from "@/lib/theme";
 import { isScoreChangedByReview } from "@/lib/review";
+import { partsFor } from "@/lib/gameParts";
+import { stopsFor } from "@/lib/gameStop";
 import { retryStudentReport, reviewSpokenAnswer } from "./actions";
 import type { AssessmentItem } from "@/lib/database.types";
 import { isAssessorLed } from "@/lib/readwell/form";
@@ -117,6 +119,12 @@ export default async function StudentReportPage({
   // Reading specialists see this page too (via /specialist) but are
   // read-only; see reviewSpokenAnswer in ./actions.ts.
   const canReview = profile?.role === "teacher" || profile?.role === "administrator";
+  // Parts the game ended early because the child couldn't do them yet
+  // (src/lib/gameStop.ts); the questions after the stop weren't asked.
+  const stops = form
+    ? []
+    : stopsFor(items, partsFor(assessedLevel), new Map((responses ?? []).flatMap((r) => (typeof r.is_correct === "boolean" ? [[r.item_id, r.is_correct] as const] : []))));
+  const stopAfterIndex = new Map(stops.map((stop) => [stop.afterIndex, stop]));
   const unreviewedWrongMicCount = items.filter((item) => {
     const r = responseByItemId.get(item.id);
     return item.type === "mic" && r && r.is_correct !== true && r.reviewed_at === null;
@@ -354,6 +362,16 @@ export default async function StudentReportPage({
                 correct below and the report will update.
               </p>
             )}
+            {stops.length > 0 && (
+              <p
+                role="status"
+                className="bg-[var(--color-orange-tint)] border border-[var(--color-orange-tint-border)] text-[var(--color-ink-soft)] text-sm rounded-xl px-4.5 py-3 m-0 mb-3"
+              >
+                <strong>Stopped here:</strong> {stops.map((stop) => stop.part.title).join(", ")}. The game moved on after three
+                wrong answers in a row, so the rest of {stops.length === 1 ? "that part" : "those parts"} weren&apos;t asked and
+                count as not yet secure.
+              </p>
+            )}
             <div className="flex flex-col gap-3">
               {items.map((item, i) => {
                 const response = responseByItemId.get(item.id);
@@ -381,8 +399,13 @@ export default async function StudentReportPage({
                       </div>
                       <div className="text-[var(--color-ink-soft)] text-sm mb-1">{item.prompt}</div>
                       <div className="text-[var(--color-body)] text-sm">
-                        Answer: {response ? formatAnswer(item, response.answer) : "Not answered"}
+                        Answer: {response ? formatAnswer(item, response.answer) : "Not asked"}
                       </div>
+                      {stopAfterIndex.has(i) && (
+                        <div className="text-[var(--color-orange-dark)] text-xs font-extrabold uppercase mt-1.5">
+                          Stop here · the rest of {stopAfterIndex.get(i)!.part.title} wasn&apos;t asked
+                        </div>
+                      )}
                       {isReviewed && (
                         <div className="text-[var(--color-muted)] text-xs font-bold mt-1">
                           {reviewChangedScore

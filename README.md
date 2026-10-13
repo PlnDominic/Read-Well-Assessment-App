@@ -128,9 +128,10 @@ their own device at `/student`
 (`src/app/student/session/[sessionId]/StudentAssessmentRunner.tsx`).
 
 - **Level 1 Form A as a game** (`src/lib/readwell/level1FormAGame.ts`,
-  seeded by 0018, shortened by 0020) uses the guide's own thirteen parts,
-  letters and words, with both stories cut to three sentences and three
-  questions each so a young child isn't loaded with a long story, adapted for a child playing alone: pointing becomes tapping a
+  seeded by 0018, stories shortened by 0020) uses the guide's own thirteen
+  parts, letters and words, with both stories cut to three sentences and
+  three questions each so a young child isn't loaded with a long story,
+  adapted for a child playing alone: pointing becomes tapping a
   picture or word; naming letters becomes finding them ("Tap the letter
   s"), and letter sounds use a key word ("the first sound in sun"), since
   speech recognition can't hear a lone letter or sound; reading parts use
@@ -161,6 +162,19 @@ their own device at `/student`
   travelling along it. Finishing a mission shows a celebration card (and, at
   a change of sitting, "time for a little break"); finishing the quest shows
   Sunny with a trophy, a Reading Star badge and the missions stamped off.
+- **Stop here.** Two kinds, neither of which tells a child they got
+  something wrong. *The stop rule* (`src/lib/gameStop.ts`, run by the answer
+  endpoint, which alone knows what was right): three wrong answers in a row
+  end a part of five questions or more, and the game moves on to the next
+  mission; the reply carries only where to go (`skipTo`), never why. A skip
+  ("I can't read this one yet") counts as wrong, reading attitude never
+  stops, and the questions left unasked score as not correct, as the
+  guide's stop rules would leave them. The teacher's report says where the
+  child stopped. (It needs a connection: offline, the child just carries on
+  through the part.) *The sitting flag*: the quest map shows a "Stop here"
+  flag after the last mission of each ReadWell sitting, and finishing that
+  mission shows a "Stop here, time for a little break" card; the game
+  already resumes where the child left off.
 - **Stars reward effort.** A child earns one star for each question they
   answer, whatever they answer.
 - **No right or wrong, and the game moves on.** A child is never told

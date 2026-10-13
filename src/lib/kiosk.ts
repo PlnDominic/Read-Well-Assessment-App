@@ -91,7 +91,7 @@ export async function loadSessionForKiosk(admin: AdminClient, sessionId: string)
 
   const { data: responses } = await admin
     .from("responses")
-    .select("item_id, answer")
+    .select("item_id, answer, is_correct")
     .eq("session_id", sessionId);
 
   const { data: student } = await admin

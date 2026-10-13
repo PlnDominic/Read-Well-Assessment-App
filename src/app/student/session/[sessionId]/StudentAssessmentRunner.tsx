@@ -94,19 +94,28 @@ function buildMissions(items: KioskItem[], parts: Part[]): Mission[] {
 }
 
 /** The path of missions across a little sky, with Sunny's face at the current one. */
+/** True when a mission ends a ReadWell sitting, so the child can stop there for the day. */
+function endsSitting(missions: Mission[], i: number) {
+  const next = missions[i + 1];
+  return !!next && missions[i].sitting !== null && next.sitting !== null && next.sitting !== missions[i].sitting;
+}
+
 function QuestMap({ missions, current, children }: { missions: Mission[]; current: number; children?: ReactNode }) {
   const stops = missions.length + 1; // the trophy at the end
   const at = (i: number) => ((Math.min(i, stops - 1) + 0.5) / stops) * 100;
   return (
     <div className="rw-map">
       <span className="rw-cloud" aria-hidden="true" /><span className="rw-cloud c2" aria-hidden="true" /><span className="rw-cloud c3" aria-hidden="true" />
-      <div className="rw-path" role="img" aria-label={current >= missions.length ? "Every mission done" : `Quest map: mission ${current + 1} of ${missions.length}`} style={{ gridTemplateColumns: `repeat(${stops}, 1fr)` }}>
+      <div className={`rw-path ${missions.some((_, i) => endsSitting(missions, i)) ? "has-stops" : ""}`} role="img" aria-label={current >= missions.length ? "Every mission done" : `Quest map: mission ${current + 1} of ${missions.length}`} style={{ gridTemplateColumns: `repeat(${stops}, 1fr)` }}>
         <div className="rw-path-line" style={{ left: `${at(0)}%`, right: `${100 - at(stops - 1)}%` }} />
         <div className="rw-path-fill" style={{ left: `${at(0)}%`, width: `${at(current) - at(0)}%` }} />
         {missions.map((m, i) => (
           <span key={m.key + i} className={`rw-node ${i < current ? "done" : i === current ? "current" : ""}`} style={{ "--node-color": m.color } as CSSProperties}>
             {i < current ? "★" : ""}
           </span>
+        ))}
+        {missions.map((m, i) => endsSitting(missions, i) && (
+          <span key={`stop${i}`} className={`rw-stop-flag ${i < current ? "passed" : ""}`} style={{ left: `${at(i)}%` }}>Stop here</span>
         ))}
         <span className="rw-node goal">🏆</span>
         <div className="rw-map-face" style={{ left: `${at(current)}%` }}>
@@ -135,12 +144,24 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
   /** The mission just finished, while its celebration is showing. */
   const [celebrating, setCelebrating] = useState<number | null>(null);
   const [starBump, setStarBump] = useState(0);
+  /** Where the server said to go after a question, when it ended a part early (see `skipsRef`). */
+  const [skips, setSkips] = useState<Record<string, number>>({});
   const pendingRef = useRef<Record<string, unknown>>({});
   const storyTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const starsRef = useRef<HTMLSpanElement>(null);
   const finishCelebrated = useRef(false);
   /** The move to the next question after a choice is tapped (see choose). */
   const autoNextRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /**
+   * Where the server says to go after a question, when it ended a part early
+   * (the stop rule, src/lib/gameStop.ts): item id to the index to jump to.
+   * A ref mirroring `skips`, because the auto-advance timer must see a skip
+   * that arrived after it was set. Never says why; the child just meets the
+   * next mission.
+   */
+  const skipsRef = useRef<Record<string, number>>({});
+  /** Where the quest picks up when the mission celebration is dismissed. */
+  const resumeAtRef = useRef<number | null>(null);
 
   const pendingKey = storageKey("pending", sessionId);
   const stateKey = storageKey("state", sessionId);
@@ -219,8 +240,11 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
     for (const [itemId, answer] of entries) {
       try {
         const response = await fetch(`/api/kiosk/sessions/${sessionId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ itemId, answer }) });
-        if (response.ok) delete pendingRef.current[itemId];
-        else ok = false;
+        if (response.ok) {
+          delete pendingRef.current[itemId];
+          const { skipTo } = await response.json().catch(() => ({})) as { skipTo?: unknown };
+          if (typeof skipTo === "number") { skipsRef.current = { ...skipsRef.current, [itemId]: skipTo }; setSkips(skipsRef.current); }
+        } else ok = false;
       } catch { ok = false; }
     }
     writeJson(pendingKey, pendingRef.current);
@@ -285,15 +309,18 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
 
   async function next() {
     if (!state || !item) return;
-    if (qIndex < state.items.length - 1) {
-      if (missionIndexOf(qIndex + 1) !== missionIndex) {
+    // The next question, or past the end of a part the stop rule ended early.
+    const target = skipsRef.current[item.id] ?? qIndex + 1;
+    if (target < state.items.length) {
+      if (missionIndexOf(target) !== missionIndex) {
+        resumeAtRef.current = target;
         setCelebrating(missionIndex);
         playSound("mission");
         burst("mission");
         if (speechSupported) sayAloud(REACTION_LINES.missionComplete);
         return;
       }
-      setQIndex((index) => index + 1);
+      setQIndex(target);
       return;
     }
     setCompleting(true);
@@ -310,10 +337,10 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
    * Finish instead.
    */
   function choose(option: string) {
-    if (!state) return;
+    if (!state || !item) return;
     saveAnswer(option);
     if (autoNextRef.current) clearTimeout(autoNextRef.current);
-    if (qIndex < state.items.length - 1) autoNextRef.current = setTimeout(next, AUTO_NEXT_MS);
+    if ((skipsRef.current[item.id] ?? qIndex + 1) < state.items.length) autoNextRef.current = setTimeout(next, AUTO_NEXT_MS);
   }
 
   // A question change (by the timer or the Next button) cancels a pending move.
@@ -323,7 +350,8 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
 
   function continueQuest() {
     setCelebrating(null);
-    setQIndex((index) => index + 1);
+    setQIndex((index) => resumeAtRef.current ?? index + 1);
+    resumeAtRef.current = null;
   }
 
   function toggleSound() {
@@ -379,7 +407,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
     const done = missions[celebrating];
     const upNext = missions[celebrating + 1];
     const earned = state.items.slice(done.start, done.end).filter((entry) => earnsStar(state.answersByItemId[entry.id])).length;
-    const breakTime = !!upNext && done.sitting !== null && upNext.sitting !== null && upNext.sitting !== done.sitting;
+    const breakTime = endsSitting(missions, celebrating);
     return (
       <div className="rw-assessment-shell">
         <QuestMap missions={missions} current={celebrating + 1} />
@@ -390,9 +418,9 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
           <div className="rw-earned" aria-label={`${earned} stars`}>
             {Array.from({ length: Math.min(earned, 10) }, (_, i) => <span key={i} style={{ animationDelay: `${150 + i * 90}ms` }}>⭐</span>)}
           </div>
-          {breakTime && <div className="rw-break-note">Time for a little break! Your teacher will tell you when to start the next part.</div>}
+          {breakTime && <div className="rw-break-note"><span className="rw-stop-here">✋ Stop here</span>Great work! Time for a little break. Your teacher will tell you when to start the next part.</div>}
           {upNext && <p>Next up: <strong>{upNext.title}</strong>{upNext.partLabel ? ` · ${upNext.subtitle}` : ""}</p>}
-          <button className="rw-primary rw-start" onClick={continueQuest} autoFocus>Next mission <span>→</span></button>
+          <button className="rw-primary rw-start" onClick={continueQuest} autoFocus>{breakTime ? "Teacher says go on" : "Next mission"} <span>→</span></button>
         </div>
       </div>
     );
@@ -403,8 +431,10 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
   const tiles = showAsTiles(pictures);
   const wordCard = isWordCard(item);
   const firstInMission = qIndex === mission.start;
-  const leftInMission = mission.end - (qIndex + 1);
-  const lastQuestion = qIndex === state.items.length - 1;
+  // A part the stop rule ended early has nothing left in it, whatever the form holds.
+  const nextIndex = skips[item.id] ?? qIndex + 1;
+  const leftInMission = nextIndex > mission.end - 1 ? 0 : mission.end - nextIndex;
+  const lastQuestion = nextIndex >= state.items.length;
   const sittingLabel = mission.sitting === 1 ? "First sitting" : mission.sitting === 2 ? "Second sitting" : "Writing time";
 
   let mood: SunnyMood;
