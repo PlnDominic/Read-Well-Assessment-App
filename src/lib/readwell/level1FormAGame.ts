@@ -22,13 +22,17 @@ import type { AssessmentItem } from "@/lib/database.types";
  *   child isn't loaded with a long story to hold in mind (the guide's
  *   versions are longer; the adult-given Form A keeps them).
  * - Sound awareness: the nine-rung ladder lives in a separate subtest
- *   script, so these eight items are written for the game (rhyme, first
- *   sound, last sound, syllables, blending).
- * - Writing is typed: the name, five letter sounds, four dictated words and
+ *   script, so these five items are written for the game (rhyme, first
+ *   sound, syllables, blending).
+ * - Each part is short, so a child isn't tired out: five questions, or three
+ *   for the stories and reading attitude, six for writing
+ *   (63 questions in all, 28 in the first sitting).
+ *   The guide's longer sets stay in the adult-given Form A.
+ * - Writing is typed: the name, two letter sounds, two dictated words and
  *   the dictated sentence, scored on spelling.
  *
  * Item ids start with the part code (LC01, VO01, ...), which is how the
- * game groups them into missions (StudentAssessmentRunner.tsx). Option
+ * game groups them into parts, and gameParts.ts pairs the parts into missions. Option
  * pictures: a leading emoji is drawn from public/pictures/<codepoints>.svg
  * (Twemoji), and a leading :name: from public/pictures/<name>.svg.
  *
@@ -86,17 +90,12 @@ const LC: [prompt: string, say: string, options: Choice[]][] = [
 const VO: [word: string, pictures: string[], correct: number][] = [
   ["ram", ["🐔", "🐏", "🐕", "🐟"], 2],
   ["web", ["🥅", "🪢", "🕸️", "🪺"], 3],
-  ["hut", ["🛖", "⛺", "🚗", "🌳"], 1],
   ["mop", ["🧹", "🖌️", "🪣", ":mop:"], 4],
-  ["tin", ["☕", "🥫", "🧴", "🧺"], 2],
-  ["bucket", ["🍲", "🥣", "🧺", "🪣"], 4],
   ["ladder", ["🪜", "🪑", "🛏️", "🚪"], 1],
-  ["bridge", ["🛣️", "🏞️", "🌉", ":gate:"], 3],
-  ["roof", ["🪟", ":roof:", "🚪", "🧱"], 2],
   ["farmer", ["🧑‍🏫", "🚕", "🧑‍🌾", "🧑‍⚕️"], 3],
 ];
 
-// --- Part 3: Print concepts (the guide's ten, on screen) --------------------
+// --- Part 3: Print concepts (five of the guide's ten, on screen) --------------------
 
 const PAGE = "Kofi has a red hat.\nHe sits on a mat.";
 
@@ -105,10 +104,7 @@ const PAGE = "Kofi has a red hat.\nHe sits on a mat.";
 const SA: [prompt: string, say: string, options: Choice[]][] = [
   ["Which one rhymes with cat?", "Which one rhymes with cat? Sun, hat, or cup?", [["☀️ sun"], ["🎩 hat", true], ["☕ cup"]]],
   ["Which one rhymes with pen?", "Which one rhymes with pen? Ten, pig, or box?", [["🔟 ten", true], ["🐖 pig"], ["📦 box"]]],
-  ["Which one rhymes with log?", "Which one rhymes with log? Bed, bus, or dog?", [["🛏️ bed"], ["🚌 bus"], ["🐕 dog", true]]],
   ["Which one starts like sun?", "Which one starts with the same sound as sun? Map, sock, or pig?", [["🗺️ map"], ["🧦 sock", true], ["🐖 pig"]]],
-  ["Which one starts like mango?", "Which one starts with the same sound as mango? Moon, fish, or tap?", [["🌙 moon", true], ["🐟 fish"], ["🚰 tap"]]],
-  ["Which one ends like goat?", "Which one ends with the same sound as goat? Sun, dog, or cat?", [["☀️ sun"], ["🐕 dog"], ["🐈 cat", true]]],
   ["How many claps in banana?", "Clap the parts of the word banana. Ba, na, na. How many claps? One, two, or three?", [["1"], ["2"], ["3", true]]],
   ["What word is it?", "Listen. Ba... nana. What word is it? Apple, banana, or pineapple?", [["🍎 apple"], ["🍌 banana", true], ["🍍 pineapple"]]],
 ];
@@ -116,8 +112,8 @@ const SA: [prompt: string, say: string, options: Choice[]][] = [
 // --- Parts 5 and 6: Letter names and letter sounds ----------------------------
 
 // The first row and the start of the second, from the guide's grids.
-const LN_LETTERS = ["s", "m", "a", "t", "o", "b", "k", "e", "w", "d"];
-const LS_LETTERS = ["a", "t", "s", "m", "p", "n", "g", "i", "h", "d"];
+const LN_LETTERS = ["s", "m", "a", "t", "o"];
+const LS_LETTERS = ["a", "t", "s", "m", "p"];
 
 // Letters a child is likely to mix up with each one.
 const LOOK_ALIKE: Record<string, [string, string]> = {
@@ -163,19 +159,16 @@ const STQ: [prompt: string, say: string, options: Choice[]][] = [
 const FACES: Choice[] = [["😀 Happy", true], ["😐 Just okay", true], ["😢 Sad", true]];
 const AT: [prompt: string, options: Choice[]][] = [
   ["How do you feel when someone reads a story to you?", FACES],
-  ["How do you feel when you look at books by yourself?", FACES],
   ["How do you feel about learning to read?", FACES],
   ["Does someone at home read or tell stories with you?", [["👍 Yes", true], ["🙂 Sometimes", true], ["👎 No", true]]],
 ];
 
 // --- Part 13: Writing (the guide's tasks, typed) ----------------------------
 
-const WT_SOUNDS: [letter: string, word: string][] = [["s", "sun"], ["m", "mango"], ["t", "tap"], ["b", "ball"], ["i", "ink"]];
+const WT_SOUNDS: [letter: string, word: string][] = [["s", "sun"], ["m", "mango"]];
 const WT_WORDS: [word: string, sentence: string][] = [
   ["tag", "The shirt has a tag."],
   ["peg", "Hang the cloth with a peg."],
-  ["job", "My mother has a job."],
-  ["bun", "I ate a bun."],
 ];
 const WT_SENTENCE = "The red bus is big.";
 
@@ -201,13 +194,8 @@ function buildItems(): AssessmentItem[] {
   const cp: [string, string, Choice[], Partial<AssessmentItem>?][] = [
     ["Tap the front of the book.", "Tap the front of the book.", [[":book-back:"], [":book-front:", true], ["📖"]]],
     ["Tap the back of the book.", "Tap the back of the book.", [[":book-front:"], ["📖"], [":book-back:", true]]],
-    ["Which book is the right way up, ready to read?", "Which book is the right way up, ready to read?", [[":book-upside-down:"], [":book-front:", true], [":book-back:"]]],
     ["Where do you start reading? Tap the first word.", "Look at the page. Where do you start reading? Tap the first word.", [["mat"], ["Kofi", true], ["red"]], { passage: PAGE }],
     ["Which arrow shows the way we read along a line?", "Which arrow shows the way we read along a line?", [["⬅️"], ["⬆️"], ["➡️", true]], { passage: PAGE }],
-    ["At the end of a line, where do you go next?", "At the end of a line, where do you go next? To the start of the next line, back to the top, or off the page?", [["↙️ To the start of the next line", true], ["⬆️ Back to the top"], ["➡️ Off the page"]], { passage: PAGE }],
-    ["Tap just one letter.", "Tap just one letter.", [["Kofi"], ["K", true], ["a red hat"]]],
-    ["Tap just one word.", "Tap just one word.", [["h"], ["a red hat"], ["hat", true]]],
-    ["Tap a capital letter.", "Tap a capital letter.", [["e"], ["K", true], ["s"]]],
     ["Tap a full stop.", "Tap a full stop.", [[","], ["?"], [".", true]]],
   ];
   cp.forEach(([prompt, say, options, extra], i) =>
@@ -268,11 +256,11 @@ function buildItems(): AssessmentItem[] {
     items.push(text(`WT${n2(i + 2)}`, "Write the letter for the first sound you hear.", `Write the letter for the first sound in ${word}. ${word}.`, letter))
   );
   WT_WORDS.forEach(([word, sentence], i) =>
-    items.push(text(`WT${n2(i + 7)}`, "Write the word you hear.", `Write the word ${word}. ${sentence} ${word}.`, word))
+    items.push(text(`WT${n2(i + 2 + WT_SOUNDS.length)}`, "Write the word you hear.", `Write the word ${word}. ${sentence} ${word}.`, word))
   );
   items.push(
     text(
-      "WT11",
+      `WT${n2(2 + WT_SOUNDS.length + WT_WORDS.length)}`,
       "Write the sentence you hear.",
       `Write this sentence. ${WT_SENTENCE} ${WT_SENTENCE.replace(/\.$/, "").split(" ").join("... ")}. ${WT_SENTENCE}`,
       WT_SENTENCE

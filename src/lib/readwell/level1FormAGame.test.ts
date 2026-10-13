@@ -3,6 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { LEVEL1_FORM_A_GAME_ITEMS as ITEMS } from "./level1FormAGame";
 import { optionPicture } from "@/lib/optionPicture";
+import { LEVEL_PARTS, partFor } from "@/lib/gameParts";
 
 const ROOT = path.resolve(import.meta.dirname, "../../..");
 const read = (file: string) => readFileSync(path.join(ROOT, file), "utf8");
@@ -11,7 +12,7 @@ const read = (file: string) => readFileSync(path.join(ROOT, file), "utf8");
 const PART_ORDER = ["LC", "VO", "CP", "SA", "LN", "LS", "CV", "RW", "NW", "HW", "ST", "AT", "WT"];
 
 function gameItemsFrom(sql: string): unknown {
-  const match = /select 1, 'A', 'game', (?:1|2), '(\[[\s\S]*?\])'::jsonb/.exec(sql);
+  const match = /select 1, 'A', 'game', (?:1|3), '(\[[\s\S]*?\])'::jsonb/.exec(sql);
   if (!match) throw new Error("No Level 1 Form A game insert found");
   return JSON.parse(match[1].replace(/''/g, "'"));
 }
@@ -38,6 +39,27 @@ describe("Level 1 Form A game items", () => {
     const reading = ITEMS.filter((i) => i.id.startsWith("ST"));
     expect(reading.filter((i) => i.type === "mic")).toHaveLength(3);
     expect(reading.filter((i) => i.type === "choice")).toHaveLength(3);
+  });
+
+  it("keep every part short, so a child isn't tired out", () => {
+    const counts = new Map<string, number>();
+    for (const item of ITEMS) counts.set(item.id.slice(0, 2), (counts.get(item.id.slice(0, 2)) ?? 0) + 1);
+    for (const [part, count] of counts) expect(count, part).toBeLessThanOrEqual(6);
+    expect(ITEMS.length).toBeLessThanOrEqual(65);
+  });
+
+  it("play as seven missions of about ten questions, three sittings", () => {
+    const parts = LEVEL_PARTS[1];
+    const missions = new Map<string, number>();
+    for (const item of ITEMS) {
+      const key = partFor(parts, item)!.mission.key;
+      missions.set(key, (missions.get(key) ?? 0) + 1);
+    }
+    expect(missions.size).toBe(7);
+    for (const [key, count] of missions) expect(count, key).toBeLessThanOrEqual(10);
+    // The first sitting is under thirty questions.
+    const first = ITEMS.filter((i) => partFor(parts, i)!.sitting === 1).length;
+    expect(first).toBeLessThanOrEqual(30);
   });
 
   it("are all game items the editor can save", () => {
@@ -86,8 +108,8 @@ describe("Level 1 Form A game items", () => {
   });
 });
 
-// 0018 seeded version 1 (the longer stories); 0020 replaced it with this one.
-describe.each(["supabase/setup.sql", "supabase/migrations/0020_level1_short_stories.sql"])("%s", (file) => {
+// 0018 seeded version 1 and 0020 version 2 (shorter stories); 0021 is this one.
+describe.each(["supabase/setup.sql", "supabase/migrations/0021_level1_short_parts.sql"])("%s", (file) => {
   it("seeds exactly these items as the Level 1 Form A game", () => {
     expect(gameItemsFrom(read(file))).toEqual(ITEMS);
   });

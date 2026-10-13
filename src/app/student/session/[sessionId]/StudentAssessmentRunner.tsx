@@ -81,12 +81,13 @@ function buildMissions(items: KioskItem[], parts: Part[]): Mission[] {
   const missions: Mission[] = [];
   items.forEach((item, index) => {
     const part = partFor(parts, item) ?? parts[0];
-    const key = byPart ? part.code : String(Math.floor(index / MISSION_SIZE));
+    // A part's mission is shared with its neighbour in the same sitting (gameParts.ts).
+    const key = byPart ? part.mission.key : String(Math.floor(index / MISSION_SIZE));
     const last = missions[missions.length - 1];
     if (last && last.key === key) { last.end = index + 1; return; }
     const n = missions.length;
     missions.push(byPart
-      ? { key, title: part.title, subtitle: part.subtitle, color: part.color, sitting: part.sitting, partLabel: `PART ${part.number} · ${part.code}`, start: index, end: index + 1 }
+      ? { key, title: part.mission.title, subtitle: part.mission.subtitle, color: part.color, sitting: part.sitting, partLabel: `PART ${part.number} · ${part.code}`, start: index, end: index + 1 }
       : { key, title: `Mission ${n + 1}`, subtitle: "", color: MISSION_COLORS[n % MISSION_COLORS.length], sitting: null, partLabel: null, start: index, end: index + 1 });
   });
   for (const m of missions) if (!m.partLabel) m.subtitle = `${m.end - m.start} question${m.end - m.start === 1 ? "" : "s"}`;
@@ -430,7 +431,10 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
   const pictures = (item.options ?? []).map(optionPicture);
   const tiles = showAsTiles(pictures);
   const wordCard = isWordCard(item);
-  const firstInMission = qIndex === mission.start;
+  // The part this question is in, and whether it opens a part (a mission can hold two).
+  const part = partFor(partsFor(state.assessmentLevel), item);
+  const previousPart = qIndex > 0 ? partFor(partsFor(state.assessmentLevel), state.items[qIndex - 1]) : undefined;
+  const firstInPart = !!part && part !== previousPart;
   // A part the stop rule ended early has nothing left in it, whatever the form holds.
   const nextIndex = skips[item.id] ?? qIndex + 1;
   const leftInMission = nextIndex > mission.end - 1 ? 0 : mission.end - nextIndex;
@@ -458,14 +462,15 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
     </div>
     <QuestMap missions={missions} current={missionIndex}>
       {mission.sitting !== null && <span className="rw-map-pill" style={{ background: mission.color }}>{sittingLabel}</span>}
-      <span>Mission {missionIndex + 1} of {missions.length}</span>
+      <span>Mission {missionIndex + 1} of {missions.length}{mission.partLabel ? ` · ${mission.title}` : ""}</span>
       {syncing && <span className="rw-saving">Saving…</span>}
     </QuestMap>
     <div className="rw-stage">
       <AnimatedSunny mood={mood} size={120} say={say} peek className="rw-stage-sunny" />
       <main className="rw-mission-card">
-        <div className="rw-mission-top"><div className="rw-part-badge" style={{ background: mission.color }}>{mission.partLabel ?? `MISSION ${missionIndex + 1}`}</div>{speechSupported && <button className="rw-listen" onClick={() => sayAloud(itemSpokenText(item))}><SpeakerIcon size={17} color="currentColor" /> Listen</button>}</div>
-        {firstInMission && <div className="rw-part-intro"><strong>{mission.title}</strong><span>{mission.subtitle}</span></div>}
+        <div className="rw-mission-top"><div className="rw-part-badge" style={{ background: part?.color ?? mission.color }}>{part ? `PART ${part.number} · ${part.code}` : `MISSION ${missionIndex + 1}`}</div>{speechSupported && <button className="rw-listen" onClick={() => sayAloud(itemSpokenText(item))}><SpeakerIcon size={17} color="currentColor" /> Listen</button>}</div>
+        {firstInPart && part && <div className="rw-part-intro"><strong>{part.title}</strong><span>{part.subtitle}</span></div>}
+        {!part && qIndex === mission.start && <div className="rw-part-intro"><strong>{mission.title}</strong><span>{mission.subtitle}</span></div>}
         {item.passage && (wordCard
           ? <div className="rw-word-card">{item.passage}</div>
           : <div className={`rw-passage ${item.type === "mic" ? "rw-passage-read" : ""}`}>{item.passage}</div>)}

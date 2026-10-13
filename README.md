@@ -155,13 +155,24 @@ their own device at `/student`
   `public/pictures/mop.svg`, drawn for pictures the guide uses that have no
   emoji. Pictures and single letters or marks show as big tiles; wordier
   choices stay a list. The service worker precaches every picture.
-- **Missions and the quest map.** The questions are split into missions:
-  one per ReadWell part when the item ids carry part codes (`LS01`, `SV03`,
-  the Level 2 quest), otherwise every five questions. A map across a little
-  sky shows the missions as a path ending in a trophy, with Sunny's face
-  travelling along it. Finishing a mission shows a celebration card (and, at
-  a change of sitting, "time for a little break"); finishing the quest shows
-  Sunny with a trophy, a Reading Star badge and the missions stamped off.
+- **Missions and the quest map.** The questions are split into parts, one
+  per ReadWell part when the item ids carry part codes (`LS01`, `SV03`, the
+  Level 2 quest), otherwise every five questions, and the parts of a sitting
+  are paired into **seven short missions** instead of thirteen
+  (`src/lib/gameParts.ts`: `mission` on each part). Level 1 plays as Listen
+  and look, Books and sounds, Letters and sounds (the first sitting, 28
+  questions), Little words, Words you know, Story time (the second), and
+  Writing (the third). Each part is about five questions (63 in all, down
+  from 100): vocabulary, print concepts, sound awareness, letter names and
+  letter sounds five each, the stories and reading attitude three, writing
+  six; the guide's longer sets stay in the adult-given Form A (migrations
+  0020 and 0021). A map across a little sky shows the missions as a path
+  ending in a trophy, with Sunny's face travelling along it. Finishing a
+  mission shows a celebration card (and, at a change of sitting, "time for
+  a little break"); finishing the quest shows Sunny with a trophy, a
+  Reading Star badge and the missions stamped off. Level 2's questions are
+  written on the Content page and play in the same seven missions, so keep
+  its parts to about five questions each there.
 - **Stop here.** Two kinds, neither of which tells a child they got
   something wrong. *The stop rule* (`src/lib/gameStop.ts`, run by the answer
   endpoint, which alone knows what was right): three wrong answers in a row
@@ -221,7 +232,7 @@ their own device at `/student`
   Confetti is `canvas-confetti`, run without its web worker because the CSP
   allows no `blob:` workers.
 - **Sunny's voice** (`src/lib/voice.ts`). Sunny speaks with recorded clips
-  in a Ghanaian-accented voice (`public/voice/`, 68 lines: his reactions and
+  in a Ghanaian-accented voice (`public/voice/`, 44 lines: his reactions and
   every Level 1 prompt except the writing ones). A clip is found by a hash of
   the exact text Sunny is about to say (`src/lib/voiceKey.ts`), so a line an
   admin writes, or one that has been reworded, has no clip and is spoken by
