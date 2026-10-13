@@ -78,6 +78,28 @@ describe("evaluateResponse", () => {
     expect(evaluateResponse(micItemWithExpectedText, "run")).toBe(false);
   });
 
+  it("counts the recognizer's other guesses, so a close mishearing isn't a miss", () => {
+    expect(evaluateResponse(micItemWithExpectedText, "jum | jump | dump")).toBe(true);
+    expect(evaluateResponse(micItemWithExpectedText, "dump | lump")).toBe(false);
+  });
+
+  it("matches a short word as a whole word, a longer one inside what was said", () => {
+    const of = { ...micItemWithExpectedText, expectedText: "of" };
+    expect(evaluateResponse(of, "off")).toBe(false);
+    expect(evaluateResponse(of, "of")).toBe(true);
+    expect(evaluateResponse(micItemWithExpectedText, "jumps")).toBe(true);
+  });
+
+  it("reads digits as the number words they stand for", () => {
+    const ten = { ...micItemWithExpectedText, expectedText: "ten" };
+    expect(evaluateResponse(ten, "10")).toBe(true);
+  });
+
+  it("scores silence as a miss, like a skip", () => {
+    expect(evaluateResponse(micItemWithExpectedText, "nospeech")).toBe(false);
+    expect(evaluateResponse(micItem, "nospeech")).toBe(false);
+  });
+
   it("scores a Level 2 writing response against its expected text", () => {
     expect(evaluateResponse(writingItem, "flat")).toBe(true);
     expect(evaluateResponse(writingItem, "")).toBe(false);

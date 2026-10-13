@@ -15,7 +15,29 @@ export function normalizeSpokenText(s: string): string {
     .toLowerCase()
     .trim()
     .replace(/[^\w\s]/g, "")
+    .replace(/\b(\d{1,2})\b/g, (n) => NUMBER_WORDS[Number(n)] ?? n)
     .replace(/\s+/g, " ");
+}
+
+// Speech recognition writes a spoken number as digits ("ten" comes back as
+// "10"), which would never match a word the child was meant to read.
+const NUMBER_WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen", "twenty"];
+
+/** What the game sends when the mic heard nothing, twice: scored as wrong, like a skip. */
+export const NO_SPEECH = "nospeech";
+
+/** The game sends everything the recognizer thought it heard, best guess first, joined by this. */
+export const HEARD_SEPARATOR = " | ";
+
+/**
+ * Whether what was heard contains the expected text. A short word (three
+ * letters or fewer) must be a whole word, or "of" would be found in "off" and
+ * "the" in "other"; a longer one may sit inside a longer word, so a child who
+ * says "jumps" for "jump" isn't marked wrong.
+ */
+function heardContains(heard: string, expected: string): boolean {
+  if (expected.length === 0) return false;
+  return expected.length <= 3 ? ` ${heard} `.includes(` ${expected} `) : heard.includes(expected);
 }
 
 /** What the game sends when a child skips a read-aloud item they can't read. */
@@ -32,8 +54,10 @@ export const SKIPPED = "skipped";
  * browsers without SpeechRecognition support), and mic items with no
  * expectedText configured (content authored before this existed, or where
  * the program team didn't set a rubric). The match is a lenient substring
- * check, not exact equality; early readers' transcripts are noisy, and a
- * false "wrong" is a worse failure mode here than a false "right".
+ * check (a whole-word one for words of three letters or fewer), not exact
+ * equality; early readers' transcripts are noisy, and a false "wrong" is a
+ * worse failure mode here than a false "right". A teacher can re-mark any
+ * read-aloud answer on the report.
  */
 export function evaluateResponse(item: AssessmentItem, answer: unknown): boolean {
   if (item.type === "text") {
@@ -44,12 +68,14 @@ export function evaluateResponse(item: AssessmentItem, answer: unknown): boolean
   if (item.type === "mic") {
     if (typeof answer !== "string" || answer.length === 0) return false;
     // The child tapped "skip" instead of reading.
-    if (answer === SKIPPED) return false;
+    if (answer === SKIPPED || answer === NO_SPEECH) return false;
     if (answer === "attempted") return true;
     if (!item.expectedText) return true;
-    const spoken = normalizeSpokenText(answer);
     const expected = normalizeSpokenText(item.expectedText);
-    return expected.length > 0 && spoken.includes(expected);
+    // The recognizer's other guesses count: early readers' words are often
+    // heard as something close, and its second guess is the right one as
+    // often as not.
+    return answer.split(HEARD_SEPARATOR).some((heard) => heardContains(normalizeSpokenText(heard), expected));
   }
   if (item.type === "choice") {
     const chosen = item.options?.find((o) => o.text === answer);

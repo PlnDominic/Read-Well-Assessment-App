@@ -36,6 +36,11 @@ describe("the stop rule", () => {
     expect(stopReachedAt(at, parts, scored({ AT01: false, AT02: false, AT03: false }), 2)).toBeNull();
   });
 
+  it("doesn't count a stop the child played on past (answers that reached the server late)", () => {
+    const marks = scored({ LN01: false, LN02: false, LN03: false, LN04: true });
+    expect(stopsFor(items, parts, marks)).toEqual([]);
+  });
+
   it("finds every part a child stopped in, for the report", () => {
     const marks = scored({ LN01: true, LN02: false, LN03: false, LN04: false });
     expect(stopsFor(items, parts, marks).map((s) => [s.part.code, s.afterIndex])).toEqual([["LN", 3]]);

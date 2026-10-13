@@ -10,6 +10,7 @@ import { REACTION_LINES, itemSpokenText } from "@/lib/spoken";
 import { canSpeak, sayAloud, stopSpeaking } from "@/lib/voice";
 import { MISSION_SIZE, partFor, partsFor, type Part } from "@/lib/gameParts";
 import { isWordCard, showAsTiles } from "@/lib/gameLayout";
+import { stopReachedAt } from "@/lib/gameStop";
 
 interface KioskItem {
   id: string;
@@ -65,6 +66,11 @@ function writeJson(key: string, value: unknown) { try { localStorage.setItem(key
 function isAnswered(answer: unknown) { return typeof answer === "string" ? answer.trim().length > 0 : answer !== undefined && answer !== null; }
 // What a read-aloud item records when the child skips it; scored as wrong (evaluateResponse in src/lib/kiosk.ts).
 const SKIPPED = "skipped";
+/** What a read-aloud item records when the mic heard nothing twice; scored as wrong (kiosk.ts). */
+const NO_SPEECH = "nospeech";
+/** How many guesses to ask the recognizer for; all of them are sent, best first (kiosk.ts HEARD_SEPARATOR). */
+const HEARD_GUESSES = 5;
+const HEARD_SEPARATOR = " | ";
 /** An answer that earns a star: anything but a skip. */
 function earnsStar(answer: unknown) { return isAnswered(answer) && answer !== SKIPPED; }
 
@@ -145,6 +151,10 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
   /** The mission just finished, while its celebration is showing. */
   const [celebrating, setCelebrating] = useState<number | null>(null);
   const [starBump, setStarBump] = useState(0);
+  /** The mic heard nothing on the first go; the child is asked to try once more. */
+  const [heardNothingFor, setHeardNothingFor] = useState<string | null>(null);
+  /** Goes the child has had at each read-aloud question. */
+  const micTriesRef = useRef<Record<string, number>>({});
   /** Where the server said to go after a question, when it ended a part early (see `skipsRef`). */
   const [skips, setSkips] = useState<Record<string, number>>({});
   const pendingRef = useRef<Record<string, unknown>>({});
@@ -161,6 +171,23 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
    * next mission.
    */
   const skipsRef = useRef<Record<string, number>>({});
+  /**
+   * Where the stop rule sends the child after question `index`, as far as this
+   * device can tell by itself: the server alone knows which answers were right,
+   * so this only sees a run of "I can't read this one yet" taps (wrong for
+   * certain) and treats every other answer as possibly right. That is the
+   * clearest case of a part a child can't do yet, and it works with no
+   * connection; the server's rule (the `skipTo` it replies with) covers the rest.
+   */
+  function stopOnDevice(index: number): number | null {
+    if (!state) return null;
+    const known = new Map<string, boolean>();
+    for (const entry of state.items) {
+      const answer = state.answersByItemId[entry.id];
+      if (isAnswered(answer)) known.set(entry.id, answer !== SKIPPED && answer !== NO_SPEECH);
+    }
+    return stopReachedAt(state.items, partsFor(state.assessmentLevel), known, index)?.resumeAt ?? null;
+  }
   /** Where the quest picks up when the mission celebration is dismissed. */
   const resumeAtRef = useRef<number | null>(null);
 
@@ -296,22 +323,46 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
   }
 
   function recordMic() {
-    if (savedString || recording) return;
+    if (savedString || recording || !item) return;
     const Recognition = window.SpeechRecognition ?? window.webkitSpeechRecognition;
     if (!Recognition) { setRecording(true); setTimeout(() => { setRecording(false); saveAnswer("attempted"); }, 1000); return; }
     const recognition = new Recognition();
-    recognition.lang = "en-US"; recognition.interimResults = false; recognition.maxAlternatives = 1;
+    // The device's own English (en-GB, en-NG, en-GH...) hears a local accent better than en-US.
+    recognition.lang = /^en\b/i.test(navigator.language) ? navigator.language : "en-US";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = HEARD_GUESSES;
     setRecording(true);
-    recognition.onresult = (event) => saveAnswer(event.results[0]?.[0]?.transcript ?? "attempted");
-    recognition.onerror = () => saveAnswer("attempted");
-    recognition.onend = () => setRecording(false);
+    setHeardNothingFor(null);
+    let finished = false;
+    const heardNothingNow = () => {
+      if (finished) return;
+      finished = true;
+      // Silence isn't a try: the child gets one more go, then it's scored as a miss.
+      const tries = (micTriesRef.current[item.id] ?? 0) + 1;
+      micTriesRef.current[item.id] = tries;
+      if (tries < 2) setHeardNothingFor(item.id);
+      else saveAnswer(NO_SPEECH);
+    };
+    recognition.onresult = (event) => {
+      const guesses = Array.from(event.results[0] ?? [], (alt) => alt.transcript.trim()).filter(Boolean);
+      if (guesses.length === 0) return heardNothingNow();
+      finished = true;
+      saveAnswer([...new Set(guesses)].join(HEARD_SEPARATOR));
+    };
+    recognition.onerror = (event) => {
+      // No speech: not a failure of the mic. Anything else (no permission, no
+      // network) means this device can't listen, and the read-aloud counts as tried.
+      if (event.error === "no-speech" || event.error === "aborted") heardNothingNow();
+      else if (!finished) { finished = true; saveAnswer("attempted"); }
+    };
+    recognition.onend = () => { setRecording(false); heardNothingNow(); };
     recognition.start();
   }
 
   async function next() {
     if (!state || !item) return;
     // The next question, or past the end of a part the stop rule ended early.
-    const target = skipsRef.current[item.id] ?? qIndex + 1;
+    const target = skipsRef.current[item.id] ?? stopOnDevice(qIndex) ?? qIndex + 1;
     if (target < state.items.length) {
       if (missionIndexOf(target) !== missionIndex) {
         resumeAtRef.current = target;
@@ -341,7 +392,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
     if (!state || !item) return;
     saveAnswer(option);
     if (autoNextRef.current) clearTimeout(autoNextRef.current);
-    if ((skipsRef.current[item.id] ?? qIndex + 1) < state.items.length) autoNextRef.current = setTimeout(next, AUTO_NEXT_MS);
+    if ((skipsRef.current[item.id] ?? stopOnDevice(qIndex) ?? qIndex + 1) < state.items.length) autoNextRef.current = setTimeout(next, AUTO_NEXT_MS);
   }
 
   // A question change (by the timer or the Next button) cancels a pending move.
@@ -436,7 +487,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
   const previousPart = qIndex > 0 ? partFor(partsFor(state.assessmentLevel), state.items[qIndex - 1]) : undefined;
   const firstInPart = !!part && part !== previousPart;
   // A part the stop rule ended early has nothing left in it, whatever the form holds.
-  const nextIndex = skips[item.id] ?? qIndex + 1;
+  const nextIndex = skips[item.id] ?? stopOnDevice(qIndex) ?? qIndex + 1;
   const leftInMission = nextIndex > mission.end - 1 ? 0 : mission.end - nextIndex;
   const lastQuestion = nextIndex >= state.items.length;
   const sittingLabel = mission.sitting === 1 ? "First sitting" : mission.sitting === 2 ? "Second sitting" : "Writing time";
@@ -444,7 +495,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
   let mood: SunnyMood;
   let say: string;
   if (recording) { mood = "listen"; say = "I'm listening…"; }
-  else if (savedString === SKIPPED) { mood = "thumbs"; say = "That's okay! On to the next one."; }
+  else if (savedString === SKIPPED || savedString === NO_SPEECH) { mood = "thumbs"; say = "That's okay! On to the next one."; }
   else if (item.type === "text" && canProceed) { mood = "thumbs"; say = "Looking good! Tap Next when you're done."; }
   else if (canProceed) { mood = qIndex % 2 ? "cheer" : "thumbs"; say = PRAISE[qIndex % PRAISE.length]; }
   else if (item.type === "mic") { mood = "read"; say = isStory ? "Read the story to me!" : "Tap the mic and read to me!"; }
@@ -494,7 +545,7 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
           </div>
         )}
         {item.type === "text" && <textarea className="rw-writing-input" value={savedString} onChange={(event) => saveAnswer(event.target.value)} placeholder="Write your answer here…" rows={3} autoFocus />}
-        {item.type === "mic" && <div className="rw-mic-wrap"><button className={`rw-mic ${savedString ? "done" : recording ? "recording" : ""}`} onClick={recordMic} aria-label="Read aloud"><MicIcon /></button><strong>{savedString === SKIPPED ? "Skipped" : savedString ? "Nice reading! ✓" : recording ? "Sunny is listening…" : "Tap to read aloud"}</strong><small>Take your time. You can try once.</small>{!savedString && !recording && <button className="rw-skip" onClick={() => saveAnswer(SKIPPED)}>I can&apos;t read this one yet</button>}</div>}
+        {item.type === "mic" && <div className="rw-mic-wrap"><button className={`rw-mic ${savedString ? "done" : recording ? "recording" : ""}`} onClick={recordMic} aria-label="Read aloud"><MicIcon /></button><strong>{savedString === SKIPPED ? "Skipped" : savedString === NO_SPEECH ? "That's okay!" : savedString ? "Nice reading! ✓" : recording ? "Sunny is listening…" : heardNothingFor === item.id ? "I didn't hear you. Tap and try again!" : "Tap to read aloud"}</strong><small>Take your time. Speak up so Sunny can hear.</small>{!savedString && !recording && <button className="rw-skip" onClick={() => saveAnswer(SKIPPED)}>I can&apos;t read this one yet</button>}</div>}
       </main>
     </div>
     <div className="rw-actions">

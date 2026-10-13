@@ -56,7 +56,12 @@ function stopWithin(indexes: readonly number[], items: readonly StopItem[], corr
     const correct = correctById.get(items[indexes[p]].id);
     if (correct === undefined) return null; // not answered yet: the child hasn't got this far
     run = correct ? 0 : run + 1;
-    if (run >= STOP_AFTER_WRONG) return p < indexes.length - 1 ? indexes[p] : null;
+    if (run >= STOP_AFTER_WRONG && p < indexes.length - 1) {
+      // A child who played on anyway (answers saved while offline reach the
+      // server late) wasn't stopped; the run starts over.
+      if (correctById.has(items[indexes[p + 1]].id)) { run = 0; continue; }
+      return indexes[p];
+    }
   }
   return null;
 }

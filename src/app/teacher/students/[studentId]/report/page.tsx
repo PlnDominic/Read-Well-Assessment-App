@@ -31,7 +31,13 @@ type HistorySessionRow = {
 
 function formatAnswer(item: AssessmentItem, answer: unknown): string {
   if (item.type === "mic") {
-    if (typeof answer === "string" && answer && answer !== "attempted") return `"${answer}"`;
+    if (answer === "skipped") return "Skipped (couldn't read it yet)";
+    if (answer === "nospeech") return "Nothing heard (the mic heard no speech, twice)";
+    if (typeof answer === "string" && answer && answer !== "attempted") {
+      // The recognizer's guesses, best first (HEARD_SEPARATOR in kiosk.ts).
+      const [best, ...others] = answer.split(" | ");
+      return others.length ? `"${best}" (also heard: ${others.map((o) => `"${o}"`).join(", ")})` : `"${best}"`;
+    }
     return "Read aloud (attempted)";
   }
   return typeof answer === "string" ? answer : "N/A";
