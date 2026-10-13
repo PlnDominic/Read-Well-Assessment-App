@@ -10,14 +10,16 @@
 -- copy in step). The adult-given Form A keeps the guide's full sets.
 --
 -- Saved as a new version, like a save on the Content page: sessions already
--- played keep the version they were given. Only a form still on the seeded
--- version 2 as 0020 left it (92 questions, the three-sentence listening
--- story) is replaced; one an administrator has since edited is left alone.
+-- played keep the version they were given. It runs on its own: it replaces
+-- the seeded version 1 (0018) or the seeded version 2 (0020, 92 questions,
+-- the three-sentence listening story), whichever is active, so 0020 is
+-- optional. A form an administrator has since edited is left alone.
 
 update public.assessments
 set is_active = false
 where level = 1 and form = 'A' and delivery = 'game' and is_active
-  and version = 2 and jsonb_array_length(items) = 92 and items::text like '%eating the yam!%';
+  and ((version = 1 and items::text like '%Every morning he gives the goat water%')
+    or (version = 2 and jsonb_array_length(items) = 92 and items::text like '%eating the yam!%'));
 
 insert into public.assessments (level, form, delivery, version, items, is_active, show_feedback)
 select 1, 'A', 'game', 3, '[
@@ -85,8 +87,9 @@ select 1, 'A', 'game', 3, '[
     {"id":"WT05","skillAreaKey":"writing","type":"text","prompt":"Write the word you hear.","say":"Write the word peg. Hang the cloth with a peg. peg.","expectedText":"peg"},
     {"id":"WT06","skillAreaKey":"writing","type":"text","prompt":"Write the sentence you hear.","say":"Write this sentence. The red bus is big. The... red... bus... is... big. The red bus is big.","expectedText":"The red bus is big."}
   ]'::jsonb, true, false
-where exists (select 1 from public.assessments where level = 1 and form = 'A' and delivery = 'game' and version = 2 and not is_active
-    and jsonb_array_length(items) = 92 and items::text like '%eating the yam!%')
+where exists (select 1 from public.assessments where level = 1 and form = 'A' and delivery = 'game' and not is_active
+    and ((version = 1 and items::text like '%Every morning he gives the goat water%')
+    or (version = 2 and jsonb_array_length(items) = 92 and items::text like '%eating the yam!%')))
   and not exists (select 1 from public.assessments where level = 1 and form = 'A' and delivery = 'game' and version = 3);
 
 notify pgrst, 'reload schema';
