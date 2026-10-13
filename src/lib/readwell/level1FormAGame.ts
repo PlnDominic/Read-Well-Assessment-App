@@ -18,6 +18,9 @@ import type { AssessmentItem } from "@/lib/database.types";
  *   spoken prompt. The first row of each grid is used, the rows the guide's
  *   stop rules look at. Teachers can re-mark read-aloud answers on the
  *   report.
+ * - Both stories are cut to three sentences, with three questions each, so a
+ *   child isn't loaded with a long story to hold in mind (the guide's
+ *   versions are longer; the adult-given Form A keeps them).
  * - Sound awareness: the nine-rung ladder lives in a separate subtest
  *   script, so these eight items are written for the game (rhyme, first
  *   sound, last sound, syllables, blending).
@@ -63,17 +66,15 @@ function placed(correct: string, distractors: string[], position: number): Choic
   return out;
 }
 
-// --- Part 1: Story listening (the guide's story, read once by Sunny) ----------
+// --- Part 1: Story listening (the guide's story cut to three sentences, read once by Sunny) ----------
 
 const STORY_LISTENING_TEXT =
-  "Kwaku has a little brown goat. Every morning he gives the goat water. One day the gate was open, and the goat ran away. Kwaku looked behind the house. He looked under the mango tree. Then he heard a sound from the kitchen. The goat was eating the yam! Kwaku laughed and tied the goat with a rope.";
+  "Kwaku has a little brown goat. One day the gate was open, and the goat ran away. Kwaku found the goat in the kitchen, eating the yam!";
 
 const LC: [prompt: string, say: string, options: Choice[]][] = [
   ["What animal does Kwaku have?", "What animal does Kwaku have? A goat, a hen, or a dog?", [["🐐 A goat", true], ["🐔 A hen"], ["🐕 A dog"]]],
-  ["What does Kwaku give the goat every morning?", "What does Kwaku give the goat every morning? Milk, water, or grass?", [["🥛 Milk"], ["💧 Water", true], ["🌿 Grass"]]],
-  ["Where did Kwaku find the goat?", "Where did Kwaku find the goat? Under the mango tree, behind the house, or in the kitchen?", [["🥭 Under the mango tree"], ["🏠 Behind the house"], ["🍳 In the kitchen", true]]],
   ["Why was the goat able to run away?", "Why was the goat able to run away? The gate was open, it was raining, or Kwaku was asleep?", [["🚪 The gate was open", true], ["🌧️ It was raining"], ["😴 Kwaku was asleep"]]],
-  ["Why do you think Kwaku tied the goat with a rope?", "Why do you think Kwaku tied the goat with a rope? So it can dance, so it cannot run away again, or so it can swim?", [["💃 So it can dance"], ["🪢 So it cannot run away again", true], ["🏊 So it can swim"]]],
+  ["Where did Kwaku find the goat?", "Where did Kwaku find the goat? Under the mango tree, behind the house, or in the kitchen?", [["🥭 Under the mango tree"], ["🏠 Behind the house"], ["🍳 In the kitchen", true]]],
 ];
 
 // --- Part 2: Vocabulary (the guide's words and pictures, in its order) -------
@@ -143,23 +144,17 @@ const RW = ["gap", "den", "rip", "jog", "bug"];
 const NW = ["vap", "teg", "nim", "dob", "fum"];
 const HW = ["the", "of", "she", "have", "are"];
 
-// --- Part 11: Story reading (the guide's story and questions) ---------------
+// --- Part 11: Story reading (the guide's story cut to three lines, three questions) ---------------
 
 const STORY_LINES = [
   "Tim has a big red bag.",
   "A pup hid in the bag.",
-  "Tim said no to the pup.",
-  "The pup did not go.",
-  "It sat on his leg.",
-  "Tim and the pup sat in the sun.",
   "Now Tim is happy.",
 ];
 
 const STQ: [prompt: string, say: string, options: Choice[]][] = [
   ["What does Tim have?", "What does Tim have? A big red bag, a hat, or a cup?", [["🎒 A big red bag", true], ["🎩 A hat"], ["☕ A cup"]]],
   ["Where did the pup hide?", "Where did the pup hide? Under the bed, in the bag, or up a tree?", [["🛏️ Under the bed"], ["👜 In the bag", true], ["🌳 Up a tree"]]],
-  ["What did Tim say to the pup?", "What did Tim say to the pup? Hello, good night, or no?", [["👋 Hello"], ["🌙 Good night"], ["🙅 No", true]]],
-  ["Where did the pup sit?", "Where did the pup sit? On his leg, on the bus, or on the bed?", [["🦵 On his leg", true], ["🚌 On the bus"], ["🛏️ On the bed"]]],
   ["Why do you think Tim is happy at the end?", "Why do you think Tim is happy at the end? He lost his bag, he has a new friend, or it is raining?", [["🎒 He lost his bag"], ["🐶 He has a new friend", true], ["🌧️ It is raining"]]],
 ];
 

@@ -11,7 +11,7 @@ const read = (file: string) => readFileSync(path.join(ROOT, file), "utf8");
 const PART_ORDER = ["LC", "VO", "CP", "SA", "LN", "LS", "CV", "RW", "NW", "HW", "ST", "AT", "WT"];
 
 function gameItemsFrom(sql: string): unknown {
-  const match = /select 1, 'A', 'game', 1, '(\[[\s\S]*?\])'::jsonb/.exec(sql);
+  const match = /select 1, 'A', 'game', (?:1|2), '(\[[\s\S]*?\])'::jsonb/.exec(sql);
   if (!match) throw new Error("No Level 1 Form A game insert found");
   return JSON.parse(match[1].replace(/''/g, "'"));
 }
@@ -27,6 +27,17 @@ describe("Level 1 Form A game items", () => {
     expect(order).toEqual(PART_ORDER);
     // Each part's items sit together, so each part is one mission.
     expect(order.length).toBe(parts.filter((p, i) => i === 0 || p !== parts[i - 1]).length);
+  });
+
+  it("keep both stories to three sentences, with three questions each", () => {
+    const sentences = (text: string) => text.match(/[^.!?]+[.!?]/g)?.length ?? 0;
+    const listening = ITEMS.filter((i) => i.id.startsWith("LC"));
+    expect(listening).toHaveLength(3);
+    // The story is read aloud at the start of the first question.
+    expect(sentences(listening[0].say!.split(" Now answer my questions.")[0].replace("Listen to my story. ", ""))).toBe(3);
+    const reading = ITEMS.filter((i) => i.id.startsWith("ST"));
+    expect(reading.filter((i) => i.type === "mic")).toHaveLength(3);
+    expect(reading.filter((i) => i.type === "choice")).toHaveLength(3);
   });
 
   it("are all game items the editor can save", () => {
@@ -75,7 +86,8 @@ describe("Level 1 Form A game items", () => {
   });
 });
 
-describe.each(["supabase/setup.sql", "supabase/migrations/0018_assessment_delivery.sql"])("%s", (file) => {
+// 0018 seeded version 1 (the longer stories); 0020 replaced it with this one.
+describe.each(["supabase/setup.sql", "supabase/migrations/0020_level1_short_stories.sql"])("%s", (file) => {
   it("seeds exactly these items as the Level 1 Form A game", () => {
     expect(gameItemsFrom(read(file))).toEqual(ITEMS);
   });

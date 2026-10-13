@@ -81,12 +81,12 @@ const VOICE_CLIPS = [
   "12f0acf0c56fb2.mp3", "133502e4091bb4.mp3", "13d016d14bb915.mp3", "1412afb8c4b467.mp3",
   "14c118035c1ed8.mp3", "14ffe2ce41ca88.mp3", "154c433de7a411.mp3", "1578f0defdade1.mp3",
   "1592c84b183480.mp3", "1628aef46a890f.mp3", "1660d33ba1f7f8.mp3", "16718b41ae3108.mp3",
-  "171ae52f6e4096.mp3", "17982d0cc23b9c.mp3", "17ad420b844056.mp3", "18d67080798e44.mp3",
-  "18db4a22786163.mp3", "190b278b829c8c.mp3", "190da225805f1b.mp3", "1921daab5ea5a8.mp3",
-  "194aaf2cf029eb.mp3", "19575d9199d3f8.mp3", "1a629172431a62.mp3", "1a93c39ad4ee93.mp3",
+  "171ae52f6e4096.mp3", "17982d0cc23b9c.mp3", "17ad420b844056.mp3",
+  "18db4a22786163.mp3", "190b278b829c8c.mp3", "190da225805f1b.mp3",
+  "19575d9199d3f8.mp3", "1a629172431a62.mp3", "1a93c39ad4ee93.mp3",
   "1a9e3750d3d660.mp3", "1abba644a0a981.mp3", "1bac99b326c7c6.mp3", "1c3da3a2a9146c.mp3",
-  "1cb9b408dcd630.mp3", "1d7188d1630fc0.mp3", "1ea056cde63d6b.mp3", "1eb2783d92009b.mp3",
-  "1ed815504cc99f.mp3", "1f356c85437e3f.mp3", "1f4879589ed776.mp3", "1f947edf92b2cb.mp3"
+  "1d7188d1630fc0.mp3", "1ea056cde63d6b.mp3", "1eb2783d92009b.mp3",
+  "1ed815504cc99f.mp3", "1f356c85437e3f.mp3", "1f947edf92b2cb.mp3"
 ];
 const STAFF_HOMES = ["/teacher", "/admin", "/specialist"];
 

@@ -10,8 +10,8 @@ const ROOT = path.resolve(import.meta.dirname, "../..");
 
 /**
  * Lines Sunny says that have no recording yet, so he says them in the
- * device's voice. These are the Level 1 writing prompts: the voice service
- * ran out of credits before they were recorded. When one is recorded, add
+ * device's voice. These are the Level 1 writing prompts (the voice service
+ * ran out of credits before they were recorded) and the new story opening. When one is recorded, add
  * its clip, drop it from here, and this test says so.
  */
 const NOT_RECORDED_YET = new Set([
@@ -26,6 +26,8 @@ const NOT_RECORDED_YET = new Set([
   "Write the word job. My mother has a job. job.",
   "Write the word bun. I ate a bun. bun.",
   "Write this sentence. The red bus is big. The... red... bus... is... big. The red bus is big.",
+  // The three-sentence listening story (migration 0020) opens the first question.
+  "Listen to my story. Kwaku has a little brown goat. One day the gate was open, and the goat ran away. Kwaku found the goat in the kitchen, eating the yam! Now answer my questions. What animal does Kwaku have? A goat, a hen, or a dog?",
 ]);
 
 describe("lineKey", () => {

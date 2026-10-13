@@ -128,8 +128,9 @@ their own device at `/student`
 (`src/app/student/session/[sessionId]/StudentAssessmentRunner.tsx`).
 
 - **Level 1 Form A as a game** (`src/lib/readwell/level1FormAGame.ts`,
-  seeded by 0018) uses the guide's own thirteen parts, story, letters and
-  words, adapted for a child playing alone: pointing becomes tapping a
+  seeded by 0018, shortened by 0020) uses the guide's own thirteen parts,
+  letters and words, with both stories cut to three sentences and three
+  questions each so a young child isn't loaded with a long story, adapted for a child playing alone: pointing becomes tapping a
   picture or word; naming letters becomes finding them ("Tap the letter
   s"), and letter sounds use a key word ("the first sound in sun"), since
   speech recognition can't hear a lone letter or sound; reading parts use
@@ -206,7 +207,7 @@ their own device at `/student`
   Confetti is `canvas-confetti`, run without its web worker because the CSP
   allows no `blob:` workers.
 - **Sunny's voice** (`src/lib/voice.ts`). Sunny speaks with recorded clips
-  in a Ghanaian-accented voice (`public/voice/`, 76 lines: his reactions and
+  in a Ghanaian-accented voice (`public/voice/`, 68 lines: his reactions and
   every Level 1 prompt except the writing ones). A clip is found by a hash of
   the exact text Sunny is about to say (`src/lib/voiceKey.ts`), so a line an
   admin writes, or one that has been reworded, has no clip and is spoken by
