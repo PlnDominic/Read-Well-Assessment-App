@@ -55,9 +55,14 @@ export function SummaryPanel({
   function run(action: (data: FormData) => Promise<SummaryActionResult>, data: FormData, done?: () => void) {
     setMessage(null);
     startTransition(async () => {
-      const result = await action(data);
-      if (result.ok) done?.();
-      else setMessage(result.message);
+      try {
+        const result = await action(data);
+        if (result.ok) done?.();
+        else setMessage(result.message);
+      } catch {
+        // The request itself failed: no connection, or this page is from before the app was updated.
+        setMessage("That didn't go through. Reload the page and try again (the app may have just been updated).");
+      }
     });
   }
   const withSession = () => {

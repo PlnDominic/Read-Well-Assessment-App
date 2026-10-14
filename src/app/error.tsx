@@ -24,13 +24,13 @@ export default function AppError({ reset }: { error: Error & { digest?: string }
       <p className="text-[var(--color-body)] text-base leading-relaxed m-0 mb-7 max-w-[440px]">
         {offline
           ? "That change needs an internet connection, so it wasn't saved. Reconnect and try again."
-          : "Please try again. If it keeps happening, reload the page."}
+          : "Please reload the page and try again. If the app was just updated, a page that was already open can't talk to the new version until it is reloaded."}
       </p>
       <button
-        onClick={() => reset()}
+        onClick={() => (offline ? reset() : window.location.reload())}
         className="bg-[var(--color-orange)] text-[var(--color-on-orange)] border-none rounded-full font-bold text-base px-8 py-3 cursor-pointer"
       >
-        Back to the page
+        {offline ? "Back to the page" : "Reload the page"}
       </button>
     </div>
   );
