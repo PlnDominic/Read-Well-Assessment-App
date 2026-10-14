@@ -10,9 +10,9 @@ export function ImportCsvForm() {
 
   return (
     <div className="border-t border-[var(--color-neutral-divider)] pt-5 mt-5">
-      <div className="font-heading font-bold text-sm text-[var(--color-ink)] mb-1.5">Bulk import (CSV)</div>
+      <div className="font-heading font-bold text-sm text-[var(--color-ink)] mb-1.5">Or add many from a file</div>
       <p className="text-[var(--color-muted)] text-xs mb-3 mt-0">
-        Header row <code>name,level,teacher_email</code>, one student per line, teacher matched by email. Level is a number, e.g. 1 or Level 1.
+        A file with the columns <code>name,level,teacher_email</code>.
       </p>
       <form action={formAction} className="flex flex-wrap items-center gap-3">
         <label className="flex flex-col gap-1 text-sm">

@@ -52,7 +52,7 @@ export function AddStudentForm({ teachers }: { teachers: { id: string; name: str
       </form>
       {teachers.length === 0 && (
         <p className="text-[var(--color-muted)] text-sm mt-3 mb-0">
-          Add a teacher on the Staff tab first. Students need one assigned.
+          Add a teacher in Staff first.
         </p>
       )}
 

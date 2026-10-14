@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { pathForUnauthorizedProfile } from "@/lib/staffRouting";
+import { PageHeader } from "@/components/PageHeader";
 import { createClient } from "@/lib/supabase/server";
 import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
 import {
@@ -53,13 +54,15 @@ export default async function AdminStudentsPage() {
 
   return (
     <div className="w-full max-w-[920px]">
-      <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-ink)] m-0 mb-6">Students</h1>
+      <PageHeader title="Students" subtitle={`${(students ?? []).length} in your school`} />
 
-      <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-6">
-        <div className="font-heading font-bold text-sm text-[var(--color-ink)] mb-4">Add a student</div>
-        <AddStudentForm teachers={teachers} />
-        <ImportCsvForm />
-      </div>
+      <details open={(students ?? []).length === 0} className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-6 py-5 sm:px-8 mb-6">
+        <summary className="inline-flex cursor-pointer list-none items-center gap-2 rounded-full bg-[var(--color-orange)] px-5 py-2.5 text-sm font-bold text-[var(--color-on-orange)] [&::-webkit-details-marker]:hidden">+ Add students</summary>
+        <div className="mt-5">
+          <AddStudentForm teachers={teachers} />
+          <ImportCsvForm />
+        </div>
+      </details>
 
       <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] overflow-hidden">
         {(students ?? []).length === 0 && (
@@ -172,11 +175,10 @@ export default async function AdminStudentsPage() {
       </div>
 
       {deletedStudents.length > 0 && (
-        <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] overflow-hidden mt-6">
-          <div className="font-heading font-bold text-sm text-[var(--color-ink)] px-6 pt-6">Deleted students</div>
-          <p className="text-[var(--color-muted)] text-sm px-6 mt-1 mb-4">
-            Restoring puts a student back on their teacher&apos;s roster with their assessment history intact.
-          </p>
+        <details className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] overflow-hidden mt-6">
+          <summary className="cursor-pointer font-heading font-bold text-sm text-[var(--color-ink)] px-6 py-5">
+            Deleted students ({deletedStudents.length})
+          </summary>
           {deletedStudents.map((s) => (
             <div
               key={s.id}
@@ -199,7 +201,7 @@ export default async function AdminStudentsPage() {
               </form>
             </div>
           ))}
-        </div>
+        </details>
       )}
     </div>
   );

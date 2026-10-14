@@ -248,6 +248,17 @@ their own device at `/student`
   `src/lib/voice.test.ts` checks everything still fits and lists which Level
   1 lines are still unrecorded.
 
+## The admin pages
+
+An administrator's pages share one layout (`src/app/admin/layout.tsx`): the
+navigation in a sidebar on the left (`src/components/AdminSidebar.tsx`, a Menu
+button on a phone) and the page on the right. The sidebar lists Overview,
+Students, Staff, Cycles, then under Content: Assessments, Recommendations and
+Skills and scoring, then Activity log and Settings. Each page starts with the
+same `PageHeader` (a title and one short line), and forms that are used now
+and then (add students, invite staff, download reports, deleted students) sit
+behind a button or a "details" fold so the page shows the list first.
+
 ## Summaries written with AI
 
 A teacher can ask for a short, plain-language summary of how a child did on
@@ -687,7 +698,7 @@ fixed, across a few rounds:
 - **Bypass Blocks (WCAG 2.4.1).** Added a "Skip to main content" link as
   the first focusable element on every staff/student page
   (`src/components/AppShell.tsx`), hidden until it receives keyboard
-  focus, jumping past the top bar and (on admin pages) `AdminNav`'s seven
+  focus, jumping past the top bar and (on teacher pages)
   tabs into a newly added `<main id="main-content">` landmark.
   Previously there was no way to reach page content without tabbing
   through all of it every time.

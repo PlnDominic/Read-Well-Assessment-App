@@ -1,8 +1,11 @@
 import { redirect } from "next/navigation";
+import { Card, PageHeader, mainButton } from "@/components/PageHeader";
 import { pathForUnauthorizedProfile } from "@/lib/staffRouting";
 import { createClient } from "@/lib/supabase/server";
 import { aiConfigured, summaryDestination, summaryModel } from "@/lib/aiSummaryServer";
 import { updateAiReports, updateDataRetention } from "./actions";
+
+const input = "border-2 border-[var(--color-neutral-border)] rounded-xl px-3.5 py-2.5 bg-[var(--color-surface)] text-[var(--color-ink)]";
 
 export default async function AdminSettingsPage() {
   const supabase = await createClient();
@@ -21,81 +24,67 @@ export default async function AdminSettingsPage() {
     .single();
 
   const destination = summaryDestination();
+  const ready = aiConfigured();
 
   return (
-    <div className="w-full max-w-[920px]">
-      <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-ink)] m-0 mb-6">Settings</h1>
+    <div className="w-full max-w-[720px]">
+      <PageHeader title="Settings" />
 
-      <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5">
-        <div className="font-heading font-bold text-sm text-[var(--color-ink)] mb-4">Data retention</div>
-        <p className="text-[var(--color-muted)] text-sm mb-4 mt-0">
-          Automatically deletes completed assessment sessions (and their responses, results, and reports) older
-          than this many days. A daily job checks this setting; leave it blank to keep data indefinitely.
-        </p>
-        <form action={updateDataRetention} className="flex flex-wrap items-end gap-3.5">
-          <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-bold text-[var(--color-muted)] text-xs uppercase">
-              Days to keep completed assessments
-            </span>
+      <Card title="AI summaries" hint="Teachers can ask for a short written summary of how a child did. They always read and approve it first.">
+        <form action={updateAiReports} className="flex flex-wrap items-center justify-between gap-4">
+          <label className="flex items-center gap-3 text-sm font-bold text-[var(--color-ink)]">
+            <input type="checkbox" name="aiReportsEnabled" defaultChecked={school?.ai_reports_enabled ?? false} className="size-5" />
+            Turn on AI summaries
+          </label>
+          <button type="submit" className={mainButton}>
+            Save
+          </button>
+        </form>
+
+        {!ready ? (
+          <p role="status" className="text-[var(--color-orange-dark)] font-bold text-sm mt-4 mb-0">
+            Not set up yet. Ask whoever looks after the app to add the AI settings.
+          </p>
+        ) : (
+          <p className="text-[var(--color-muted)] text-sm mt-4 mb-0">
+            Written by {summaryModel()} · {destination.local ? "runs on your own network" : destination.host}
+          </p>
+        )}
+        {ready && destination.provider === "openai-compatible" && !destination.local && (
+          <p role="status" className="text-[var(--color-orange-dark)] font-bold text-sm mt-2 mb-0">
+            This is an outside service. Check its terms before you turn it on.
+          </p>
+        )}
+
+        <details className="mt-4">
+          <summary className="cursor-pointer font-bold text-sm text-[var(--color-orange-dark)]">What is sent?</summary>
+          <ul className="text-sm text-[var(--color-body)] leading-relaxed mt-2 mb-0 pl-5">
+            <li>The scores and what the child answered.</li>
+            <li>Never their name, ID, school or dates.</li>
+            <li>Tell parents before you turn this on.</li>
+          </ul>
+        </details>
+      </Card>
+
+      <Card title="Keep data" hint="Finished assessments are deleted after this many days. Leave it blank to keep them for ever.">
+        <form action={updateDataRetention} className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-3 text-sm font-bold text-[var(--color-ink)]">
+            Days
             <input
               name="dataRetentionDays"
               type="number"
               min={1}
               step={1}
               defaultValue={school?.data_retention_days ?? ""}
-              placeholder="Indefinite"
-              className="border-2 border-[var(--color-neutral-border)] rounded-xl px-3.5 py-2.5 w-[220px]"
+              placeholder="Keep for ever"
+              className={`${input} w-[180px]`}
             />
           </label>
-          <button
-            type="submit"
-            className="bg-[var(--color-orange)] text-[var(--color-on-orange)] border-none rounded-full font-bold text-sm shadow-[0_6px_16px_rgba(74,107,82,0.25)] transition-transform hover:-translate-y-0.5 px-5 py-2.75 cursor-pointer"
-          >
+          <button type="submit" className={mainButton}>
             Save
           </button>
         </form>
-      </div>
-
-      <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mt-5">
-        <div className="font-heading font-bold text-sm text-[var(--color-ink)] mb-4">Summaries written with AI</div>
-        <p className="text-[var(--color-muted)] text-sm mb-3 mt-0">
-          When this is on, a teacher can ask for a short, plain-language summary of how a child did, with ideas for
-          what to try next. It is only a draft: the teacher reads it, changes it and approves it before it appears on
-          the PDF. The scores, bands and flags are never written by the AI.
-        </p>
-        <p className="text-[var(--color-muted)] text-sm mb-4 mt-0">
-          To write a summary, the assessment&apos;s scores and what the child answered (letters chosen, words read,
-          words spelled) are sent to <strong>{destination.host}</strong>
-          {destination.local ? " (a computer on your own network, so nothing leaves it)" : ""}.{" "}
-          <strong>No name, student ID, school or date is sent</strong>, and what the child typed for
-          &ldquo;Write your name&rdquo; is left out. Make sure parents and guardians have been told before you turn this on.
-        </p>
-        {destination.provider === "openai-compatible" && !destination.local && (
-          <p role="status" className="text-[var(--color-orange-dark)] font-bold text-sm mb-4 mt-0">
-            {destination.host} is an outside service. Some free services keep what they receive or use it to improve
-            their models. Check their terms before you turn this on for children&apos;s answers.
-          </p>
-        )}
-        {!aiConfigured() && (
-          <p role="status" className="text-[var(--color-orange-dark)] font-bold text-sm mb-4 mt-0">
-            This deployment isn&apos;t set up to write summaries yet (see AI_REPORT_* and ANTHROPIC_API_KEY in
-            .env.example), so nothing can be written even when this is on.
-          </p>
-        )}
-        <form action={updateAiReports} className="flex flex-wrap items-center gap-3.5">
-          <label className="flex items-center gap-2.5 text-sm font-bold text-[var(--color-ink-soft)]">
-            <input type="checkbox" name="aiReportsEnabled" defaultChecked={school?.ai_reports_enabled ?? false} className="size-5" />
-            Let teachers draft summaries with AI
-          </label>
-          <button
-            type="submit"
-            className="bg-[var(--color-orange)] text-[var(--color-on-orange)] border-none rounded-full font-bold text-sm px-5 py-2.75 cursor-pointer"
-          >
-            Save
-          </button>
-        </form>
-        <p className="text-xs text-[var(--color-muted)] mt-3 mb-0">Model: {summaryModel() || "not set"}</p>
-      </div>
+      </Card>
     </div>
   );
 }

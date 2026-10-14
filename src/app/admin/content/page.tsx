@@ -50,21 +50,20 @@ export default async function AdminContentPage({ searchParams }: { searchParams:
     <div className="w-full max-w-[920px]">
       <ContentHeader
         tab="assessments"
-        intro="Each level has four forms: A, B, C and the Final assessment. When teachers start an assessment, they pick the form and how it's given. They can only start what's ready below."
+        intro="Pick a level. Teachers can only start the forms marked Ready."
       />
       <LevelPicker level={LEVEL} basePath="/admin/content" notes={levelNotes} />
 
       <div className="grid gap-3 sm:grid-cols-2 mb-6">
         <WayExplainer icon="🧑🏾‍🏫" title="With an adult">
-          An adult sits with the child and marks each answer on the assessor screen, following the ReadWell guide.
-          These come from the guide, so they can&apos;t be changed here.
+          An adult marks each answer. These come from the ReadWell guide.
         </WayExplainer>
-        <WayExplainer icon="🎮" title="Game on a tablet">
-          The child plays on their own with Sunny, who reads everything aloud. You build and edit these here.
+        <WayExplainer icon="🎮" title="Game">
+          The child plays alone with Sunny. You can edit these.
         </WayExplainer>
       </div>
 
-      <h2 className="font-heading font-bold text-lg text-[var(--color-ink)] m-0 mb-3">{levelLabel(LEVEL)} forms</h2>
+      <h2 className="font-heading font-bold text-lg text-[var(--color-ink)] m-0 mb-3">{levelLabel(LEVEL)}</h2>
       <div className="flex flex-col gap-4">
         {FORM_OPTIONS.map((form) => (
           <section key={form} className={`${cardClass} px-5 py-5 sm:px-7`} aria-labelledby={`form-${form}`}>
@@ -113,7 +112,7 @@ function AdultCell({ items }: { items: AssessmentItem[] | null }) {
     return (
       <CellShell title="With an adult" ready={false}>
         <p className="text-sm text-[var(--color-body)] m-0">
-          Not added yet. It&apos;s added by the ReadWell team once its guide is ready.
+          Not added yet.
         </p>
       </CellShell>
     );
@@ -126,7 +125,7 @@ function AdultCell({ items }: { items: AssessmentItem[] | null }) {
       </p>
       {form && (
         <details className="text-sm">
-          <summary className="cursor-pointer font-bold text-[var(--color-orange-dark)]">What&apos;s in it</summary>
+          <summary className="cursor-pointer font-bold text-[var(--color-orange-dark)]">See the parts</summary>
           <ol className="m-0 mt-2 pl-5 text-[13px] text-[var(--color-body)] columns-1 sm:columns-2 gap-6">
             {form.parts.map((part) => (
               <li key={part.number}>{part.title}</li>
@@ -150,7 +149,7 @@ function GameCell({
   const href = `/admin/content/game/${level}/${form}`;
   if (!game) {
     return (
-      <CellShell title="Game on a tablet" ready={false}>
+      <CellShell title="Game" ready={false}>
         <p className="text-sm text-[var(--color-body)] m-0">Not built yet.</p>
         <EditLink href={href}>Build the game</EditLink>
       </CellShell>
@@ -158,8 +157,9 @@ function GameCell({
   }
   const groups = groupByPart(game.items, partsFor(level));
   const byPart = !groups.some((g) => g.part === null);
+  // Parts of a sitting are paired into missions (gameParts.ts), so count missions, not parts.
   const missions = byPart
-    ? groups.filter((g) => g.indexes.length > 0).length
+    ? new Set(groups.filter((g) => g.indexes.length > 0).map((g) => g.part!.mission.key)).size
     : Math.ceil(game.items.length / MISSION_SIZE);
   const count = (type: AssessmentItem["type"]) => game.items.filter((i) => i.type === type).length;
   const kinds = [
@@ -173,7 +173,7 @@ function GameCell({
   const updated = new Date(game.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
   return (
-    <CellShell title="Game on a tablet" ready>
+    <CellShell title="Game" ready>
       <p className="text-sm text-[var(--color-ink)] font-bold m-0">
         {game.items.length} question{game.items.length === 1 ? "" : "s"} in {missions} mission{missions === 1 ? "" : "s"}
       </p>

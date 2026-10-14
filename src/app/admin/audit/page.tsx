@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { pathForUnauthorizedProfile } from "@/lib/staffRouting";
+import { PageHeader } from "@/components/PageHeader";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -61,10 +62,7 @@ export default async function AdminAuditPage({
 
   return (
     <div className="w-full max-w-[920px]">
-      <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-ink)] m-0 mb-1">Audit Log</h1>
-      <p className="text-[var(--color-muted)] text-sm m-0 mb-6">
-        Who viewed or exported a report, most recent first (last 200 matching events).
-      </p>
+      <PageHeader title="Activity log" subtitle="Who viewed or exported reports, newest first." />
 
       <form
         method="get"

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { pathForUnauthorizedProfile } from "@/lib/staffRouting";
+import { PageHeader } from "@/components/PageHeader";
 import { createClient } from "@/lib/supabase/server";
 import { activateDueCycle } from "@/lib/cycles";
 import { startNewCycle } from "./actions";
@@ -30,18 +31,12 @@ export default async function AdminCyclesPage() {
 
   return (
     <div className="w-full max-w-[920px]">
-      <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-ink)] m-0 mb-6">
-        Assessment Cycles
-      </h1>
+      <PageHeader title="Cycles" subtitle="A cycle is one round of assessments." />
 
-      <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-6">
-        <div className="font-heading font-bold text-sm text-[var(--color-ink)] mb-4">
-          Start a new cycle
-        </div>
+      <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-6 py-6 sm:px-8 mb-6">
+        <div className="font-heading font-bold text-base text-[var(--color-ink)] mb-1">New cycle</div>
         <p className="text-[var(--color-muted)] text-sm mb-4 mt-0">
-          Scheduling a future start date keeps the current cycle running until then; it switches over on its own
-          that day. An end date is optional, and enables a reminder email to teachers a few days before it arrives
-          if they still have students without a completed assessment.
+          It starts on the date you pick. Add an end date to remind teachers before it closes.
         </p>
         <form action={startNewCycle} className="flex flex-wrap items-end gap-3.5">
           <label className="flex flex-col gap-1.5 text-sm flex-1 min-w-[200px]">
@@ -75,7 +70,7 @@ export default async function AdminCyclesPage() {
             type="submit"
             className="bg-[var(--color-orange)] text-[var(--color-on-orange)] border-none rounded-full font-bold text-sm shadow-[0_6px_16px_rgba(74,107,82,0.25)] transition-transform hover:-translate-y-0.5 px-5 py-2.75 cursor-pointer"
           >
-            Schedule cycle
+            Add cycle
           </button>
         </form>
       </div>

@@ -53,7 +53,7 @@ export default async function RecommendationsPage({ searchParams }: { searchPara
     <div className="w-full max-w-[920px]">
       <ContentHeader
         tab="recommendations"
-        intro="When a child is flagged as needing support in a skill area, their report suggests next steps for the teacher. Write those next steps here, for each level."
+        intro="What a report suggests when a child is flagged in a skill."
       />
       <LevelPicker level={LEVEL} basePath="/admin/content/recommendations" notes={notes} />
 
@@ -64,10 +64,10 @@ export default async function RecommendationsPage({ searchParams }: { searchPara
         <AddRecommendationForm level={LEVEL} skillAreas={skillAreas ?? []} />
       </section>
 
-      <h2 className="font-heading font-bold text-lg text-[var(--color-ink)] m-0 mb-3">{levelLabel(LEVEL)} next steps</h2>
+      <h2 className="font-heading font-bold text-lg text-[var(--color-ink)] m-0 mb-3">{levelLabel(LEVEL)}</h2>
       {withRules.length === 0 && (
         <p className="text-sm text-[var(--color-muted)] m-0 mb-4">
-          None yet. A flagged child&apos;s report at this level won&apos;t suggest any next steps until you add some.
+          None yet.
         </p>
       )}
       <div className="flex flex-col gap-3 mb-5">
@@ -102,7 +102,7 @@ export default async function RecommendationsPage({ searchParams }: { searchPara
       </div>
       {withRules.length > 0 && withoutRules.length > 0 && (
         <p className="text-sm text-[var(--color-muted)] m-0">
-          No next steps yet at this level for: {withoutRules.map((sa) => sa.name).join(", ")}.
+          Nothing yet for: {withoutRules.map((sa) => sa.name).join(", ")}.
         </p>
       )}
     </div>

@@ -47,17 +47,13 @@ export default async function SkillsPage() {
     <div className="w-full max-w-[920px]">
       <ContentHeader
         tab="skills"
-        intro="Every question counts toward one skill area, and a child's report shows a score for each. Here you name the skill areas and decide how they're scored at your school."
+        intro="Each question counts toward one skill. Set how your school scores them."
       />
 
       <div className="grid gap-3 sm:grid-cols-2 mb-5">
-        <Explainer title="Counts">
-          How much an area weighs in the school&apos;s overall score. 1 is normal; 2 counts twice as much; 0.5 half as
-          much.
-        </Explainer>
+        <Explainer title="Counts">How much a skill weighs in the overall score. 1 is normal.</Explainer>
         <Explainer title="Flag below">
-          A child scoring under this in an area is flagged as needing support there, and their report suggests its next
-          steps. Leave it blank to use {FLAGGED_SCORE_THRESHOLD}%.
+          Children scoring under this are flagged for support. Blank means {FLAGGED_SCORE_THRESHOLD}%.
         </Explainer>
       </div>
 
@@ -97,7 +93,7 @@ export default async function SkillsPage() {
           Add a skill area
         </h2>
         <p className="text-sm text-[var(--color-muted)] m-0 mb-3">
-          Skill area names are shared by every school using Read Well. Counts and Flag below are just for yours.
+          Names are shared by every school. Counts and Flag below are only yours.
         </p>
         <AddSkillAreaForm />
       </section>

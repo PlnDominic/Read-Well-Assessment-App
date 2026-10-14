@@ -1,48 +1,21 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/PageHeader";
 import { LEVEL_OPTIONS, levelLabel } from "@/lib/levels";
 
 /**
- * The top of every Content tab: the title, the three tabs, and a line on
- * what the open tab is for. Tabs are separate pages so each one does one
- * job; the game editor has its own page with a way back instead.
+ * The top of every Content page: its title and one line on what it is for.
+ * The three pages are in the sidebar, so there are no tabs here.
  */
 export type ContentTab = "assessments" | "recommendations" | "skills";
 
-const TABS: { key: ContentTab; href: string; label: string }[] = [
-  { key: "assessments", href: "/admin/content", label: "Assessments" },
-  { key: "recommendations", href: "/admin/content/recommendations", label: "Recommendations" },
-  { key: "skills", href: "/admin/content/skills", label: "Skills and scoring" },
-];
+const TITLES: Record<ContentTab, string> = {
+  assessments: "Assessments",
+  recommendations: "Recommendations",
+  skills: "Skills and scoring",
+};
 
 export function ContentHeader({ tab, intro }: { tab: ContentTab; intro: React.ReactNode }) {
-  return (
-    <>
-      <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-ink)] m-0 mb-3">Content</h1>
-      <nav
-        aria-label="Content sections"
-        className="flex gap-6 border-b-2 border-[var(--color-neutral-divider)] mb-4 overflow-x-auto"
-      >
-        {TABS.map((t) => {
-          const active = t.key === tab;
-          return (
-            <Link
-              key={t.key}
-              href={t.href}
-              aria-current={active ? "page" : undefined}
-              className="pb-2.5 -mb-0.5 border-b-[3px] font-bold text-sm whitespace-nowrap no-underline transition-colors hover:text-[var(--color-ink)]"
-              style={{
-                borderColor: active ? "var(--color-orange)" : "transparent",
-                color: active ? "var(--color-ink)" : "var(--color-muted)",
-              }}
-            >
-              {t.label}
-            </Link>
-          );
-        })}
-      </nav>
-      <p className="text-[var(--color-body)] text-sm leading-relaxed m-0 mb-5 max-w-[680px]">{intro}</p>
-    </>
-  );
+  return <PageHeader title={TITLES[tab]} subtitle={intro} />;
 }
 
 /** Level buttons for the tabs that show one level at a time, with a short note under each. */

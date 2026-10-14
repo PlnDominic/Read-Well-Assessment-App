@@ -21,7 +21,7 @@ export function AppShell({
     <div className="min-h-screen bg-[var(--color-bg)] flex flex-col items-center px-4 pt-6 pb-15">
       {/* Skip link (WCAG 2.4.1 Bypass Blocks): a keyboard user landing on
           any staff page otherwise has to tab through the top bar's three
-          buttons and, on admin pages, AdminNav's seven tabs before
+          buttons before
           reaching this page's own content. Hidden until it receives focus
           (the first Tab press), same convention as most sites' skip links. */}
       <a
