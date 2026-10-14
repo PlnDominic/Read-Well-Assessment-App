@@ -103,7 +103,7 @@ describe("a free or self-hosted model", () => {
   const wrapped = "Sure! Here is the summary:\n```json\n" + JSON.stringify(answer) + "\n```";
 
   it("is understood when its reply is wrapped in fences or chatter", async () => {
-    const { content } = await draftSummary(facts, reply({ text: wrapped }), "llama-3.3-70b-versatile", 2);
+    const { content } = await draftSummary(facts, reply({ text: wrapped }), "openai/gpt-oss-120b", 2);
     expect(content.nextSteps).toHaveLength(1);
   });
 
@@ -142,6 +142,20 @@ describe("callOpenAiCompatible", () => {
     expect(sent.response_format).toEqual({ type: "json_object" });
     expect(sent.messages[0].content).toContain('"familyNote"');
     expect(result).toMatchObject({ stopReason: "stop", model: "llama-3.3-70b" });
+    globalThis.fetch = realFetch;
+  });
+
+  it("asks a gpt-oss model to think briefly and leaves room for it", async () => {
+    process.env.AI_REPORT_BASE_URL = "https://api.groq.example/openai/v1";
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify(body("{}")), { status: 200 }));
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    const { callOpenAiCompatible } = await import("@/lib/aiSummaryServer");
+    await callOpenAiCompatible("s", "u", "openai/gpt-oss-120b");
+    await callOpenAiCompatible("s", "u", "some-other-model");
+    const sent = fetchMock.mock.calls.map((c) => JSON.parse((c as unknown as [string, RequestInit])[1].body as string));
+    expect(sent[0].reasoning_effort).toBe("low");
+    expect(sent[1]).not.toHaveProperty("reasoning_effort");
+    expect(sent[0].max_tokens).toBeGreaterThanOrEqual(4000);
     globalThis.fetch = realFetch;
   });
 

@@ -210,7 +210,10 @@ export const callOpenAiCompatible: CallModel = async (system, user, model) => {
       body: JSON.stringify({
         model,
         temperature: 0.3,
-        max_tokens: 1500,
+        // Room for a reasoning model's thinking as well as the summary: its thinking counts toward this limit.
+        max_tokens: 4000,
+        // gpt-oss models think before answering; a short write-up needs little of it.
+        ...(/gpt-oss/i.test(model) ? { reasoning_effort: "low" } : {}),
         messages: [
           { role: "system", content: `${system}\n\n${JSON_ANSWER_INSTRUCTION}` },
           { role: "user", content: user },
@@ -260,7 +263,7 @@ export async function draftSummary(
       console.error("AI summary request failed", err);
       const status = err instanceof HttpError ? err.status : err instanceof Anthropic.APIError ? err.status : undefined;
       if (status === 404) {
-        throw new SummaryError("The summary writer's address or model wasn't found. Ask your administrator to check the AI address and model name.");
+        throw new SummaryError("The summary writer's address or model wasn't found. The model may have been retired or renamed: ask your administrator to check the AI address and model name.");
       }
       if (status === 429) throw new SummaryError("The summary writer is busy or its free allowance is used up. Try again in a few minutes.");
       if (status === 401 || status === 403) {
