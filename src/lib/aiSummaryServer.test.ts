@@ -181,6 +181,19 @@ describe("callOpenAiCompatible", () => {
     globalThis.fetch = realFetch;
   });
 
+  it("says the address or model is wrong on a 404, and logs why without the key", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    process.env.AI_REPORT_BASE_URL = "https://api.groq.example";
+    globalThis.fetch = (async () => new Response('{"error":{"message":"The model `nope` does not exist. Key gsk_abcdefghijk1234"}}', { status: 404 })) as typeof fetch;
+    const { callOpenAiCompatible } = await import("@/lib/aiSummaryServer");
+    await expect(draftSummary(facts, callOpenAiCompatible, "nope", 1)).rejects.toThrow(/address or model/);
+    const logged = String((log.mock.calls[0]?.[1] as Error).message);
+    expect(logged).toContain("does not exist");
+    expect(logged).toContain("/chat/completions");
+    expect(logged).not.toContain("gsk_abcdefghijk1234");
+    globalThis.fetch = realFetch;
+  });
+
   it("turns an auth error into the set-up message, not the service's words", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     process.env.AI_REPORT_BASE_URL = "https://api.groq.example/openai/v1";

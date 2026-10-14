@@ -219,7 +219,11 @@ export const callOpenAiCompatible: CallModel = async (system, user, model) => {
       }),
       signal: AbortSignal.timeout(90_000),
     });
-    if (!res.ok) throw new HttpError(res.status, `${res.status} from ${new URL(url).host}`);
+    if (!res.ok) {
+      // The service's own explanation ("model not found", "invalid API key") goes to the server log, with any key-like text removed.
+      const detail = (await res.text().catch(() => "")).replace(/\b(?:gsk|sk)[-_][A-Za-z0-9_-]{8,}/g, "[key]").slice(0, 300);
+      throw new HttpError(res.status, `${res.status} from ${new URL(url).host} at ${new URL(url).pathname}: ${detail}`);
+    }
     return (await res.json()) as { model?: string; choices?: { message?: { content?: string | null }; finish_reason?: string | null }[] };
   };
   let body: Awaited<ReturnType<typeof post>>;
@@ -255,6 +259,9 @@ export async function draftSummary(
     } catch (err) {
       console.error("AI summary request failed", err);
       const status = err instanceof HttpError ? err.status : err instanceof Anthropic.APIError ? err.status : undefined;
+      if (status === 404) {
+        throw new SummaryError("The summary writer's address or model wasn't found. Ask your administrator to check the AI address and model name.");
+      }
       if (status === 429) throw new SummaryError("The summary writer is busy or its free allowance is used up. Try again in a few minutes.");
       if (status === 401 || status === 403) {
         throw new SummaryError("The summary writer isn't set up correctly. Ask your administrator to check the AI key.");
