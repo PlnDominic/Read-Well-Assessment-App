@@ -263,7 +263,7 @@ exception: it keeps the old top bar so the child's task has the full width.
 Each admin page starts with the same `PageHeader` (a title and one short
 line), and forms that are used now and then (add students, invite staff,
 download reports, deleted students) sit behind a button or a "details" fold
-so the page shows the list first. Students has a name search (`?q=`).
+so the page shows the list first. Students searches by name as you type (after a short pause), filters by level and teacher, and shows 25 at a time with Previous and Next (`?q=&level=&teacher=&page=`, read by `src/lib/studentFilters.ts`, filtered by the page itself on the server; the form also works without JavaScript).
 
 ## Summaries written with AI
 

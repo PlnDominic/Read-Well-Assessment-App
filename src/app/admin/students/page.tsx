@@ -14,9 +14,17 @@ import {
 import { AddStudentForm } from "./AddStudentForm";
 import { ImportCsvForm } from "./ImportCsvForm";
 import { LEVEL_OPTIONS, levelLabel } from "@/lib/levels";
+import { STUDENTS_PER_PAGE, lastPage, likeContains, pageRange, parseStudentFilters, studentsHref } from "@/lib/studentFilters";
+import { StudentFilters } from "./StudentFilters";
 
-export default async function AdminStudentsPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
-  const q = ((await searchParams).q ?? "").trim().slice(0, 80);
+/** A query the name, level and teacher filters can be applied to (the count and the rows share them). */
+interface Narrowable<T> {
+  ilike(column: string, pattern: string): T;
+  eq(column: string, value: string | number): T;
+}
+
+export default async function AdminStudentsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const raw = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -34,10 +42,24 @@ export default async function AdminStudentsPage({ searchParams }: { searchParams
   const teachers = (staff ?? []).filter((s) => s.role === "teacher");
   const specialists = (staff ?? []).filter((s) => s.role === "reading_specialist");
 
-  let studentQuery = supabase.from("students").select("id, name, level, teacher_id").order("name");
-  // A name search; % and _ are LIKE's wildcards, so a typed one is escaped.
-  if (q) studentQuery = studentQuery.ilike("name", `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
-  const { data: students } = await studentQuery;
+  const filters = parseStudentFilters(raw, teachers.map((t) => t.id));
+  const { q, level, teacher } = filters;
+  const filtered = q !== "" || level !== null || teacher !== null;
+
+  // The same filters for the count and for the page of rows.
+  const narrow = <T extends Narrowable<T>>(query: T): T => {
+    let next = query;
+    if (q) next = next.ilike("name", likeContains(q));
+    if (level !== null) next = next.eq("level", level);
+    if (teacher) next = next.eq("teacher_id", teacher);
+    return next;
+  };
+  const { count } = await narrow(supabase.from("students").select("id", { count: "exact", head: true }));
+  const total = count ?? 0;
+  // A page past the end (after a delete, or a stale link) shows the last one.
+  const page = Math.min(filters.page, lastPage(total));
+  const [from, to] = pageRange(page);
+  const { data: students } = await narrow(supabase.from("students").select("id, name, level, teacher_id").order("name")).range(from, to);
 
   const { data: assignments } = await supabase
     .from("specialist_assignments")
@@ -55,28 +77,20 @@ export default async function AdminStudentsPage({ searchParams }: { searchParams
 
   return (
     <div className="w-full max-w-[920px]">
-      <PageHeader title="Students" subtitle={q ? `${(students ?? []).length} found for “${q}”` : `${(students ?? []).length} in your school`} />
+      <PageHeader
+        title="Students"
+        subtitle={
+          total === 0
+            ? filtered ? "No students match." : "No students yet."
+            : total <= STUDENTS_PER_PAGE
+              ? `${total} ${filtered ? "found" : "in your school"}`
+              : `Showing ${from + 1}–${Math.min(to + 1, total)} of ${total}${filtered ? " found" : ""}`
+        }
+      />
 
-      <form method="get" role="search" className="flex flex-wrap items-center gap-2.5 mb-5">
-        <input
-          type="search"
-          name="q"
-          defaultValue={q}
-          placeholder="Search by name"
-          aria-label="Search students by name"
-          className="border-2 border-[var(--color-neutral-border)] bg-[var(--color-surface)] text-[var(--color-ink)] rounded-full px-4 py-2.5 text-sm w-[260px] max-w-full"
-        />
-        <button type="submit" className="bg-[var(--color-neutral)] border-none text-[var(--color-orange-dark)] font-bold text-sm px-4.5 py-2.5 rounded-full cursor-pointer">
-          Search
-        </button>
-        {q && (
-          <a href="/admin/students" className="text-sm font-bold text-[var(--color-orange-dark)]">
-            Clear
-          </a>
-        )}
-      </form>
+      <StudentFilters teachers={teachers.map((t) => ({ id: t.id, name: t.name }))} initial={{ q, level, teacher }} />
 
-      <details open={(students ?? []).length === 0 && !q} className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-6 py-5 sm:px-8 mb-6">
+      <details open={total === 0 && !filtered} className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-6 py-5 sm:px-8 mb-6">
         <summary className="inline-flex cursor-pointer list-none items-center gap-2 rounded-full bg-[var(--color-orange)] px-5 py-2.5 text-sm font-bold text-[var(--color-on-orange)] [&::-webkit-details-marker]:hidden">+ Add students</summary>
         <div className="mt-5">
           <AddStudentForm teachers={teachers} />
@@ -86,7 +100,7 @@ export default async function AdminStudentsPage({ searchParams }: { searchParams
 
       <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] overflow-hidden">
         {(students ?? []).length === 0 && (
-          <div className="px-6 py-8 text-[var(--color-muted)] text-center">{q ? "No student has that name." : "No students yet."}</div>
+          <div className="px-6 py-8 text-[var(--color-muted)] text-center">{filtered ? "No students match." : "No students yet."}</div>
         )}
         {(students ?? []).map((s) => {
           const assignedIds = specialistIdsByStudent.get(s.id) ?? [];
@@ -193,6 +207,28 @@ export default async function AdminStudentsPage({ searchParams }: { searchParams
           );
         })}
       </div>
+
+      {total > STUDENTS_PER_PAGE && (
+        <nav aria-label="Pages of students" className="flex items-center justify-between gap-3 mt-4">
+          {page > 1 ? (
+            <a href={studentsHref({ q, level, teacher, page: page - 1 })} className="font-bold text-sm text-[var(--color-orange-dark)] bg-[var(--color-neutral)] rounded-full px-4.5 py-2.5 no-underline">
+              ← Previous
+            </a>
+          ) : (
+            <span />
+          )}
+          <span className="text-sm text-[var(--color-muted)]">
+            Page {page} of {lastPage(total)}
+          </span>
+          {page < lastPage(total) ? (
+            <a href={studentsHref({ q, level, teacher, page: page + 1 })} className="font-bold text-sm text-[var(--color-orange-dark)] bg-[var(--color-neutral)] rounded-full px-4.5 py-2.5 no-underline">
+              Next →
+            </a>
+          ) : (
+            <span />
+          )}
+        </nav>
+      )}
 
       {deletedStudents.length > 0 && (
         <details className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] overflow-hidden mt-6">
