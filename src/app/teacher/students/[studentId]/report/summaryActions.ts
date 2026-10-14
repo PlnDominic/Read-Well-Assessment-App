@@ -55,7 +55,7 @@ export async function generateSummary(formData: FormData): Promise<SummaryAction
   const { admin, profile, session, student, aiEnabled } = await authorize(sessionId);
 
   if (!aiEnabled) return fail("AI summaries are switched off for your school. An administrator can turn them on in Settings.");
-  if (!aiConfigured()) return fail("AI summaries aren't set up on this deployment yet (no ANTHROPIC_API_KEY).");
+  if (!aiConfigured()) return fail("AI summaries aren't set up on this deployment yet. An administrator needs to add the AI settings (see .env.example).");
   // Each draft costs money; 20 per person per 15 minutes is far more than a teacher needs.
   if (await isRateLimited(`ai-summary:${profile.id}`, 20)) return fail("That's a lot of summaries at once. Try again in a few minutes.");
 

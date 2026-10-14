@@ -98,3 +98,120 @@ describe("collectSummaryFacts for a game", () => {
     expect(JSON.stringify(facts)).not.toContain("child-1");
   });
 });
+
+describe("a free or self-hosted model", () => {
+  const wrapped = "Sure! Here is the summary:\n```json\n" + JSON.stringify(answer) + "\n```";
+
+  it("is understood when its reply is wrapped in fences or chatter", async () => {
+    const { content } = await draftSummary(facts, reply({ text: wrapped }), "llama-3.3-70b-versatile", 2);
+    expect(content.nextSteps).toHaveLength(1);
+  });
+
+  it("gets a second go when the first reply misses the format", async () => {
+    const call = vi
+      .fn<CallModel>()
+      .mockResolvedValueOnce({ text: "I think the child did well.", stopReason: "stop", model: "m" })
+      .mockResolvedValueOnce({ text: JSON.stringify(answer), stopReason: "stop", model: "m" });
+    const { content } = await draftSummary(facts, call, "m", 2);
+    expect(call).toHaveBeenCalledTimes(2);
+    expect(content.overview).toContain("{{name}}");
+  });
+
+  it("gives up with a clear message after the allowed goes", async () => {
+    const call = reply({ text: "no json at all" });
+    await expect(draftSummary(facts, call, "m", 2)).rejects.toThrow(/wrong shape/);
+    expect(call).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("callOpenAiCompatible", () => {
+  const realFetch = globalThis.fetch;
+  const body = (content: string, finish = "stop") => ({ model: "llama-3.3-70b", choices: [{ message: { content }, finish_reason: finish }] });
+
+  it("posts to the service's chat endpoint with the key, and returns the reply", async () => {
+    process.env.AI_REPORT_BASE_URL = "https://api.groq.example/openai/v1/";
+    process.env.AI_REPORT_API_KEY = "gsk_test";
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify(body(JSON.stringify(answer))), { status: 200 }));
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    const { callOpenAiCompatible } = await import("@/lib/aiSummaryServer");
+    const result = await callOpenAiCompatible("system", "user", "llama-3.3-70b");
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("https://api.groq.example/openai/v1/chat/completions");
+    expect((init.headers as Record<string, string>).authorization).toBe("Bearer gsk_test");
+    const sent = JSON.parse(init.body as string);
+    expect(sent.response_format).toEqual({ type: "json_object" });
+    expect(sent.messages[0].content).toContain('"familyNote"');
+    expect(result).toMatchObject({ stopReason: "stop", model: "llama-3.3-70b" });
+    globalThis.fetch = realFetch;
+  });
+
+  it("asks again without JSON mode when the service doesn't know it", async () => {
+    process.env.AI_REPORT_BASE_URL = "http://localhost:11434/v1";
+    delete process.env.AI_REPORT_API_KEY;
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response("unsupported", { status: 400 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(body("{}")), { status: 200 }));
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    const { callOpenAiCompatible } = await import("@/lib/aiSummaryServer");
+    await callOpenAiCompatible("s", "u", "gemma");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const second = JSON.parse((fetchMock.mock.calls[1] as unknown as [string, RequestInit])[1].body as string);
+    expect(second.response_format).toBeUndefined();
+    expect((fetchMock.mock.calls[1] as unknown as [string, RequestInit])[1].headers).not.toHaveProperty("authorization");
+    globalThis.fetch = realFetch;
+  });
+
+  it("reports a cut-off reply as incomplete, and a filtered one as a refusal", async () => {
+    process.env.AI_REPORT_BASE_URL = "http://localhost:11434/v1";
+    const { callOpenAiCompatible } = await import("@/lib/aiSummaryServer");
+    globalThis.fetch = (async () => new Response(JSON.stringify(body("{", "length")), { status: 200 })) as typeof fetch;
+    expect((await callOpenAiCompatible("s", "u", "m")).stopReason).toBe("max_tokens");
+    globalThis.fetch = (async () => new Response(JSON.stringify(body("", "content_filter")), { status: 200 })) as typeof fetch;
+    expect((await callOpenAiCompatible("s", "u", "m")).stopReason).toBe("refusal");
+    globalThis.fetch = realFetch;
+  });
+
+  it("says when the free allowance is used up", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    process.env.AI_REPORT_BASE_URL = "https://api.groq.example/openai/v1";
+    globalThis.fetch = (async () => new Response("rate limited", { status: 429 })) as typeof fetch;
+    const { callOpenAiCompatible } = await import("@/lib/aiSummaryServer");
+    await expect(draftSummary(facts, callOpenAiCompatible, "m", 1)).rejects.toThrow(/free allowance is used up/);
+    globalThis.fetch = realFetch;
+  });
+
+  it("turns an auth error into the set-up message, not the service's words", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    process.env.AI_REPORT_BASE_URL = "https://api.groq.example/openai/v1";
+    globalThis.fetch = (async () => new Response("bad key gsk_secret", { status: 401 })) as typeof fetch;
+    const { callOpenAiCompatible } = await import("@/lib/aiSummaryServer");
+    const error = await draftSummary(facts, callOpenAiCompatible, "m", 1).catch((e: unknown) => e);
+    expect((error as Error).message).toMatch(/isn't set up correctly/);
+    expect((error as Error).message).not.toMatch(/gsk_/);
+    globalThis.fetch = realFetch;
+  });
+});
+
+describe("which provider is used", () => {
+  it("defaults to Anthropic, and an openai-compatible one needs a URL and a model", async () => {
+    const m = await import("@/lib/aiSummaryServer");
+    delete process.env.AI_REPORT_PROVIDER;
+    process.env.ANTHROPIC_API_KEY = "k";
+    expect(m.summaryProvider()).toBe("anthropic");
+    expect(m.aiConfigured()).toBe(true);
+    process.env.AI_REPORT_PROVIDER = "openai-compatible";
+    process.env.AI_REPORT_BASE_URL = "http://localhost:11434/v1";
+    delete process.env.AI_REPORT_MODEL;
+    expect(m.aiConfigured()).toBe(false);
+    process.env.AI_REPORT_MODEL = "gemma3";
+    expect(m.aiConfigured()).toBe(true);
+    expect(m.summaryDestination()).toEqual({ provider: "openai-compatible", host: "localhost", local: true });
+    process.env.AI_REPORT_BASE_URL = "https://api.groq.com/openai/v1";
+    expect(m.summaryDestination()).toEqual({ provider: "openai-compatible", host: "api.groq.com", local: false });
+    delete process.env.AI_REPORT_PROVIDER;
+    delete process.env.AI_REPORT_BASE_URL;
+    delete process.env.AI_REPORT_MODEL;
+    delete process.env.ANTHROPIC_API_KEY;
+  });
+});

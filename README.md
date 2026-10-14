@@ -266,8 +266,26 @@ report page (`SummaryPanel.tsx`) under the scores.
   and nothing else.
 - **Off until a school turns it on.** An administrator switches it on in
   **Admin → Settings → Summaries written with AI** (`schools.ai_reports_enabled`,
-  off by default), and the deployment needs `ANTHROPIC_API_KEY`. Without both,
-  the button isn't offered and nothing is sent anywhere.
+  off by default), and the deployment needs a model to write them (below).
+  Without both, the button isn't offered and nothing is sent anywhere. The
+  Settings page says which host the facts go to, and warns when it is an
+  outside service.
+- **Which model writes them** (`AI_REPORT_PROVIDER`). By default Claude, with
+  `ANTHROPIC_API_KEY`. To use a **free or self-hosted model** instead, set
+  `AI_REPORT_PROVIDER=openai-compatible`, `AI_REPORT_BASE_URL`,
+  `AI_REPORT_MODEL` and (if it wants one) `AI_REPORT_API_KEY`: this works with
+  Groq's free tier, OpenRouter's free models, Google's OpenAI-compatible
+  endpoint, or Ollama on your own machine (`.env.example` has examples). Small
+  models are asked for JSON in the instructions rather than by schema, their
+  replies are cleaned (`extractJson`) and checked the same way, and a reply
+  that misses the format gets one more try. **Free hosted services differ on
+  what they keep:** Google's free Gemini tier says it may use what you send to
+  improve its products, with human review, so it is a poor fit for children's
+  answers; OpenRouter's free models include hosts that may train on prompts
+  (its setting can exclude them); Groq's free-tier terms should be read before
+  use. Only a model you run yourself keeps every answer on your own network.
+  Quality varies: read a few drafts from the model you pick before teachers
+  rely on it, which is why a teacher approves every one.
 - **What is sent, and what isn't** (`collectSummaryFacts` in
   `src/lib/aiSummaryServer.ts`). Sent: the level and form, how it was given,
   the scores and bands, the program recommendations for the flagged areas,

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { pathForUnauthorizedProfile } from "@/lib/staffRouting";
 import { createClient } from "@/lib/supabase/server";
-import { aiConfigured, summaryModel } from "@/lib/aiSummaryServer";
+import { aiConfigured, summaryDestination, summaryModel } from "@/lib/aiSummaryServer";
 import { updateAiReports, updateDataRetention } from "./actions";
 
 export default async function AdminSettingsPage() {
@@ -19,6 +19,8 @@ export default async function AdminSettingsPage() {
     .select("data_retention_days, ai_reports_enabled")
     .eq("id", profile.school_id)
     .single();
+
+  const destination = summaryDestination();
 
   return (
     <div className="w-full max-w-[920px]">
@@ -63,13 +65,21 @@ export default async function AdminSettingsPage() {
         </p>
         <p className="text-[var(--color-muted)] text-sm mb-4 mt-0">
           To write a summary, the assessment&apos;s scores and what the child answered (letters chosen, words read,
-          words spelled) are sent to Anthropic. <strong>No name, student ID, school or date is sent</strong>, and what
-          the child typed for &ldquo;Write your name&rdquo; is left out. Make sure parents and guardians have been told
-          before you turn this on.
+          words spelled) are sent to <strong>{destination.host}</strong>
+          {destination.local ? " (a computer on your own network, so nothing leaves it)" : ""}.{" "}
+          <strong>No name, student ID, school or date is sent</strong>, and what the child typed for
+          &ldquo;Write your name&rdquo; is left out. Make sure parents and guardians have been told before you turn this on.
         </p>
+        {destination.provider === "openai-compatible" && !destination.local && (
+          <p role="status" className="text-[var(--color-orange-dark)] font-bold text-sm mb-4 mt-0">
+            {destination.host} is an outside service. Some free services keep what they receive or use it to improve
+            their models. Check their terms before you turn this on for children&apos;s answers.
+          </p>
+        )}
         {!aiConfigured() && (
           <p role="status" className="text-[var(--color-orange-dark)] font-bold text-sm mb-4 mt-0">
-            This deployment has no AI key yet (ANTHROPIC_API_KEY), so summaries can&apos;t be written even when this is on.
+            This deployment isn&apos;t set up to write summaries yet (see AI_REPORT_* and ANTHROPIC_API_KEY in
+            .env.example), so nothing can be written even when this is on.
           </p>
         )}
         <form action={updateAiReports} className="flex flex-wrap items-center gap-3.5">
@@ -84,7 +94,7 @@ export default async function AdminSettingsPage() {
             Save
           </button>
         </form>
-        <p className="text-xs text-[var(--color-muted)] mt-3 mb-0">Model: {summaryModel()}</p>
+        <p className="text-xs text-[var(--color-muted)] mt-3 mb-0">Model: {summaryModel() || "not set"}</p>
       </div>
     </div>
   );

@@ -10,8 +10,10 @@ import { isAssessorLed } from "@/lib/readwell/form";
 import { assessorFormSummary } from "@/lib/reports";
 import { formLabel, type AssessmentForm } from "@/lib/levels";
 import {
+  JSON_ANSWER_INSTRUCTION,
   SUMMARY_SCHEMA,
   SYSTEM_PROMPT,
+  extractJson,
   factsMessage,
   parseSummary,
   type SummaryContent,
@@ -20,12 +22,43 @@ import {
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
-/** The model that writes summaries; set AI_REPORT_MODEL to change it. */
-export const DEFAULT_SUMMARY_MODEL = "claude-opus-5-5";
-export const summaryModel = () => process.env.AI_REPORT_MODEL?.trim() || DEFAULT_SUMMARY_MODEL;
+/**
+ * Who writes the summaries. "anthropic" (the default) uses Claude through the
+ * Anthropic API. "openai-compatible" uses any service that speaks the common
+ * chat-completions format, which covers free and self-hosted options: Groq,
+ * OpenRouter's free models, Google's OpenAI-compatible endpoint, or a model
+ * you run yourself with Ollama. Set AI_REPORT_PROVIDER, AI_REPORT_BASE_URL,
+ * AI_REPORT_API_KEY (if the service wants one) and AI_REPORT_MODEL.
+ */
+export type SummaryProvider = "anthropic" | "openai-compatible";
+export const summaryProvider = (): SummaryProvider =>
+  process.env.AI_REPORT_PROVIDER?.trim() === "openai-compatible" ? "openai-compatible" : "anthropic";
 
-/** Whether this deployment has a key to write summaries with. */
-export const aiConfigured = () => Boolean(process.env.ANTHROPIC_API_KEY);
+/** The model that writes summaries; set AI_REPORT_MODEL to change it. Required for openai-compatible. */
+export const DEFAULT_SUMMARY_MODEL = "claude-opus-5-5";
+export const summaryModel = () =>
+  process.env.AI_REPORT_MODEL?.trim() || (summaryProvider() === "anthropic" ? DEFAULT_SUMMARY_MODEL : "");
+
+const compatBaseUrl = () => process.env.AI_REPORT_BASE_URL?.trim().replace(/\/+$/, "") ?? "";
+
+/** Whether this deployment can write summaries at all. */
+export const aiConfigured = () =>
+  summaryProvider() === "anthropic" ? Boolean(process.env.ANTHROPIC_API_KEY) : Boolean(compatBaseUrl() && summaryModel());
+
+/**
+ * Where summary requests go, for the admin to see before turning the feature
+ * on: the service's host, and whether it is this computer or network.
+ */
+export function summaryDestination(): { provider: SummaryProvider; host: string; local: boolean } {
+  if (summaryProvider() === "anthropic") return { provider: "anthropic", host: "api.anthropic.com", local: false };
+  try {
+    const { hostname } = new URL(compatBaseUrl());
+    const local = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1" || hostname.endsWith(".internal") || hostname.endsWith(".local");
+    return { provider: "openai-compatible", host: hostname, local };
+  } catch {
+    return { provider: "openai-compatible", host: "(invalid AI_REPORT_BASE_URL)", local: false };
+  }
+}
 
 /** Models that accept the server-side refusal fallback, so a rare decline is re-run instead of failing. */
 const SUPPORTS_FALLBACK = new Set(["claude-opus-5-5", "claude-opus-5", "claude-fable-5-1", "claude-sonnet-5-5"]);
@@ -155,31 +188,88 @@ export const callAnthropic: CallModel = async (system, user, model) => {
 
 export class SummaryError extends Error {}
 
+/** A failed HTTP call to an OpenAI-compatible service, with the status for the caller to act on. */
+class HttpError extends Error {
+  constructor(readonly status: number, message: string) {
+    super(message);
+  }
+}
+
+/**
+ * The call for any OpenAI-compatible service (free or self-hosted). Asks for
+ * a JSON object; a service that doesn't know that option is asked again
+ * without it, since the instructions already spell out the shape.
+ */
+export const callOpenAiCompatible: CallModel = async (system, user, model) => {
+  const url = `${compatBaseUrl()}/chat/completions`;
+  const key = process.env.AI_REPORT_API_KEY?.trim();
+  const post = async (jsonMode: boolean) => {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json", ...(key ? { authorization: `Bearer ${key}` } : {}) },
+      body: JSON.stringify({
+        model,
+        temperature: 0.3,
+        max_tokens: 1500,
+        messages: [
+          { role: "system", content: `${system}\n\n${JSON_ANSWER_INSTRUCTION}` },
+          { role: "user", content: user },
+        ],
+        ...(jsonMode ? { response_format: { type: "json_object" } } : {}),
+      }),
+      signal: AbortSignal.timeout(90_000),
+    });
+    if (!res.ok) throw new HttpError(res.status, `${res.status} from ${new URL(url).host}`);
+    return (await res.json()) as { model?: string; choices?: { message?: { content?: string | null }; finish_reason?: string | null }[] };
+  };
+  let body: Awaited<ReturnType<typeof post>>;
+  try {
+    body = await post(true);
+  } catch (err) {
+    // 400/422: this service or model doesn't take response_format.
+    if (err instanceof HttpError && (err.status === 400 || err.status === 422)) body = await post(false);
+    else throw err;
+  }
+  const choice = body.choices?.[0];
+  const finish = choice?.finish_reason;
+  return {
+    text: choice?.message?.content ?? null,
+    stopReason: finish === "length" ? "max_tokens" : finish === "content_filter" ? "refusal" : (finish ?? null),
+    model: body.model || model,
+  };
+};
+
 /** Asks the model for a summary of these facts; throws a SummaryError whose message is fit to show a teacher. */
 export async function draftSummary(
   facts: SummaryFacts,
-  call: CallModel = callAnthropic,
-  model: string = summaryModel()
+  call: CallModel = summaryProvider() === "anthropic" ? callAnthropic : callOpenAiCompatible,
+  model: string = summaryModel(),
+  // Small and free models sometimes miss the format; one more go is cheap. Claude answers in a schema, so it doesn't need it.
+  attempts: number = summaryProvider() === "anthropic" ? 1 : 2
 ): Promise<{ content: SummaryContent; model: string }> {
-  let reply: ModelReply;
-  try {
-    reply = await call(SYSTEM_PROMPT, factsMessage(facts), model);
-  } catch (err) {
-    console.error("AI summary request failed", err);
-    if (err instanceof Anthropic.RateLimitError) throw new SummaryError("The summary writer is busy. Try again in a minute.");
-    if (err instanceof Anthropic.AuthenticationError || err instanceof Anthropic.PermissionDeniedError) {
-      throw new SummaryError("The summary writer isn't set up correctly. Ask your administrator to check the AI key.");
+  let lastProblem = "The summary came back in the wrong shape. Try again.";
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    let reply: ModelReply;
+    try {
+      reply = await call(SYSTEM_PROMPT, factsMessage(facts), model);
+    } catch (err) {
+      console.error("AI summary request failed", err);
+      const status = err instanceof HttpError ? err.status : err instanceof Anthropic.APIError ? err.status : undefined;
+      if (status === 429) throw new SummaryError("The summary writer is busy or its free allowance is used up. Try again in a few minutes.");
+      if (status === 401 || status === 403) {
+        throw new SummaryError("The summary writer isn't set up correctly. Ask your administrator to check the AI key.");
+      }
+      throw new SummaryError("The summary couldn't be written just now. Try again, or write it yourself.");
     }
-    throw new SummaryError("The summary couldn't be written just now. Try again, or write it yourself.");
+    if (reply.stopReason === "refusal") throw new SummaryError("A summary couldn't be written for this one. You can write it yourself.");
+    if (reply.stopReason === "max_tokens" || !reply.text) {
+      lastProblem = "The summary came back incomplete. Try again.";
+      continue;
+    }
+    // A schema-constrained reply is plain JSON; a free model's may be wrapped in fences or chatter.
+    const parsed = parseSummary(extractJson(reply.text));
+    if (parsed) return { content: parsed, model: reply.model || model };
+    lastProblem = "The summary came back in the wrong shape. Try again.";
   }
-  if (reply.stopReason === "refusal") throw new SummaryError("A summary couldn't be written for this one. You can write it yourself.");
-  if (reply.stopReason === "max_tokens" || !reply.text) throw new SummaryError("The summary came back incomplete. Try again.");
-  let parsed: SummaryContent | null = null;
-  try {
-    parsed = parseSummary(JSON.parse(reply.text));
-  } catch {
-    parsed = null;
-  }
-  if (!parsed) throw new SummaryError("The summary came back in the wrong shape. Try again.");
-  return { content: parsed, model: reply.model || model };
+  throw new SummaryError(lastProblem);
 }

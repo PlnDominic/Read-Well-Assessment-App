@@ -82,3 +82,18 @@ describe("editing", () => {
     expect(linesToList("• one\n\n- two \n three")).toEqual(["one", "two", "three"]);
   });
 });
+
+describe("extractJson", () => {
+  it("finds the object in a reply that has fences or chatter around it", async () => {
+    const { extractJson } = await import("@/lib/aiSummary");
+    expect(extractJson('```json\n{"a": 1}\n```')).toEqual({ a: 1 });
+    expect(extractJson('Sure! Here it is: {"a": {"b": 2}} Hope that helps.')).toEqual({ a: { b: 2 } });
+    expect(extractJson("no object here")).toBeNull();
+    expect(extractJson("{ broken json")).toBeNull();
+  });
+
+  it("spells out the same keys the schema requires", async () => {
+    const { JSON_ANSWER_INSTRUCTION } = await import("@/lib/aiSummary");
+    for (const key of SUMMARY_SCHEMA.required) expect(JSON_ANSWER_INSTRUCTION).toContain(`"${key}"`);
+  });
+});
