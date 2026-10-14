@@ -52,6 +52,13 @@ export async function buildStudentReportPageData(
 
   const recs = await getRecommendations(admin, flaggedSkillAreaIds, params.assessmentLevel);
   const formSummary = await assessorFormSummary(admin, params.sessionId);
+  // A summary reaches the PDF only once a teacher has approved it (0022).
+  const { data: summaryRow } = await admin
+    .from("student_report_summaries")
+    .select("content")
+    .eq("session_id", params.sessionId)
+    .eq("status", "approved")
+    .maybeSingle();
   // Assessor-led forms report the guide's three-step support level; its
   // first step lines up with "On Track" (0-1 Emerging foundation strands).
   const overallLabel = formSummary?.supportLevel ?? computeOverallLabel(flaggedSkillAreaIds.length);
@@ -75,6 +82,7 @@ export async function buildStudentReportPageData(
       programReference: r.programReference,
     })),
     ...(formSummary ? { formSummary } : {}),
+    ...(summaryRow ? { summary: summaryRow.content } : {}),
   };
 }
 

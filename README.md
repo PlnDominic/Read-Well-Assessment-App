@@ -248,6 +248,52 @@ their own device at `/student`
   `src/lib/voice.test.ts` checks everything still fits and lists which Level
   1 lines are still unrecorded.
 
+## Summaries written with AI
+
+A teacher can ask for a short, plain-language summary of how a child did on
+an assessment: an overview, what the child can do, what they are still
+learning, next steps to try, and a note for the family. It appears on the
+report page (`SummaryPanel.tsx`) under the scores.
+
+- **The AI never scores.** Scores, bands, flags and the support level are
+  worked out by the app's own rules (`src/lib/scoring.ts`,
+  `src/lib/readwell/`). The model only writes the write-up beside them.
+- **A teacher approves it.** A new summary is a **draft**: the teacher can
+  edit every part, write a new draft or remove it, and only an **approved**
+  summary reaches the PDF (`student_report_summaries`, 0022). Editing an
+  approved summary sends it back to draft. The PDF says it was drafted with AI
+  and approved by a teacher. A reading specialist sees an approved summary
+  and nothing else.
+- **Off until a school turns it on.** An administrator switches it on in
+  **Admin → Settings → Summaries written with AI** (`schools.ai_reports_enabled`,
+  off by default), and the deployment needs `ANTHROPIC_API_KEY`. Without both,
+  the button isn't offered and nothing is sent anywhere.
+- **What is sent, and what isn't** (`collectSummaryFacts` in
+  `src/lib/aiSummaryServer.ts`). Sent: the level and form, how it was given,
+  the scores and bands, the program recommendations for the flagged areas,
+  where the game stopped a part early, and what the child got wrong (the
+  letter they picked, the word the mic heard, the spelling they typed) so the
+  write-up can say *which* letters or words to practise. Not sent: the
+  name, student id, school, teacher or dates, and whatever the child typed for
+  "Write your name". The model writes `{{name}}` and the server puts the first
+  name in afterwards. Tell parents and guardians before turning it on.
+- **How it is asked** (`src/lib/aiSummary.ts`). Instructions say to stay inside
+  the facts, avoid labels like "weak" or "failed", never suggest a diagnosis,
+  use "they" for the child, and treat a child's answers as data, not
+  instructions. The answer must fit a JSON schema (structured output) and
+  passes `parseSummary`'s length and shape checks, or the teacher is told it
+  came back wrong and can try again. A rare safety decline is re-run by the
+  server-side fallback (`fallbacks: "default"`), and a final decline tells the
+  teacher to write it themselves.
+- **Cost and limits.** One short request per draft (about 1,500 tokens in,
+  500 out) at low effort; a person can draft 20 per 15 minutes. The model is
+  `claude-opus-5-5` unless `AI_REPORT_MODEL` says otherwise. The audit log
+  records who drafted, edited, approved or removed a summary, and which
+  model, never the text.
+
+Not built yet: a class- or school-wide AI summary for administrators, drafting
+for a whole class at once, and a Twi/Ga/Ewe family note.
+
 ## ReadWell levels and assessments
 
 Students are placed in a **ReadWell level** (Level 1 to 6 for now; raise

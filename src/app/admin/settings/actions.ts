@@ -4,6 +4,32 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/authz";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+/**
+ * Switches AI-drafted report summaries on or off for the school (0022). On
+ * means staff can ask for a draft, which sends the assessment's scores and
+ * the child's answers, with no name or other identifying detail, to
+ * Anthropic to write a short summary for a teacher to review.
+ */
+export async function updateAiReports(formData: FormData) {
+  const { profile } = await requireAdmin();
+  const enabled = formData.get("aiReportsEnabled") === "on";
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("schools").update({ ai_reports_enabled: enabled }).eq("id", profile.school_id);
+  if (error) throw new Error(error.message);
+
+  await admin.from("audit_log").insert({
+    actor_id: profile.id,
+    action: "settings.ai_reports_updated",
+    resource_type: "school",
+    resource_id: profile.school_id,
+    metadata: { enabled },
+  });
+
+  revalidatePath("/admin/settings");
+  revalidatePath("/teacher", "layout");
+}
+
 export async function updateDataRetention(formData: FormData) {
   const { profile } = await requireAdmin();
 

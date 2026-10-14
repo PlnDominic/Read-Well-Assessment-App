@@ -11,6 +11,8 @@ import { isScoreChangedByReview } from "@/lib/review";
 import { partsFor } from "@/lib/gameParts";
 import { stopsFor } from "@/lib/gameStop";
 import { retryStudentReport, reviewSpokenAnswer } from "./actions";
+import { SummaryPanel } from "./SummaryPanel";
+import { aiConfigured } from "@/lib/aiSummaryServer";
 import type { AssessmentItem } from "@/lib/database.types";
 import { isAssessorLed } from "@/lib/readwell/form";
 import { formForItems } from "@/lib/readwell/forms";
@@ -151,6 +153,16 @@ export default async function StudentReportPage({
         .in("skill_area_id", flaggedIds)
         .eq("level", assessedLevel)
     : { data: [] };
+
+  // The AI-drafted summary (0022): staff see a draft; a reading specialist sees only an approved one.
+  const { data: summaryRow } = await supabase
+    .from("student_report_summaries")
+    .select("status, content, edited")
+    .eq("session_id", sessionId)
+    .maybeSingle();
+  const { data: school } = await supabase.from("schools").select("ai_reports_enabled").eq("id", student.school_id).maybeSingle();
+  const aiAvailable = canReview && Boolean(school?.ai_reports_enabled) && aiConfigured();
+  const summary = summaryRow && (canReview || summaryRow.status === "approved") ? summaryRow : null;
 
   const { data: report } = await supabase
     .from("student_reports")
@@ -301,6 +313,18 @@ export default async function StudentReportPage({
             </>
           )}
         </div>
+
+        <SummaryPanel
+          sessionId={sessionId}
+          summary={summary}
+          canEdit={canReview}
+          aiAvailable={aiAvailable}
+          unavailable={
+            !school?.ai_reports_enabled
+              ? "Summaries written with AI are switched off for your school. An administrator can turn them on in Settings."
+              : "Summaries written with AI aren't set up on this deployment yet."
+          }
+        />
 
         {history.length > 1 && (
           <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-5">

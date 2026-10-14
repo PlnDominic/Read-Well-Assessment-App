@@ -393,6 +393,30 @@ create unique index if not exists assessments_one_active_per_form_delivery
 alter table public.assessments add column if not exists show_feedback boolean not null default true;
 
 -- ===========================================================================
+-- AI-written report summaries (0022): off per school until an administrator
+-- switches them on; one draft or approved summary per assessment, always
+-- reviewed by a teacher before it reaches the PDF.
+-- ===========================================================================
+
+alter table public.schools add column if not exists ai_reports_enabled boolean not null default false;
+
+create table if not exists public.student_report_summaries (
+  id uuid primary key default gen_random_uuid(),
+  student_id uuid not null references public.students (id) on delete cascade,
+  session_id uuid not null unique references public.assessment_sessions (id) on delete cascade,
+  status text not null default 'draft' check (status in ('draft', 'approved')),
+  content jsonb not null,
+  model text not null,
+  edited boolean not null default false,
+  generated_by uuid references public.profiles (id) on delete set null,
+  approved_by uuid references public.profiles (id) on delete set null,
+  approved_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists student_report_summaries_student_idx on public.student_report_summaries (student_id);
+
+-- ===========================================================================
 -- Level-match guard (0006, 0014, 0017): a session's assessment must be for
 -- the student's own level. grade_override is still honoured for sessions
 -- created with an override before levels; nothing sets it any more.
@@ -576,6 +600,13 @@ create policy results_select_scoped on public.results
 
 drop policy if exists student_reports_select_scoped on public.student_reports;
 create policy student_reports_select_scoped on public.student_reports
+  for select to authenticated
+  using (public.can_access_student(student_id));
+
+alter table public.student_report_summaries enable row level security;
+
+drop policy if exists student_report_summaries_select_scoped on public.student_report_summaries;
+create policy student_report_summaries_select_scoped on public.student_report_summaries
   for select to authenticated
   using (public.can_access_student(student_id));
 

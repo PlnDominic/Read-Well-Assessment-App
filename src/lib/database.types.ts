@@ -83,9 +83,11 @@ export interface Database {
           name: string;
           address: string | null;
           data_retention_days: number | null;
+          /** Staff may have an AI draft a report summary for a teacher to review (0022). */
+          ai_reports_enabled: boolean;
           created_at: string;
         },
-        { id?: string; name: string; address?: string | null; data_retention_days?: number | null }
+        { id?: string; name: string; address?: string | null; data_retention_days?: number | null; ai_reports_enabled?: boolean }
       >;
       profiles: Table<
         {
@@ -265,6 +267,36 @@ export interface Database {
           skill_area_id: string;
           score: number;
           flagged_as_difficulty?: boolean;
+        }
+      >;
+      student_report_summaries: Table<
+        {
+          id: string;
+          student_id: string;
+          session_id: string;
+          /** A draft is shown only to staff; an approved one goes in the PDF (0022). */
+          status: "draft" | "approved";
+          content: import("@/lib/aiSummary").SummaryContent;
+          model: string;
+          edited: boolean;
+          generated_by: string | null;
+          approved_by: string | null;
+          approved_at: string | null;
+          created_at: string;
+          updated_at: string;
+        },
+        {
+          id?: string;
+          student_id: string;
+          session_id: string;
+          status?: "draft" | "approved";
+          content: import("@/lib/aiSummary").SummaryContent;
+          model: string;
+          edited?: boolean;
+          generated_by?: string | null;
+          approved_by?: string | null;
+          approved_at?: string | null;
+          updated_at?: string;
         }
       >;
       student_reports: Table<

@@ -2,6 +2,7 @@ import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
 import { colors } from "@/lib/theme";
 import { formDeliveryLabel, formLabel, levelLabel, type AssessmentForm, type Delivery } from "@/lib/levels";
 import { isOnTrackLabel, type FormSummary } from "@/lib/readwell/score";
+import type { SummaryContent } from "@/lib/aiSummary";
 
 const styles = StyleSheet.create({
   page: { backgroundColor: colors.white, padding: 40, fontSize: 11, color: colors.ink },
@@ -51,6 +52,8 @@ export interface StudentReportPageProps {
   recommendations: { skillName: string; text: string; programReference?: string | null }[];
   /** Present for assessor-led forms (ReadWell Level 1): strands with raw scores and bands replace the percent bars. */
   formSummary?: FormSummary;
+  /** A teacher-approved summary (0022); a draft never reaches the PDF. */
+  summary?: SummaryContent;
 }
 
 /**
@@ -70,6 +73,7 @@ export function StudentReportPage({
   skills,
   recommendations,
   formSummary,
+  summary,
 }: StudentReportPageProps) {
   const isOnTrack = isOnTrackLabel(overallLabel);
   return (
@@ -100,6 +104,8 @@ export function StudentReportPage({
           {overallLabel}
         </Text>
       </View>
+
+      {summary && <SummarySection summary={summary} />}
 
       {formSummary ? (
         <FormSummarySection summary={formSummary} />
@@ -148,6 +154,35 @@ export function StudentReportPage({
 
       <Text style={styles.footer}>Read Well Assessment App · Generated {new Date().toLocaleDateString()}</Text>
     </Page>
+  );
+}
+
+/** The approved write-up: what the child can do, what they are still learning, and what to try next. */
+function SummarySection({ summary }: { summary: SummaryContent }) {
+  const list = (title: string, items: string[]) =>
+    items.length > 0 && (
+      <View style={{ marginTop: 6 }}>
+        <Text style={[styles.skillName, { marginBottom: 2 }]}>{title}</Text>
+        {items.map((item) => (
+          <Text style={[styles.recText, { marginBottom: 2 }]} key={item}>
+            • {item}
+          </Text>
+        ))}
+      </View>
+    );
+  return (
+    <View>
+      <Text style={styles.sectionTitle}>Summary</Text>
+      <Text style={styles.recText}>{summary.overview}</Text>
+      {list("What they can do", summary.strengths)}
+      {list("Still learning", summary.toSupport)}
+      {list("Next steps", summary.nextSteps)}
+      <View style={[styles.recCard, { marginTop: 10 }]}>
+        <Text style={styles.recSkill}>Note for the family</Text>
+        <Text style={styles.recText}>{summary.familyNote}</Text>
+      </View>
+      <Text style={[styles.meta, { fontSize: 9 }]}>Drafted with AI and approved by a teacher.</Text>
+    </View>
   );
 }
 
