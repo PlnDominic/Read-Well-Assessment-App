@@ -1,8 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { after } from "next/server";
 import Link from "next/link";
-import { AppShell } from "@/components/AppShell";
-import { ROLE_AVATAR } from "@/lib/avatars";
+import { StaffShell } from "@/components/StaffShell";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { computeOverallLabel, computeWeightedAverage } from "@/lib/scoring";
@@ -208,7 +207,7 @@ export default async function StudentReportPage({
     : "N/A";
 
   return (
-    <AppShell avatarSrc={profile ? ROLE_AVATAR[profile.role] : undefined}>
+    <StaffShell role={profile?.role}>
       <div className="w-full max-w-[760px]">
         <Link href="/teacher" className="text-[var(--color-orange)] font-bold text-sm no-underline inline-block mb-4">
           &larr; Back to class
@@ -532,6 +531,6 @@ export default async function StudentReportPage({
           </div>
         )}
       </div>
-    </AppShell>
+    </StaffShell>
   );
 }

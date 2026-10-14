@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { ReadWellMark } from "@/components/icons";
 
-type IconName = "home" | "students" | "staff" | "cycles" | "assessments" | "steps" | "skills" | "log" | "settings";
+type IconName = "class" | "home" | "students" | "staff" | "cycles" | "assessments" | "steps" | "skills" | "log" | "settings";
 
 interface NavItem {
   href: string;
@@ -37,12 +37,22 @@ const CONTENT: NavItem[] = [
   { href: "/admin/content/skills", label: "Skills and scoring", icon: "skills", isActive: under("/admin/content/skills") },
 ];
 
+// A teacher's and a reading specialist's page. (Notifications are the bell at the bottom, which shows how many are unread.)
+const TEACHER: NavItem[] = [{ href: "/teacher", label: "My class", icon: "class", isActive: under("/teacher") }];
+const SPECIALIST: NavItem[] = [{ href: "/specialist", label: "My students", icon: "class", isActive: under("/specialist") }];
+
 const OTHER: NavItem[] = [
   { href: "/admin/audit", label: "Activity log", icon: "log", isActive: under("/admin/audit") },
   { href: "/admin/settings", label: "Settings", icon: "settings", isActive: under("/admin/settings") },
 ];
 
 const ICONS: Record<IconName, ReactNode> = {
+  class: (
+    <>
+      <path d="M3 8.5 12 4l9 4.5-9 4.5-9-4.5Z" />
+      <path d="M7 11v5c0 1.2 2.2 2.5 5 2.5s5-1.3 5-2.5v-5" />
+    </>
+  ),
   home: <path d="M3 11 12 4l9 7M5 10v10h5v-6h4v6h5V10" />,
   students: (
     <>
@@ -127,11 +137,23 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
 }
 
 /**
- * The admin's navigation, down the left on a computer and behind a Menu
+ * Staff navigation (the admin's, a teacher's or a reading specialist's), down the left on a computer and behind a Menu
  * button on a phone. `footer` is the theme, notifications and log-out
  * controls, passed in because the notification bell is a server component.
  */
-export function AdminSidebar({ avatarSrc, schoolName, footer }: { avatarSrc?: string; schoolName?: string; footer: ReactNode }) {
+export type SidebarVariant = "admin" | "teacher" | "specialist";
+
+export function StaffSidebar({
+  variant,
+  avatarSrc,
+  schoolName,
+  footer,
+}: {
+  variant: SidebarVariant;
+  avatarSrc?: string;
+  schoolName?: string;
+  footer: ReactNode;
+}) {
   const pathname = usePathname();
   // The page the menu was opened on: moving to another page closes it again.
   const [openOn, setOpenOn] = useState<string | null>(null);
@@ -168,7 +190,7 @@ export function AdminSidebar({ avatarSrc, schoolName, footer }: { avatarSrc?: st
 
       <aside
         id="admin-sidebar"
-        aria-label="Admin"
+        aria-label="Menu"
         className={`fixed md:sticky top-0 left-0 z-40 h-screen w-[264px] shrink-0 flex flex-col bg-[var(--color-surface)] border-r border-[var(--color-neutral-divider)] transition-transform md:translate-x-0 md:visible ${
           open ? "translate-x-0 visible" : "-translate-x-full invisible"
         }`}
@@ -183,12 +205,18 @@ export function AdminSidebar({ avatarSrc, schoolName, footer }: { avatarSrc?: st
           </div>
         </div>
 
-        <nav aria-label="Admin pages" className="flex-1 overflow-y-auto px-3 pb-4 flex flex-col gap-1">
-          {MAIN.map((item) => <NavLink key={item.href} item={item} pathname={pathname} />)}
-          <div className="mt-4 mb-1 px-3.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--color-muted)]">Content</div>
-          {CONTENT.map((item) => <NavLink key={item.href} item={item} pathname={pathname} />)}
-          <div className="mt-4 mb-1 px-3.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--color-muted)]">More</div>
-          {OTHER.map((item) => <NavLink key={item.href} item={item} pathname={pathname} />)}
+        <nav aria-label="Pages" className="flex-1 overflow-y-auto px-3 pb-4 flex flex-col gap-1">
+          {variant === "admin" ? (
+            <>
+              {MAIN.map((item) => <NavLink key={item.href} item={item} pathname={pathname} />)}
+              <div className="mt-4 mb-1 px-3.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--color-muted)]">Content</div>
+              {CONTENT.map((item) => <NavLink key={item.href} item={item} pathname={pathname} />)}
+              <div className="mt-4 mb-1 px-3.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--color-muted)]">More</div>
+              {OTHER.map((item) => <NavLink key={item.href} item={item} pathname={pathname} />)}
+            </>
+          ) : (
+            (variant === "teacher" ? TEACHER : SPECIALIST).map((item) => <NavLink key={item.href} item={item} pathname={pathname} />)
+          )}
         </nav>
 
         <div className="border-t border-[var(--color-neutral-divider)] px-4 py-4 flex items-center gap-2.5 flex-wrap">

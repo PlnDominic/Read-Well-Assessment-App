@@ -248,16 +248,22 @@ their own device at `/student`
   `src/lib/voice.test.ts` checks everything still fits and lists which Level
   1 lines are still unrecorded.
 
-## The admin pages
+## The staff pages
 
-An administrator's pages share one layout (`src/app/admin/layout.tsx`): the
-navigation in a sidebar on the left (`src/components/AdminSidebar.tsx`, a Menu
-button on a phone) and the page on the right. The sidebar lists Overview,
-Students, Staff, Cycles, then under Content: Assessments, Recommendations and
-Skills and scoring, then Activity log and Settings. Each page starts with the
-same `PageHeader` (a title and one short line), and forms that are used now
-and then (add students, invite staff, download reports, deleted students) sit
-behind a button or a "details" fold so the page shows the list first.
+Every signed-in staff page has one layout (`src/components/StaffShell.tsx`):
+the navigation in a sidebar on the left (`StaffSidebar.tsx`, behind a Menu
+button on a phone) and the page on the right. The links depend on the role.
+An administrator sees Overview, Students, Staff, Cycles, then under Content
+Assessments, Recommendations and Skills and scoring, then Activity log and
+Settings. A teacher sees My class and a reading specialist My students.
+Theme, the notification bell (with its unread count) and Log Out are at the
+bottom for everyone. The assessor screen (`/teacher/assess/...`) is the one
+exception: it keeps the old top bar so the child's task has the full width.
+
+Each admin page starts with the same `PageHeader` (a title and one short
+line), and forms that are used now and then (add students, invite staff,
+download reports, deleted students) sit behind a button or a "details" fold
+so the page shows the list first. Students has a name search (`?q=`).
 
 ## Summaries written with AI
 

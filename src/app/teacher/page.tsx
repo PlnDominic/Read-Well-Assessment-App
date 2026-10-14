@@ -2,9 +2,8 @@ import { PrepareOffline } from "@/components/PrepareOffline";
 import { redirect } from "next/navigation";
 import { NO_PROFILE_LOGIN } from "@/lib/staffRouting";
 import Link from "next/link";
-import { AppShell } from "@/components/AppShell";
+import { StaffShell } from "@/components/StaffShell";
 import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
-import { ROLE_AVATAR } from "@/lib/avatars";
 import { createClient } from "@/lib/supabase/server";
 import { formDeliveryLabel, formLabel, levelLabel, type AssessmentForm, type Delivery } from "@/lib/levels";
 import { cancelSession } from "./actions";
@@ -99,7 +98,7 @@ export default async function TeacherRosterPage() {
   const classLevels = [...new Set((students ?? []).map((s) => s.level))].sort((a, b) => a - b);
 
   return (
-    <AppShell avatarSrc={ROLE_AVATAR[profile.role]}>
+    <StaffShell role={profile.role}>
       <div className="w-full max-w-[840px]">
         <div className="flex justify-between items-start flex-wrap gap-3.5 mb-1">
           <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-ink)] m-0">
@@ -222,6 +221,6 @@ export default async function TeacherRosterPage() {
           })}
         </div>
       </div>
-    </AppShell>
+    </StaffShell>
   );
 }

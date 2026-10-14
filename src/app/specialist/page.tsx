@@ -1,8 +1,7 @@
 import { redirect } from "next/navigation";
 import { pathForUnauthorizedProfile } from "@/lib/staffRouting";
 import Link from "next/link";
-import { AppShell } from "@/components/AppShell";
-import { ROLE_AVATAR } from "@/lib/avatars";
+import { StaffShell } from "@/components/StaffShell";
 import { createClient } from "@/lib/supabase/server";
 import { formDeliveryLabel, levelLabel, type AssessmentForm, type Delivery } from "@/lib/levels";
 
@@ -54,7 +53,7 @@ export default async function SpecialistPage() {
   }
 
   return (
-    <AppShell avatarSrc={ROLE_AVATAR[profile.role]}>
+    <StaffShell role={profile.role}>
       <div className="w-full max-w-[840px]">
         <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-ink)] m-0 mb-1">
           Assigned Students
@@ -109,6 +108,6 @@ export default async function SpecialistPage() {
           })}
         </div>
       </div>
-    </AppShell>
+    </StaffShell>
   );
 }

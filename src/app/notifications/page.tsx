@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { AppShell } from "@/components/AppShell";
-import { ROLE_AVATAR } from "@/lib/avatars";
+import { StaffShell } from "@/components/StaffShell";
 import { createClient } from "@/lib/supabase/server";
 import { markAllNotificationsRead, markNotificationRead } from "./actions";
 
@@ -29,7 +28,7 @@ export default async function NotificationsPage() {
   const unreadCount = (notifications ?? []).filter((n) => !n.read).length;
 
   return (
-    <AppShell avatarSrc={profile ? ROLE_AVATAR[profile.role] : undefined}>
+    <StaffShell role={profile?.role}>
       <div className="w-full max-w-[760px]">
         <div className="flex justify-between items-center flex-wrap gap-3 mb-6">
           <h1 className="font-heading font-bold text-[30px] tracking-tight text-[var(--color-ink)] m-0">Notifications</h1>
@@ -85,6 +84,6 @@ export default async function NotificationsPage() {
           ))}
         </div>
       </div>
-    </AppShell>
+    </StaffShell>
   );
 }

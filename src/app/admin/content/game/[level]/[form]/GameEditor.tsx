@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
+import { PageHeader } from "@/components/PageHeader";
 import { useRouter } from "next/navigation";
 import type { AssessmentItem } from "@/lib/database.types";
 import { formLabel, levelLabel, type AssessmentForm } from "@/lib/levels";
@@ -190,27 +191,17 @@ export function GameEditor({
       >
         ← {levelLabel(level)} assessments
       </Link>
-      <div className="flex items-center gap-3 flex-wrap mb-1">
-        <h1 className="font-heading font-bold text-[28px] tracking-tight text-[var(--color-ink)] m-0">
-          {levelLabel(level)} · {formLabel(form)} game
-        </h1>
-        <StatusPill ready={!!published}>{published ? "Ready" : "Not published"}</StatusPill>
-      </div>
-      <p className="text-sm text-[var(--color-body)] m-0 mb-5">
-        {published
-          ? `Last published ${published}. This is what children get when a teacher starts ${formLabel(form)} as a game.`
-          : "Teachers can't start this game until you publish it."}
-      </p>
-      <p className="text-sm text-[var(--color-muted)] m-0 mb-5 -mt-3">
-        Children are never told whether an answer is right or wrong. Every answer earns a star, and the game moves on.
-      </p>
+      <PageHeader
+        title={`${levelLabel(level)} · ${formLabel(form)} game`}
+        subtitle={published ? `Last published ${published}.` : "Not published yet. Teachers can't start it until you publish."}
+        actions={<StatusPill ready={!!published}>{published ? "Ready" : "Not published"}</StatusPill>}
+      />
 
       {items.length === 0 && (
         <section className={`${cardClass} px-5 py-5 sm:px-7 mb-5`}>
           <h2 className="font-heading font-bold text-base text-[var(--color-ink)] m-0 mb-1">Start building</h2>
           <p className="text-sm text-[var(--color-body)] m-0 mb-3">
-            Add questions to the missions below
-            {copySources.length > 0 ? ", or start from a copy of another form's game and change the words." : "."}
+            Add questions below{copySources.length > 0 ? ", or start from another form's game." : "."}
           </p>
           {copySources.length > 0 && (
             <div className="flex gap-2 flex-wrap">
@@ -233,8 +224,7 @@ export function GameEditor({
         <div>
           <h2 className="font-heading font-bold text-lg text-[var(--color-ink)] m-0">Missions and questions</h2>
           <p className="text-sm text-[var(--color-muted)] m-0">
-            {items.length} question{items.length === 1 ? "" : "s"}. Children play the missions in this order. Click a
-            question to change it.
+            {items.length} question{items.length === 1 ? "" : "s"}. Click one to change it.
           </p>
         </div>
         {items.length > 0 && (
@@ -250,8 +240,8 @@ export function GameEditor({
 
       {unplaced && (
         <p className="rounded-xl border border-[var(--color-orange-tint-border)] bg-[var(--color-orange-tint)] px-4 py-3 text-sm text-[var(--color-orange-dark)] m-0 mb-3">
-          Some questions aren&apos;t in a mission yet (see the end of the list). Open each and pick its mission. Until
-          every question has one, the game splits the questions into groups of {MISSION_SIZE} instead.
+          Some questions have no mission yet (at the end of the list). Open each and pick one, or the game groups them
+          {" "}{MISSION_SIZE} at a time.
         </p>
       )}
 

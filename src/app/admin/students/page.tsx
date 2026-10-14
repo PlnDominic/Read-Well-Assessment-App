@@ -15,7 +15,8 @@ import { AddStudentForm } from "./AddStudentForm";
 import { ImportCsvForm } from "./ImportCsvForm";
 import { LEVEL_OPTIONS, levelLabel } from "@/lib/levels";
 
-export default async function AdminStudentsPage() {
+export default async function AdminStudentsPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+  const q = ((await searchParams).q ?? "").trim().slice(0, 80);
   const supabase = await createClient();
   const {
     data: { user },
@@ -33,10 +34,10 @@ export default async function AdminStudentsPage() {
   const teachers = (staff ?? []).filter((s) => s.role === "teacher");
   const specialists = (staff ?? []).filter((s) => s.role === "reading_specialist");
 
-  const { data: students } = await supabase
-    .from("students")
-    .select("id, name, level, teacher_id")
-    .order("name");
+  let studentQuery = supabase.from("students").select("id, name, level, teacher_id").order("name");
+  // A name search; % and _ are LIKE's wildcards, so a typed one is escaped.
+  if (q) studentQuery = studentQuery.ilike("name", `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
+  const { data: students } = await studentQuery;
 
   const { data: assignments } = await supabase
     .from("specialist_assignments")
@@ -54,9 +55,28 @@ export default async function AdminStudentsPage() {
 
   return (
     <div className="w-full max-w-[920px]">
-      <PageHeader title="Students" subtitle={`${(students ?? []).length} in your school`} />
+      <PageHeader title="Students" subtitle={q ? `${(students ?? []).length} found for “${q}”` : `${(students ?? []).length} in your school`} />
 
-      <details open={(students ?? []).length === 0} className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-6 py-5 sm:px-8 mb-6">
+      <form method="get" role="search" className="flex flex-wrap items-center gap-2.5 mb-5">
+        <input
+          type="search"
+          name="q"
+          defaultValue={q}
+          placeholder="Search by name"
+          aria-label="Search students by name"
+          className="border-2 border-[var(--color-neutral-border)] bg-[var(--color-surface)] text-[var(--color-ink)] rounded-full px-4 py-2.5 text-sm w-[260px] max-w-full"
+        />
+        <button type="submit" className="bg-[var(--color-neutral)] border-none text-[var(--color-orange-dark)] font-bold text-sm px-4.5 py-2.5 rounded-full cursor-pointer">
+          Search
+        </button>
+        {q && (
+          <a href="/admin/students" className="text-sm font-bold text-[var(--color-orange-dark)]">
+            Clear
+          </a>
+        )}
+      </form>
+
+      <details open={(students ?? []).length === 0 && !q} className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-6 py-5 sm:px-8 mb-6">
         <summary className="inline-flex cursor-pointer list-none items-center gap-2 rounded-full bg-[var(--color-orange)] px-5 py-2.5 text-sm font-bold text-[var(--color-on-orange)] [&::-webkit-details-marker]:hidden">+ Add students</summary>
         <div className="mt-5">
           <AddStudentForm teachers={teachers} />
@@ -66,7 +86,7 @@ export default async function AdminStudentsPage() {
 
       <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] overflow-hidden">
         {(students ?? []).length === 0 && (
-          <div className="px-6 py-8 text-[var(--color-muted)] text-center">No students yet.</div>
+          <div className="px-6 py-8 text-[var(--color-muted)] text-center">{q ? "No student has that name." : "No students yet."}</div>
         )}
         {(students ?? []).map((s) => {
           const assignedIds = specialistIdsByStudent.get(s.id) ?? [];
