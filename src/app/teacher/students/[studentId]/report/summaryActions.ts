@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isRateLimited } from "@/lib/rateLimit";
 import { generateStudentReport, markStudentReportFailed } from "@/lib/reports";
-import { fillName, firstNameOf, linesToList, parseSummary } from "@/lib/aiSummary";
+import { fillName, firstNameOf, linesToList, linesToTitled, parseSummary } from "@/lib/aiSummary";
 import { aiConfigured, collectSummaryFacts, draftSummary, SummaryError } from "@/lib/aiSummaryServer";
 
 /**
@@ -104,13 +104,15 @@ export async function saveSummary(formData: FormData): Promise<SummaryActionResu
   const { admin, profile } = await authorize(sessionId);
 
   const content = parseSummary({
+    headline: formData.get("headline"),
     overview: formData.get("overview"),
-    strengths: linesToList(String(formData.get("strengths") ?? "")),
-    toSupport: linesToList(String(formData.get("toSupport") ?? "")),
-    nextSteps: linesToList(String(formData.get("nextSteps") ?? "")),
-    familyNote: formData.get("familyNote"),
+    canDo: linesToList(String(formData.get("canDo") ?? "")),
+    notYet: linesToList(String(formData.get("notYet") ?? "")),
+    firstThings: linesToTitled(String(formData.get("firstThings") ?? "")),
+    atSchool: linesToList(String(formData.get("atSchool") ?? "")),
+    atHome: linesToTitled(String(formData.get("atHome") ?? "")),
   });
-  if (!content) return fail("Check the summary: the overview, the family note and at least one next step are needed, and each point should be short.");
+  if (!content) return fail("Check the summary: every box needs something, the priorities and home activities need a title, then a colon, then the text, and each point should be short.");
 
   const { error } = await admin
     .from("student_report_summaries")

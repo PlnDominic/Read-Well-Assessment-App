@@ -105,7 +105,7 @@ export function StudentReportPage({
         </Text>
       </View>
 
-      {summary && <SummarySection summary={summary} />}
+      {summary && <SummaryHeadline summary={summary} />}
 
       {formSummary ? (
         <FormSummarySection summary={formSummary} />
@@ -152,36 +152,97 @@ export function StudentReportPage({
         </>
       )}
 
+      {summary && <SummaryDetail summary={summary} />}
+
       <Text style={styles.footer}>Read Well Assessment App · Generated {new Date().toLocaleDateString()}</Text>
     </Page>
   );
 }
 
-/** The approved write-up: what the child can do, what they are still learning, and what to try next. */
-function SummarySection({ summary }: { summary: SummaryContent }) {
-  const list = (title: string, items: string[]) =>
-    items.length > 0 && (
-      <View style={{ marginTop: 6 }}>
-        <Text style={[styles.skillName, { marginBottom: 2 }]}>{title}</Text>
-        {items.map((item) => (
-          <Text style={[styles.recText, { marginBottom: 2 }]} key={item}>
-            • {item}
-          </Text>
-        ))}
-      </View>
-    );
+const sum = StyleSheet.create({
+  headline: { backgroundColor: colors.orangeTint, borderRadius: 10, padding: 14, marginBottom: 6 },
+  headlineTitle: { fontSize: 15, fontWeight: 700, color: colors.ink, marginBottom: 4 },
+  columns: { flexDirection: "row", gap: 18, marginTop: 14 },
+  column: { flex: 1 },
+  columnTitle: { fontSize: 12, fontWeight: 700, color: colors.ink, paddingBottom: 4, marginBottom: 8, borderBottomWidth: 2 },
+  point: { flexDirection: "row", marginBottom: 5 },
+  mark: { width: 14, fontWeight: 700, color: colors.orangeDark },
+  pointText: { flex: 1, color: colors.body, fontSize: 10.5, lineHeight: 1.4 },
+  cardText: { color: colors.body, fontSize: 10.5, lineHeight: 1.4 },
+  cards: { flexDirection: "row", gap: 10, marginTop: 2 },
+  card: { flex: 1, borderWidth: 1, borderColor: colors.neutralBorderStrong, borderRadius: 10, padding: 10 },
+  cardHead: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
+  num: { width: 18, height: 18, borderRadius: 9, backgroundColor: colors.ink, color: colors.white, textAlign: "center", fontSize: 10, fontWeight: 700, paddingTop: 3, marginRight: 6 },
+  cardTitle: { flex: 1, fontSize: 11, fontWeight: 700, color: colors.ink },
+});
+
+/** The approved headline: where the child stands, in a sentence or two, above the strands. */
+function SummaryHeadline({ summary }: { summary: SummaryContent }) {
+  return (
+    <View style={sum.headline}>
+      <Text style={sum.headlineTitle}>{summary.headline}</Text>
+      <Text style={styles.recText}>{summary.overview}</Text>
+    </View>
+  );
+}
+
+function Points({ title, items, mark, color }: { title: string; items: string[]; mark: string; color: string }) {
+  return (
+    <View style={sum.column}>
+      <Text style={[sum.columnTitle, { borderBottomColor: color }]}>{title}</Text>
+      {items.map((item, i) => (
+        <View style={sum.point} key={i} wrap={false}>
+          <Text style={sum.mark}>{mark}</Text>
+          <Text style={sum.pointText}>{item}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/**
+ * The rest of the approved write-up, after the strands: what the child can
+ * and cannot do yet, the three first priorities, and what school and home
+ * will do. The scores themselves come from the app, never from the AI.
+ */
+function SummaryDetail({ summary }: { summary: SummaryContent }) {
   return (
     <View>
-      <Text style={styles.sectionTitle}>Summary</Text>
-      <Text style={styles.recText}>{summary.overview}</Text>
-      {list("What they can do", summary.strengths)}
-      {list("Still learning", summary.toSupport)}
-      {list("Next steps", summary.nextSteps)}
-      <View style={[styles.recCard, { marginTop: 10 }]}>
-        <Text style={styles.recSkill}>Note for the family</Text>
-        <Text style={styles.recText}>{summary.familyNote}</Text>
+      <View style={sum.columns} wrap={false}>
+        <Points title="What they can already do" items={summary.canDo} mark="+" color={colors.ink} />
+        <Points title="What they have not learned yet" items={summary.notYet} mark=">" color={colors.orange} />
       </View>
-      <Text style={[styles.meta, { fontSize: 9 }]}>Drafted with AI and approved by a teacher.</Text>
+
+      <Text style={styles.sectionTitle}>First things first</Text>
+      <View style={sum.cards} wrap={false}>
+        {summary.firstThings.map((p, i) => (
+          <View style={sum.card} key={i}>
+            <View style={sum.cardHead}>
+              <Text style={sum.num}>{i + 1}</Text>
+              <Text style={sum.cardTitle}>{p.title}</Text>
+            </View>
+            <Text style={sum.cardText}>{p.text}</Text>
+          </View>
+        ))}
+      </View>
+
+      <View style={sum.columns} wrap={false}>
+        <Points title="At school, the teacher will" items={summary.atSchool} mark="•" color={colors.ink} />
+        <View style={sum.column}>
+          <Text style={[sum.columnTitle, { borderBottomColor: colors.orange }]}>At home, five minutes a day</Text>
+          {summary.atHome.map((p, i) => (
+            <View style={sum.point} key={i} wrap={false}>
+              <Text style={sum.mark}>•</Text>
+              <Text style={sum.pointText}>
+                <Text style={{ fontWeight: 700, color: colors.ink }}>{p.title}. </Text>
+                {p.text}
+              </Text>
+            </View>
+          ))}
+          <Text style={[styles.meta, { fontSize: 9 }]}>Sound games work in any language you speak at home.</Text>
+        </View>
+      </View>
+      <Text style={[styles.meta, { fontSize: 9, marginTop: 10 }]}>Drafted with AI and approved by a teacher.</Text>
     </View>
   );
 }

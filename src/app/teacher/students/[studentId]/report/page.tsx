@@ -12,6 +12,7 @@ import { stopsFor } from "@/lib/gameStop";
 import { retryStudentReport, reviewSpokenAnswer } from "./actions";
 import { SummaryPanel } from "./SummaryPanel";
 import { aiConfigured } from "@/lib/aiSummaryServer";
+import { parseSummary } from "@/lib/aiSummary";
 import type { AssessmentItem } from "@/lib/database.types";
 import { isAssessorLed } from "@/lib/readwell/form";
 import { formForItems } from "@/lib/readwell/forms";
@@ -161,7 +162,8 @@ export default async function StudentReportPage({
     .maybeSingle();
   const { data: school } = await supabase.from("schools").select("ai_reports_enabled").eq("id", student.school_id).maybeSingle();
   const aiAvailable = canReview && Boolean(school?.ai_reports_enabled) && aiConfigured();
-  const summary = summaryRow && (canReview || summaryRow.status === "approved") ? summaryRow : null;
+  const summaryContent = summaryRow ? parseSummary(summaryRow.content) : null;
+  const summary = summaryRow && summaryContent && (canReview || summaryRow.status === "approved") ? { ...summaryRow, content: summaryContent } : null;
 
   const { data: report } = await supabase
     .from("student_reports")

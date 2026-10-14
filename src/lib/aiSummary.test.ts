@@ -1,12 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { factsMessage, fillName, firstNameOf, linesToList, NAME_TOKEN, parseSummary, SUMMARY_SCHEMA, SYSTEM_PROMPT, type SummaryFacts } from "@/lib/aiSummary";
+import { factsMessage, linesToTitled, titledToLines, fillName, firstNameOf, linesToList, NAME_TOKEN, parseSummary, SUMMARY_SCHEMA, SYSTEM_PROMPT, type SummaryFacts } from "@/lib/aiSummary";
 
 const good = {
+  headline: `${NAME_TOKEN} is ready to begin Level 1.`,
   overview: `${NAME_TOKEN} knows many letters and is starting to read short words.`,
-  strengths: [`${NAME_TOKEN} names most letters.`],
-  toSupport: ["Blending sounds into words."],
-  nextSteps: ["Sound out three short words together each day.", "Point to words while reading a story."],
-  familyNote: `${NAME_TOKEN} is doing well. Please read a short story together at home. Thank you.`,
+  canDo: [`Name 18 letters.`],
+  notYet: ["Blending sounds into words."],
+  firstThings: [
+    { title: "Join sounds by ear", text: "Put two parts together to make a word." },
+    { title: "Learn 15 letter sounds", text: "Two new sounds a week." },
+    { title: "Hear the end of a word", text: "Listen for the last sound." },
+  ],
+  atSchool: ["Teach two new letter sounds each week."],
+  atHome: [{ title: "Robot talk", text: "Say a word in two parts and let them say the whole word." }],
 };
 
 describe("parseSummary", () => {
@@ -16,8 +22,9 @@ describe("parseSummary", () => {
 
   it("rejects an answer with a missing or wrong-typed field", () => {
     expect(parseSummary({ ...good, overview: undefined })).toBeNull();
-    expect(parseSummary({ ...good, strengths: "names letters" })).toBeNull();
-    expect(parseSummary({ ...good, nextSteps: [] })).toBeNull();
+    expect(parseSummary({ ...good, canDo: "names letters" })).toBeNull();
+    expect(parseSummary({ ...good, atHome: [] })).toBeNull();
+    expect(parseSummary({ ...good, firstThings: [{ title: "No text" }] })).toBeNull();
     expect(parseSummary(null)).toBeNull();
     expect(parseSummary("text")).toBeNull();
   });
@@ -25,12 +32,18 @@ describe("parseSummary", () => {
   it("rejects an empty or over-long piece of text", () => {
     expect(parseSummary({ ...good, overview: "   " })).toBeNull();
     expect(parseSummary({ ...good, overview: "x".repeat(2000) })).toBeNull();
-    expect(parseSummary({ ...good, toSupport: ["y".repeat(1000)] })).toBeNull();
+    expect(parseSummary({ ...good, notYet: ["y".repeat(1000)] })).toBeNull();
   });
 
   it("trims, collapses whitespace and keeps at most the allowed number of points", () => {
-    const parsed = parseSummary({ ...good, strengths: ["a", "b", "c", "d", "e", "f"], overview: "  Two   spaces.  " });
-    expect(parsed?.strengths).toHaveLength(4);
+    const parsed = parseSummary({
+      ...good,
+      canDo: ["a", "b", "c", "d", "e", "f", "g", "h"],
+      firstThings: [...good.firstThings, { title: "Four", text: "extra" }],
+      overview: "  Two   spaces.  ",
+    });
+    expect(parsed?.canDo).toHaveLength(6);
+    expect(parsed?.firstThings).toHaveLength(3);
     expect(parsed?.overview).toBe("Two spaces.");
   });
 });
@@ -95,5 +108,12 @@ describe("extractJson", () => {
   it("spells out the same keys the schema requires", async () => {
     const { JSON_ANSWER_INSTRUCTION } = await import("@/lib/aiSummary");
     for (const key of SUMMARY_SCHEMA.required) expect(JSON_ANSWER_INSTRUCTION).toContain(`"${key}"`);
+  });
+});
+
+describe("titled points in an edit box", () => {
+  it("round-trips as Title: text lines", () => {
+    const points = [{ title: "Robot talk", text: "Say a word in two parts." }, { title: "I spy", text: "Use first sounds." }];
+    expect(linesToTitled(titledToLines(points))).toEqual(points);
   });
 });

@@ -11,6 +11,7 @@ import type { AssessmentItem } from "@/lib/database.types";
 import { isAssessorLed } from "@/lib/readwell/form";
 import { formForItems } from "@/lib/readwell/forms";
 import { scoreForm, type FormSummary } from "@/lib/readwell/score";
+import { parseSummary } from "@/lib/aiSummary";
 import { levelLabel, type AssessmentForm, type Delivery } from "@/lib/levels";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
@@ -59,6 +60,8 @@ export async function buildStudentReportPageData(
     .eq("session_id", params.sessionId)
     .eq("status", "approved")
     .maybeSingle();
+  // A summary saved before the report layout changed no longer fits, so it is left off.
+  const parsedSummary = summaryRow ? parseSummary(summaryRow.content) : null;
   // Assessor-led forms report the guide's three-step support level; its
   // first step lines up with "On Track" (0-1 Emerging foundation strands).
   const overallLabel = formSummary?.supportLevel ?? computeOverallLabel(flaggedSkillAreaIds.length);
@@ -82,7 +85,7 @@ export async function buildStudentReportPageData(
       programReference: r.programReference,
     })),
     ...(formSummary ? { formSummary } : {}),
-    ...(summaryRow ? { summary: summaryRow.content } : {}),
+    ...(parsedSummary ? { summary: parsedSummary } : {}),
   };
 }
 

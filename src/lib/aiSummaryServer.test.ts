@@ -5,11 +5,13 @@ import type { AssessmentItem } from "@/lib/database.types";
 
 const facts = { level: 1, form: "Form A", how: "played as a game", overall: "Needs Support", recommendations: [] };
 const answer = {
+  headline: "{{name}} is ready to begin Level 1.",
   overview: "{{name}} is learning letters.",
-  strengths: ["Names some letters."],
-  toSupport: ["Letter sounds."],
-  nextSteps: ["Say the sound of one letter each morning."],
-  familyNote: "{{name}} is trying hard. Please point out letters at home.",
+  canDo: ["Names some letters."],
+  notYet: ["Letter sounds."],
+  firstThings: [{ title: "Learn letter sounds", text: "Two new sounds a week." }],
+  atSchool: ["Teach two new letter sounds each week."],
+  atHome: [{ title: "I spy", text: "Play I spy with first sounds." }],
 };
 const reply = (over: Partial<Awaited<ReturnType<CallModel>>> = {}): CallModel =>
   vi.fn(async () => ({ text: JSON.stringify(answer), stopReason: "end_turn", model: "claude-opus-5-5", ...over }));
@@ -104,7 +106,7 @@ describe("a free or self-hosted model", () => {
 
   it("is understood when its reply is wrapped in fences or chatter", async () => {
     const { content } = await draftSummary(facts, reply({ text: wrapped }), "openai/gpt-oss-120b", 2);
-    expect(content.nextSteps).toHaveLength(1);
+    expect(content.firstThings).toHaveLength(1);
   });
 
   it("gets a second go when the first reply misses the format", async () => {
@@ -140,7 +142,7 @@ describe("callOpenAiCompatible", () => {
     expect((init.headers as Record<string, string>).authorization).toBe("Bearer gsk_test");
     const sent = JSON.parse(init.body as string);
     expect(sent.response_format).toEqual({ type: "json_object" });
-    expect(sent.messages[0].content).toContain('"familyNote"');
+    expect(sent.messages[0].content).toContain('"firstThings"');
     expect(result).toMatchObject({ stopReason: "stop", model: "llama-3.3-70b" });
     globalThis.fetch = realFetch;
   });
