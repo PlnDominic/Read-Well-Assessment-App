@@ -7,9 +7,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 /**
  * Switches AI-drafted summaries on or off for the school (0022, 0023). On
  * means staff can ask for a draft, which sends the assessment's scores and
- * the child's answers (or, for a family note, the teacher's summary; for the
- * school or a class, the cycle's totals), with no name or other identifying
- * detail, to the configured AI service for a person to review.
+ * the child's answers (or, for the school or a class, the cycle's totals),
+ * with no name or other identifying detail, to the configured AI service for
+ * a person to review.
  */
 export async function updateAiReports(formData: FormData) {
   const { profile } = await requireAdmin();

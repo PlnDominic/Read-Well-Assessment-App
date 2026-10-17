@@ -277,8 +277,6 @@ export interface Database {
           /** A draft is shown only to staff; an approved one goes in the PDF (0022). */
           status: "draft" | "approved";
           content: import("@/lib/aiSummary").SummaryContent;
-          /** An optional note for the family in Twi, Ga or Ewe, approved with the summary (0023). */
-          family_note: import("@/lib/familyNote").FamilyNote | null;
           model: string;
           edited: boolean;
           generated_by: string | null;
@@ -293,7 +291,6 @@ export interface Database {
           session_id: string;
           status?: "draft" | "approved";
           content: import("@/lib/aiSummary").SummaryContent;
-          family_note?: import("@/lib/familyNote").FamilyNote | null;
           model: string;
           edited?: boolean;
           generated_by?: string | null;

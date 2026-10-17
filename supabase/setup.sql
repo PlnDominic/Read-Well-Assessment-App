@@ -417,15 +417,9 @@ create table if not exists public.student_report_summaries (
 create index if not exists student_report_summaries_student_idx on public.student_report_summaries (student_id);
 
 -- ===========================================================================
--- Family notes and cycle summaries (0023): a summary's optional note for the
--- family in Twi, Ga or Ewe, and a summary of a whole cycle for the school or
--- one class, drafted by an administrator from the cycle's totals.
+-- Cycle summaries (0023): a summary of a whole cycle for the school or one
+-- class, drafted by an administrator from the cycle's totals.
 -- ===========================================================================
-
-alter table public.student_report_summaries add column if not exists family_note jsonb;
-alter table public.student_report_summaries drop constraint if exists student_report_summaries_family_language_check;
-alter table public.student_report_summaries add constraint student_report_summaries_family_language_check
-  check (family_note is null or family_note->>'language' in ('tw', 'gaa', 'ee'));
 
 create table if not exists public.cycle_report_summaries (
   id uuid primary key default gen_random_uuid(),

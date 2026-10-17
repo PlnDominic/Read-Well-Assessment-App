@@ -19,15 +19,6 @@ import {
   type SummaryContent,
   type SummaryFacts,
 } from "@/lib/aiSummary";
-import {
-  FAMILY_NOTE_INSTRUCTION,
-  FAMILY_NOTE_SCHEMA,
-  familyNoteMessage,
-  familyNotePrompt,
-  parseFamilyNote,
-  type FamilyLanguage,
-  type FamilyNote,
-} from "@/lib/familyNote";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
@@ -283,7 +274,7 @@ const defaultAttempts = () => (summaryProvider() === "anthropic" ? 1 : 2);
 /**
  * Asks the model for an answer of the request's shape, checked by its
  * parse; throws a SummaryError whose message is fit to show a teacher.
- * Used for a child's summary, its family note and a cycle's summary.
+ * Used for a child's summary and a cycle's summary.
  */
 export async function askModel<T>(
   request: ModelRequest<T>,
@@ -329,29 +320,4 @@ export function draftSummary(
   attempts?: number
 ): Promise<{ content: SummaryContent; model: string }> {
   return askModel({ system: SYSTEM_PROMPT, user: factsMessage(facts), format: SUMMARY_FORMAT, parse: parseSummary }, call, model, attempts);
-}
-
-/**
- * Asks the model for a short note to the family in Twi, Ga or Ewe, written
- * from the English summary with the child's name taken out (familyNote.ts).
- */
-export function draftFamilyNote(
-  summary: SummaryContent,
-  fullName: string,
-  language: FamilyLanguage,
-  call?: CallModel,
-  model?: string,
-  attempts?: number
-): Promise<{ content: FamilyNote; model: string }> {
-  return askModel(
-    {
-      system: familyNotePrompt(language),
-      user: familyNoteMessage(summary, fullName),
-      format: { schema: FAMILY_NOTE_SCHEMA as unknown as Record<string, unknown>, instruction: FAMILY_NOTE_INSTRUCTION },
-      parse: (value) => (value && typeof value === "object" ? parseFamilyNote({ ...value, language }) : null),
-    },
-    call,
-    model,
-    attempts
-  );
 }

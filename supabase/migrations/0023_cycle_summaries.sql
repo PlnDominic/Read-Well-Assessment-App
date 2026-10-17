@@ -1,22 +1,13 @@
--- More AI-written summaries, each still approved by a person before it
--- reaches a PDF.
+-- AI-written summaries of a whole assessment cycle, approved by an
+-- administrator before they reach a PDF.
 --
--- 1. student_report_summaries.family_note: an optional short note for the
---    child's family in Twi, Ga or Ewe, written from the English summary and
---    approved together with it. {"language": "tw" | "gaa" | "ee", "text":
---    "...", "atHome": [{"title": "...", "text": "..."}]}, or null.
--- 2. cycle_report_summaries: a summary of an assessment cycle for the whole
---    school (teacher_id null) or for one class (teacher_id set), drafted by
---    an administrator from the cycle's totals alone, never a child's answers.
---    An approved school summary goes in the school PDF; an approved class
---    summary is also shown to that class's teacher. Written by the service
---    role after the caller's own access is checked (like
---    student_report_summaries), so there is a select policy only.
-
-alter table public.student_report_summaries add column if not exists family_note jsonb;
-alter table public.student_report_summaries drop constraint if exists student_report_summaries_family_language_check;
-alter table public.student_report_summaries add constraint student_report_summaries_family_language_check
-  check (family_note is null or family_note->>'language' in ('tw', 'gaa', 'ee'));
+-- cycle_report_summaries: a summary of an assessment cycle for the whole
+-- school (teacher_id null) or for one class (teacher_id set), drafted by an
+-- administrator from the cycle's totals alone, never a child's answers. An
+-- approved school summary goes in the school PDF; an approved class summary
+-- is also shown to that class's teacher. Written by the service role after
+-- the caller's own access is checked (like student_report_summaries), so
+-- there is a select policy only.
 
 create table if not exists public.cycle_report_summaries (
   id uuid primary key default gen_random_uuid(),
