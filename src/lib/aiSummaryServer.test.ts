@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { collectSummaryFacts, draftSummary, SummaryError, type CallModel } from "@/lib/aiSummaryServer";
+import { collectSummaryFacts, draftSummary, SUMMARY_FORMAT, SummaryError, type CallModel } from "@/lib/aiSummaryServer";
 import { SYSTEM_PROMPT } from "@/lib/aiSummary";
 import type { AssessmentItem } from "@/lib/database.types";
 
@@ -22,7 +22,7 @@ describe("draftSummary", () => {
     const { content, model } = await draftSummary(facts, call, "claude-opus-5-5");
     expect(content.overview).toContain("{{name}}");
     expect(model).toBe("claude-opus-5-5");
-    expect(call).toHaveBeenCalledWith(SYSTEM_PROMPT, expect.stringContaining("Needs Support"), "claude-opus-5-5");
+    expect(call).toHaveBeenCalledWith(SYSTEM_PROMPT, expect.stringContaining("Needs Support"), "claude-opus-5-5", SUMMARY_FORMAT);
   });
 
   it("explains a refusal in words a teacher can act on", async () => {
@@ -136,7 +136,7 @@ describe("callOpenAiCompatible", () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify(body(JSON.stringify(answer))), { status: 200 }));
     globalThis.fetch = fetchMock as unknown as typeof fetch;
     const { callOpenAiCompatible } = await import("@/lib/aiSummaryServer");
-    const result = await callOpenAiCompatible("system", "user", "llama-3.3-70b");
+    const result = await callOpenAiCompatible("system", "user", "llama-3.3-70b", SUMMARY_FORMAT);
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe("https://api.groq.example/openai/v1/chat/completions");
     expect((init.headers as Record<string, string>).authorization).toBe("Bearer gsk_test");
@@ -152,8 +152,8 @@ describe("callOpenAiCompatible", () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify(body("{}")), { status: 200 }));
     globalThis.fetch = fetchMock as unknown as typeof fetch;
     const { callOpenAiCompatible } = await import("@/lib/aiSummaryServer");
-    await callOpenAiCompatible("s", "u", "openai/gpt-oss-120b");
-    await callOpenAiCompatible("s", "u", "some-other-model");
+    await callOpenAiCompatible("s", "u", "openai/gpt-oss-120b", SUMMARY_FORMAT);
+    await callOpenAiCompatible("s", "u", "some-other-model", SUMMARY_FORMAT);
     const sent = fetchMock.mock.calls.map((c) => JSON.parse((c as unknown as [string, RequestInit])[1].body as string));
     expect(sent[0].reasoning_effort).toBe("low");
     expect(sent[1]).not.toHaveProperty("reasoning_effort");
@@ -170,7 +170,7 @@ describe("callOpenAiCompatible", () => {
       .mockResolvedValueOnce(new Response(JSON.stringify(body("{}")), { status: 200 }));
     globalThis.fetch = fetchMock as unknown as typeof fetch;
     const { callOpenAiCompatible } = await import("@/lib/aiSummaryServer");
-    await callOpenAiCompatible("s", "u", "gemma");
+    await callOpenAiCompatible("s", "u", "gemma", SUMMARY_FORMAT);
     expect(fetchMock).toHaveBeenCalledTimes(2);
     const second = JSON.parse((fetchMock.mock.calls[1] as unknown as [string, RequestInit])[1].body as string);
     expect(second.response_format).toBeUndefined();
@@ -182,9 +182,9 @@ describe("callOpenAiCompatible", () => {
     process.env.AI_REPORT_BASE_URL = "http://localhost:11434/v1";
     const { callOpenAiCompatible } = await import("@/lib/aiSummaryServer");
     globalThis.fetch = (async () => new Response(JSON.stringify(body("{", "length")), { status: 200 })) as typeof fetch;
-    expect((await callOpenAiCompatible("s", "u", "m")).stopReason).toBe("max_tokens");
+    expect((await callOpenAiCompatible("s", "u", "m", SUMMARY_FORMAT)).stopReason).toBe("max_tokens");
     globalThis.fetch = (async () => new Response(JSON.stringify(body("", "content_filter")), { status: 200 })) as typeof fetch;
-    expect((await callOpenAiCompatible("s", "u", "m")).stopReason).toBe("refusal");
+    expect((await callOpenAiCompatible("s", "u", "m", SUMMARY_FORMAT)).stopReason).toBe("refusal");
     globalThis.fetch = realFetch;
   });
 

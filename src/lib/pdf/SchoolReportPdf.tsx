@@ -1,6 +1,7 @@
 import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
 import { colors } from "@/lib/theme";
 import { levelLabel } from "@/lib/levels";
+import type { CycleSummaryContent } from "@/lib/cycleSummary";
 
 const styles = StyleSheet.create({
   page: { backgroundColor: colors.white, padding: 40, fontSize: 11, color: colors.ink },
@@ -41,6 +42,14 @@ const styles = StyleSheet.create({
     lineHeight: 1.5,
   },
   footer: { position: "absolute", bottom: 30, left: 40, right: 40, fontSize: 9, color: colors.mutedLight },
+  headline: { backgroundColor: colors.orangeTint, borderRadius: 10, padding: 14, marginBottom: 22 },
+  headlineTitle: { fontSize: 14, fontWeight: 700, color: colors.ink, marginBottom: 4 },
+  body: { color: colors.body, fontSize: 10.5, lineHeight: 1.45 },
+  point: { flexDirection: "row", marginBottom: 5 },
+  mark: { width: 14, fontWeight: 700, color: colors.orangeDark },
+  columns: { flexDirection: "row", gap: 18, marginTop: 4, marginBottom: 6 },
+  column: { flex: 1 },
+  columnTitle: { fontSize: 12, fontWeight: 700, color: colors.ink, paddingBottom: 4, marginBottom: 8, borderBottomWidth: 2 },
 });
 
 export interface SchoolReportPdfProps {
@@ -53,6 +62,8 @@ export interface SchoolReportPdfProps {
   skillDistribution: { name: string; pctFlagged: number }[];
   classroomBreakdown: { teacherName: string; studentsAssessed: number; avgScore: number; pctNeedsSupport: number }[];
   planningNote: string;
+  /** The cycle's summary, once an administrator has approved it (0023). */
+  summary?: CycleSummaryContent;
 }
 
 export function SchoolReportPdf({
@@ -65,6 +76,7 @@ export function SchoolReportPdf({
   skillDistribution,
   classroomBreakdown,
   planningNote,
+  summary,
 }: SchoolReportPdfProps) {
   return (
     <Document title={`${schoolName}: School-Wide Reading Report`}>
@@ -92,6 +104,13 @@ export function SchoolReportPdf({
             <Text style={[styles.statValue, { color: colors.orange }]}>{avgOverallScore}%</Text>
           </View>
         </View>
+
+        {summary && (
+          <View style={styles.headline}>
+            <Text style={styles.headlineTitle}>{summary.headline}</Text>
+            <Text style={styles.body}>{summary.overview}</Text>
+          </View>
+        )}
 
         <Text style={styles.sectionTitle}>Difficulty Area Distribution (% of students flagged)</Text>
         {skillDistribution.map((sk) => (
@@ -130,10 +149,56 @@ export function SchoolReportPdf({
           </>
         )}
 
+        {summary && <CycleSummaryDetail summary={summary} />}
+
         <Text style={styles.note}>{planningNote}</Text>
 
         <Text style={styles.footer}>Read Well Assessment App · Generated {new Date().toLocaleDateString()}</Text>
       </Page>
     </Document>
+  );
+}
+
+function Points({ items, mark }: { items: string[]; mark: string }) {
+  return (
+    <>
+      {items.map((item, i) => (
+        <View style={styles.point} key={i} wrap={false}>
+          <Text style={styles.mark}>{mark}</Text>
+          <Text style={[styles.body, { flex: 1 }]}>{item}</Text>
+        </View>
+      ))}
+    </>
+  );
+}
+
+/** The rest of the approved summary: what's going well, what to work on first, and the school's next steps. */
+function CycleSummaryDetail({ summary }: { summary: CycleSummaryContent }) {
+  return (
+    <View>
+      <View style={styles.columns} wrap={false}>
+        {summary.strengths.length > 0 && (
+          <View style={styles.column}>
+            <Text style={[styles.columnTitle, { borderBottomColor: colors.ink }]}>Going well</Text>
+            <Points items={summary.strengths} mark="+" />
+          </View>
+        )}
+        <View style={styles.column}>
+          <Text style={[styles.columnTitle, { borderBottomColor: colors.orange }]}>Work on first</Text>
+          {summary.priorities.map((p, i) => (
+            <View style={styles.point} key={i} wrap={false}>
+              <Text style={styles.mark}>{i + 1}</Text>
+              <Text style={[styles.body, { flex: 1 }]}>
+                <Text style={{ fontWeight: 700, color: colors.ink }}>{p.title}. </Text>
+                {p.text}
+              </Text>
+            </View>
+          ))}
+        </View>
+      </View>
+      <Text style={styles.sectionTitle}>Next steps for the school</Text>
+      <Points items={summary.actions} mark="•" />
+      <Text style={[styles.meta, { fontSize: 9, marginTop: 8 }]}>Drafted with AI from this cycle&apos;s totals and approved by an administrator.</Text>
+    </View>
   );
 }

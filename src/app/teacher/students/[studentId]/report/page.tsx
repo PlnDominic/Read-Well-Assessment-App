@@ -13,6 +13,7 @@ import { retryStudentReport, reviewSpokenAnswer } from "./actions";
 import { SummaryPanel } from "./SummaryPanel";
 import { aiConfigured } from "@/lib/aiSummaryServer";
 import { parseSummary } from "@/lib/aiSummary";
+import { parseFamilyNote } from "@/lib/familyNote";
 import type { AssessmentItem } from "@/lib/database.types";
 import { isAssessorLed } from "@/lib/readwell/form";
 import { formForItems } from "@/lib/readwell/forms";
@@ -157,13 +158,16 @@ export default async function StudentReportPage({
   // The AI-drafted summary (0022): staff see a draft; a reading specialist sees only an approved one.
   const { data: summaryRow } = await supabase
     .from("student_report_summaries")
-    .select("status, content, edited")
+    .select("status, content, edited, family_note")
     .eq("session_id", sessionId)
     .maybeSingle();
   const { data: school } = await supabase.from("schools").select("ai_reports_enabled").eq("id", student.school_id).maybeSingle();
   const aiAvailable = canReview && Boolean(school?.ai_reports_enabled) && aiConfigured();
   const summaryContent = summaryRow ? parseSummary(summaryRow.content) : null;
-  const summary = summaryRow && summaryContent && (canReview || summaryRow.status === "approved") ? { ...summaryRow, content: summaryContent } : null;
+  const summary =
+    summaryRow && summaryContent && (canReview || summaryRow.status === "approved")
+      ? { status: summaryRow.status, edited: summaryRow.edited, content: summaryContent, familyNote: summaryRow.family_note ? parseFamilyNote(summaryRow.family_note) : null }
+      : null;
 
   const { data: report } = await supabase
     .from("student_reports")

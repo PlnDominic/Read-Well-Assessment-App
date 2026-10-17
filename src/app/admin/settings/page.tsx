@@ -30,7 +30,10 @@ export default async function AdminSettingsPage() {
     <div className="w-full max-w-[720px]">
       <PageHeader title="Settings" />
 
-      <Card title="AI summaries" hint="Teachers can ask for a short written summary of how a child did. They always read and approve it first.">
+      <Card
+        title="AI summaries"
+        hint="Teachers can ask for a short written summary of how a child did, with a note for the family in Twi, Ga or Ewe, and you can ask for one for the school or a class. A person always reads and approves it first."
+      >
         <form action={updateAiReports} className="flex flex-wrap items-center justify-between gap-4">
           <label className="flex items-center gap-3 text-sm font-bold text-[var(--color-ink)]">
             <input type="checkbox" name="aiReportsEnabled" defaultChecked={school?.ai_reports_enabled ?? false} className="size-5" />
@@ -59,8 +62,10 @@ export default async function AdminSettingsPage() {
         <details className="mt-4">
           <summary className="cursor-pointer font-bold text-sm text-[var(--color-orange-dark)]">What is sent?</summary>
           <ul className="text-sm text-[var(--color-body)] leading-relaxed mt-2 mb-0 pl-5">
-            <li>The scores and what the child answered.</li>
-            <li>Never their name, ID, school or dates.</li>
+            <li>For a child: the scores and what the child answered.</li>
+            <li>For a family note: the teacher&apos;s summary, with the child&apos;s name taken out.</li>
+            <li>For the school or a class: only totals, never a child&apos;s answers.</li>
+            <li>Never a child&apos;s name or ID, or the school, teacher or dates.</li>
             <li>Tell parents before you turn this on.</li>
           </ul>
         </details>

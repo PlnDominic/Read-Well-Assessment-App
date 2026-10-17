@@ -3,6 +3,8 @@ import { colors } from "@/lib/theme";
 import { formDeliveryLabel, formLabel, levelLabel, type AssessmentForm, type Delivery } from "@/lib/levels";
 import { isOnTrackLabel, type FormSummary } from "@/lib/readwell/score";
 import type { SummaryContent } from "@/lib/aiSummary";
+import { FAMILY_LANGUAGES, type FamilyNote } from "@/lib/familyNote";
+import { LOCAL_LANGUAGE_FONT } from "@/lib/pdf/fonts";
 
 const styles = StyleSheet.create({
   page: { backgroundColor: colors.white, padding: 40, fontSize: 11, color: colors.ink },
@@ -54,6 +56,8 @@ export interface StudentReportPageProps {
   formSummary?: FormSummary;
   /** A teacher-approved summary (0022); a draft never reaches the PDF. */
   summary?: SummaryContent;
+  /** The approved summary's note for the family in Twi, Ga or Ewe (0023), on a page of its own. */
+  familyNote?: FamilyNote;
 }
 
 /**
@@ -74,6 +78,7 @@ export function StudentReportPage({
   recommendations,
   formSummary,
   summary,
+  familyNote,
 }: StudentReportPageProps) {
   const isOnTrack = isOnTrackLabel(overallLabel);
   return (
@@ -153,6 +158,8 @@ export function StudentReportPage({
       )}
 
       {summary && <SummaryDetail summary={summary} />}
+
+      {summary && familyNote && <FamilyNotePage studentName={studentName} assessedDate={assessedDate} note={familyNote} />}
 
       <Text style={styles.footer}>Read Well Assessment App · Generated {new Date().toLocaleDateString()}</Text>
     </Page>
@@ -243,6 +250,43 @@ function SummaryDetail({ summary }: { summary: SummaryContent }) {
         </View>
       </View>
       <Text style={[styles.meta, { fontSize: 9, marginTop: 10 }]}>Drafted with AI and approved by a teacher.</Text>
+    </View>
+  );
+}
+
+const fam = StyleSheet.create({
+  title: { fontSize: 18, fontWeight: 700, color: colors.ink, marginBottom: 4 },
+  text: { fontFamily: LOCAL_LANGUAGE_FONT, color: colors.body, fontSize: 12, lineHeight: 1.6, marginTop: 18, marginBottom: 14 },
+  point: { flexDirection: "row", marginBottom: 8 },
+  pointText: { flex: 1, fontFamily: LOCAL_LANGUAGE_FONT, color: colors.body, fontSize: 11.5, lineHeight: 1.5 },
+});
+
+/**
+ * The family note, on a page of its own so it can be printed and sent home.
+ * Its words are in the family's language, in a font that has their letters;
+ * the heading stays in English for the teacher.
+ */
+function FamilyNotePage({ studentName, assessedDate, note }: { studentName: string; assessedDate: string; note: FamilyNote }) {
+  const lang = FAMILY_LANGUAGES[note.language];
+  return (
+    <View break>
+      <Text style={fam.title}>{studentName}</Text>
+      <Text style={styles.meta}>
+        A note for the family, in {lang} · Assessed {assessedDate}
+      </Text>
+      <Text style={fam.text}>{note.text}</Text>
+      {note.atHome.map((p, i) => (
+        <View style={fam.point} key={i} wrap={false}>
+          <Text style={sum.mark}>•</Text>
+          <Text style={fam.pointText}>
+            <Text style={{ fontWeight: 700, color: colors.ink }}>{p.title}. </Text>
+            {p.text}
+          </Text>
+        </View>
+      ))}
+      <Text style={[styles.meta, { fontSize: 9, marginTop: 14 }]}>
+        Drafted with AI from the teacher&apos;s summary, then checked and approved by a teacher.
+      </Text>
     </View>
   );
 }

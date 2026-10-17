@@ -7,7 +7,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isRateLimited } from "@/lib/rateLimit";
 import { generateStudentReport, markStudentReportFailed } from "@/lib/reports";
 import { fillName, firstNameOf, linesToList, linesToTitled, parseSummary } from "@/lib/aiSummary";
-import { aiConfigured, collectSummaryFacts, draftSummary, SummaryError } from "@/lib/aiSummaryServer";
+import { aiConfigured, collectSummaryFacts, draftFamilyNote, draftSummary, SummaryError } from "@/lib/aiSummaryServer";
+import { fillFamilyName, isFamilyLanguage, parseFamilyNote } from "@/lib/familyNote";
 
 /**
  * The AI-drafted summary on a student's report (0022). The scores and bands
@@ -48,16 +49,16 @@ async function authorize(sessionId: string) {
   return { admin, profile, session, student, aiEnabled: Boolean(school?.ai_reports_enabled) };
 }
 
-/** Writes a new draft, replacing any summary this assessment already has. */
-export async function generateSummary(formData: FormData): Promise<SummaryActionResult> {
-  const sessionId = String(formData.get("sessionId") ?? "");
-  if (!sessionId) return fail("Missing session id");
+/** Each draft costs money; 60 per person per 15 minutes covers drafting a whole class at once. */
+const DRAFTS_PER_WINDOW = 60;
+
+/** Writes a new draft, replacing any summary this assessment already has (and its family note, which no longer matches). */
+async function writeDraft(sessionId: string): Promise<SummaryActionResult> {
   const { admin, profile, session, student, aiEnabled } = await authorize(sessionId);
 
   if (!aiEnabled) return fail("AI summaries are switched off for your school. An administrator can turn them on in Settings.");
   if (!aiConfigured()) return fail("AI summaries aren't set up on this deployment yet. An administrator needs to add the AI settings (see .env.example).");
-  // Each draft costs money; 20 per person per 15 minutes is far more than a teacher needs.
-  if (await isRateLimited(`ai-summary:${profile.id}`, 20)) return fail("That's a lot of summaries at once. Try again in a few minutes.");
+  if (await isRateLimited(`ai-summary:${profile.id}`, DRAFTS_PER_WINDOW)) return fail("That's a lot of summaries at once. Try again in a few minutes.");
 
   try {
     const facts = await collectSummaryFacts(admin, sessionId);
@@ -69,6 +70,7 @@ export async function generateSummary(formData: FormData): Promise<SummaryAction
         session_id: sessionId,
         status: "draft",
         content: named,
+        family_note: null,
         model,
         edited: false,
         generated_by: profile.id,
@@ -92,9 +94,30 @@ export async function generateSummary(formData: FormData): Promise<SummaryAction
     console.error("generateSummary failed", err);
     return fail("The summary couldn't be written just now. Try again.");
   }
-
-  revalidatePath("/teacher", "layout");
   return { ok: true };
+}
+
+/** Writes a new draft from the report page. */
+export async function generateSummary(formData: FormData): Promise<SummaryActionResult> {
+  const sessionId = String(formData.get("sessionId") ?? "");
+  if (!sessionId) return fail("Missing session id");
+  const result = await writeDraft(sessionId);
+  if (result.ok) revalidatePath("/teacher", "layout");
+  return result;
+}
+
+/**
+ * Writes one draft for "Draft summaries for the class" on the class list,
+ * which calls this once per child and refreshes the page itself at the end,
+ * so nothing is revalidated here. Never throws: a child it can't do is
+ * reported and the class list moves on to the next.
+ */
+export async function generateClassSummary(sessionId: string): Promise<SummaryActionResult> {
+  try {
+    return await writeDraft(sessionId);
+  } catch (err) {
+    return fail(err instanceof Error ? err.message : "The summary couldn't be written just now.");
+  }
 }
 
 /** Saves a teacher's edits to a draft (or to an approved summary, which goes back to draft). */
@@ -156,6 +179,99 @@ export async function discardSummary(formData: FormData): Promise<SummaryActionR
 
   await admin.from("audit_log").insert({ actor_id: profile.id, action: "summary.discarded", resource_type: "student_report", resource_id: sessionId });
   if (existing?.status === "approved") await rerenderPdf(admin, sessionId);
+  revalidatePath("/teacher", "layout");
+  return { ok: true };
+}
+
+/**
+ * Writes the summary's note for the family in Twi, Ga or Ewe, from the
+ * English summary with the child's name taken out. Like an edit, it sends an
+ * approved summary back to draft: the teacher checks the note, then approves.
+ */
+export async function generateFamilyNote(formData: FormData): Promise<SummaryActionResult> {
+  const sessionId = String(formData.get("sessionId") ?? "");
+  const language = formData.get("language");
+  if (!sessionId) return fail("Missing session id");
+  if (!isFamilyLanguage(language)) return fail("Pick Twi, Ga or Ewe.");
+  const { admin, profile, student, aiEnabled } = await authorize(sessionId);
+
+  if (!aiEnabled) return fail("AI summaries are switched off for your school. An administrator can turn them on in Settings.");
+  if (!aiConfigured()) return fail("AI summaries aren't set up on this deployment yet.");
+  const { data: row } = await admin.from("student_report_summaries").select("content").eq("session_id", sessionId).maybeSingle();
+  const summary = row ? parseSummary(row.content) : null;
+  if (!summary) return fail("Write the summary first: the family note is made from it.");
+  if (await isRateLimited(`ai-summary:${profile.id}`, DRAFTS_PER_WINDOW)) return fail("That's a lot of summaries at once. Try again in a few minutes.");
+
+  try {
+    const { content, model } = await draftFamilyNote(summary, student.name, language);
+    const { error } = await admin
+      .from("student_report_summaries")
+      .update({
+        family_note: fillFamilyName(content, firstNameOf(student.name)),
+        status: "draft",
+        approved_by: null,
+        approved_at: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("session_id", sessionId);
+    if (error) return fail("The note was written but couldn't be saved. Try again.");
+    await admin.from("audit_log").insert({
+      actor_id: profile.id,
+      action: "summary.family_note_drafted",
+      resource_type: "student_report",
+      resource_id: sessionId,
+      metadata: { model, language },
+    });
+  } catch (err) {
+    if (err instanceof SummaryError) return fail(err.message);
+    console.error("generateFamilyNote failed", err);
+    return fail("The note couldn't be written just now. Try again.");
+  }
+
+  revalidatePath("/teacher", "layout");
+  return { ok: true };
+}
+
+/** Saves a teacher's edits to the family note; the summary goes back to draft. */
+export async function saveFamilyNote(formData: FormData): Promise<SummaryActionResult> {
+  const sessionId = String(formData.get("sessionId") ?? "");
+  if (!sessionId) return fail("Missing session id");
+  const { admin, profile } = await authorize(sessionId);
+
+  const note = parseFamilyNote({
+    language: formData.get("language"),
+    text: formData.get("text"),
+    atHome: linesToTitled(String(formData.get("atHome") ?? "")),
+  });
+  if (!note) return fail("Check the note: it needs some text, and each home activity needs a title, then a colon, then the text.");
+
+  const { error } = await admin
+    .from("student_report_summaries")
+    .update({ family_note: note, edited: true, status: "draft", approved_by: null, approved_at: null, updated_at: new Date().toISOString() })
+    .eq("session_id", sessionId);
+  if (error) return fail("Couldn't save your changes. Try again.");
+
+  await admin.from("audit_log").insert({ actor_id: profile.id, action: "summary.family_note_edited", resource_type: "student_report", resource_id: sessionId });
+  revalidatePath("/teacher", "layout");
+  return { ok: true };
+}
+
+/** Removes the family note and keeps the rest of the summary as it is. */
+export async function removeFamilyNote(formData: FormData): Promise<SummaryActionResult> {
+  const sessionId = String(formData.get("sessionId") ?? "");
+  if (!sessionId) return fail("Missing session id");
+  const { admin, profile } = await authorize(sessionId);
+
+  const { data, error } = await admin
+    .from("student_report_summaries")
+    .update({ family_note: null, updated_at: new Date().toISOString() })
+    .eq("session_id", sessionId)
+    .select("status");
+  if (error || !data?.length) return fail("Couldn't remove the note. Try again.");
+
+  await admin.from("audit_log").insert({ actor_id: profile.id, action: "summary.family_note_removed", resource_type: "student_report", resource_id: sessionId });
+  // An approved summary's PDF has the note on it, so it's made again without.
+  if (data[0].status === "approved") await rerenderPdf(admin, sessionId);
   revalidatePath("/teacher", "layout");
   return { ok: true };
 }

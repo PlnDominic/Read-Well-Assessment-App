@@ -12,6 +12,8 @@ import { isAssessorLed } from "@/lib/readwell/form";
 import { formForItems } from "@/lib/readwell/forms";
 import { scoreForm, type FormSummary } from "@/lib/readwell/score";
 import { parseSummary } from "@/lib/aiSummary";
+import { parseFamilyNote } from "@/lib/familyNote";
+import { parseCycleSummary } from "@/lib/cycleSummary";
 import { levelLabel, type AssessmentForm, type Delivery } from "@/lib/levels";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
@@ -56,12 +58,13 @@ export async function buildStudentReportPageData(
   // A summary reaches the PDF only once a teacher has approved it (0022).
   const { data: summaryRow } = await admin
     .from("student_report_summaries")
-    .select("content")
+    .select("content, family_note")
     .eq("session_id", params.sessionId)
     .eq("status", "approved")
     .maybeSingle();
   // A summary saved before the report layout changed no longer fits, so it is left off.
   const parsedSummary = summaryRow ? parseSummary(summaryRow.content) : null;
+  const familyNote = parsedSummary && summaryRow?.family_note ? parseFamilyNote(summaryRow.family_note) : null;
   // Assessor-led forms report the guide's three-step support level; its
   // first step lines up with "On Track" (0-1 Emerging foundation strands).
   const overallLabel = formSummary?.supportLevel ?? computeOverallLabel(flaggedSkillAreaIds.length);
@@ -86,6 +89,7 @@ export async function buildStudentReportPageData(
     })),
     ...(formSummary ? { formSummary } : {}),
     ...(parsedSummary ? { summary: parsedSummary } : {}),
+    ...(familyNote ? { familyNote } : {}),
   };
 }
 
@@ -207,8 +211,15 @@ export async function generateStudentReport(
  * session in a cycle into the school-wide PDF. Re-run after each student
  * completion so the report stays current (PRD §4.4: "auto-updated as
  * assessments in a cycle are completed").
+ *
+ * `notify: false` skips telling the administrators, for a re-render they
+ * asked for themselves (approving or removing the cycle's summary).
  */
-export async function generateSchoolReport(schoolId: string, cycleId: string): Promise<void> {
+export async function generateSchoolReport(
+  schoolId: string,
+  cycleId: string,
+  { notify = true }: { notify?: boolean } = {}
+): Promise<void> {
   const admin = createAdminClient();
 
   // See the matching comment in generateStudentReport.
@@ -335,6 +346,16 @@ export async function generateSchoolReport(schoolId: string, cycleId: string): P
         } across ${levelLabel(level)} classes.`
       : "No skill areas are broadly flagged this cycle.";
 
+  // The whole school's summary, once an administrator has approved it (0023).
+  const { data: summaryRow } = await admin
+    .from("cycle_report_summaries")
+    .select("content")
+    .eq("cycle_id", cycleId)
+    .is("teacher_id", null)
+    .eq("status", "approved")
+    .maybeSingle();
+  const summary = summaryRow ? parseCycleSummary(summaryRow.content) : null;
+
   const pdfBuffer = await renderToBuffer(
     createElement(SchoolReportPdf, {
       schoolName: school.name,
@@ -346,6 +367,7 @@ export async function generateSchoolReport(schoolId: string, cycleId: string): P
       skillDistribution,
       classroomBreakdown,
       planningNote,
+      ...(summary ? { summary } : {}),
     }) as unknown as ReactElement<DocumentProps>
   );
 
@@ -370,6 +392,8 @@ export async function generateSchoolReport(schoolId: string, cycleId: string): P
       { onConflict: "school_id,cycle_id" }
     );
   if (upsertError) throw upsertError;
+
+  if (!notify) return;
 
   const { data: admins } = await admin
     .from("profiles")

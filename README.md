@@ -269,8 +269,11 @@ so the page shows the list first. Students searches by name as you type (after a
 
 A teacher can ask for a short, plain-language summary of how a child did on
 an assessment: an overview, what the child can do, what they are still
-learning, next steps to try, and a note for the family. It appears on the
-report page (`SummaryPanel.tsx`) under the scores.
+learning, next steps to try, and activities for the family, with an optional
+note to the family in Twi, Ga or Ewe. It appears on the report page
+(`SummaryPanel.tsx`) under the scores, and a whole class can be drafted at
+once from the class list. Administrators can also have the whole cycle
+summarised for the school or one class (all below).
 
 - **The AI never scores.** Scores, bands, flags and the support level are
   worked out by the app's own rules (`src/lib/scoring.ts`,
@@ -311,7 +314,9 @@ report page (`SummaryPanel.tsx`) under the scores.
   write-up can say *which* letters or words to practise. Not sent: the
   name, student id, school, teacher or dates, and whatever the child typed for
   "Write your name". The model writes `{{name}}` and the server puts the first
-  name in afterwards. Tell parents and guardians before turning it on.
+  name in afterwards. A family note is sent the English summary instead, with
+  the name taken out; a school or class summary only totals (below). Tell
+  parents and guardians before turning it on.
 - **How it is asked** (`src/lib/aiSummary.ts`). Instructions say to stay inside
   the facts, avoid labels like "weak" or "failed", never suggest a diagnosis,
   use "they" for the child, and treat a child's answers as data, not
@@ -321,13 +326,51 @@ report page (`SummaryPanel.tsx`) under the scores.
   server-side fallback (`fallbacks: "default"`), and a final decline tells the
   teacher to write it themselves.
 - **Cost and limits.** One short request per draft (about 1,500 tokens in,
-  500 out) at low effort; a person can draft 20 per 15 minutes. The model is
-  `claude-opus-5-5` unless `AI_REPORT_MODEL` says otherwise. The audit log
-  records who drafted, edited, approved or removed a summary, and which
-  model, never the text.
-
-Not built yet: a class- or school-wide AI summary for administrators, drafting
-for a whole class at once, and a Twi/Ga/Ewe family note.
+  500 out) at low effort; a person can draft 60 per 15 minutes, enough for a
+  class at once. The model is `claude-opus-5-5` unless `AI_REPORT_MODEL` says
+  otherwise. The audit log records who drafted, edited, approved or removed a
+  summary or family note, and which model, never the text.
+- **A note for the family in Twi, Ga or Ewe** (`src/lib/familyNote.ts`,
+  `student_report_summaries.family_note`, 0023). Under a summary, the teacher
+  picks a language and asks for a short note to the family: a few sentences on
+  what the child does well and what comes next, and the home activities. It is
+  made from the English summary, not the scores, with the child's name taken
+  out first (`hideName`: the full name and each part of it become `{{name}}`),
+  so it says nothing the teacher hasn't already read. It is part of the
+  summary: writing or editing it sends an approved summary back to draft, and
+  the approved note is printed on a page of its own at the end of the child's
+  PDF, ready to send home. Writing the English summary again removes the note,
+  since it no longer matches. **AI writes Twi, Ga and Ewe less well than
+  English, and small free models much less well: have someone who reads the
+  language check every word before approving.** The PDFs' built-in Helvetica
+  has no ɛ, ɔ, ŋ, ɖ, ƒ, ɣ or ʋ, so the note uses DejaVu Sans
+  (`src/lib/pdf/fonts/`, free to redistribute, see its `LICENSE.txt`), which
+  `next.config.ts` ships with every route that renders a PDF.
+- **Drafting a whole class at once.** When summaries are on, the class list
+  shows how many finished assessments have no summary and a **Draft all**
+  button (`src/app/teacher/DraftClassSummaries.tsx`). It drafts them one child
+  at a time through the same server action as the report page, so the teacher
+  sees it move and can stop it, and it stops by itself when the same problem
+  comes up twice running (switched off, limit reached, no connection). Nothing
+  is approved for the teacher: each child's row then says **Summary to check**
+  until they approve it on the report.
+- **A summary of the cycle for the school or a class**
+  (`src/lib/cycleSummary.ts`, `src/lib/cycleSummaryServer.ts`,
+  `cycle_report_summaries`, 0023). On the admin Overview, the **Summary** card
+  drafts a write-up of the current cycle for the whole school or, picked above
+  it, one class: the headline, what is going well, up to three things to work
+  on first, and next steps for the school's planning. The model is sent only
+  totals (`collectCycleFacts`): how many children were assessed, each level's
+  overall results (from each report's own label), each skill area's average
+  and share flagged, the program recommendations for the most-flagged skill
+  areas, and for the whole school each class's totals under a label such as
+  `{{class:A}}`, which the server swaps for the class's name afterwards. No
+  child's name, id or answers, and no school, teacher or cycle name. Like a
+  child's summary it is a draft until an administrator approves it: the
+  approved school summary goes in the school PDF (re-rendered without
+  notifying anyone), and an approved class summary is also shown to that
+  class's teacher on their class list. Administrators see every draft; a
+  teacher sees only their own class's approved one (RLS).
 
 ## ReadWell levels and assessments
 

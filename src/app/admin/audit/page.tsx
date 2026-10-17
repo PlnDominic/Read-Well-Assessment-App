@@ -10,6 +10,17 @@ const ACTION_LABELS: Record<string, string> = {
   "report.export_csv": "Exported CSV of",
   "report.export_bulk": "Exported all reports for",
   "settings.data_retention_updated": "Updated",
+  "summary.drafted": "Drafted an AI summary on",
+  "summary.edited": "Edited the AI summary on",
+  "summary.approved": "Approved the AI summary on",
+  "summary.discarded": "Removed the AI summary from",
+  "summary.family_note_drafted": "Drafted a family note on",
+  "summary.family_note_edited": "Edited the family note on",
+  "summary.family_note_removed": "Removed the family note from",
+  "cycle_summary.drafted": "Drafted",
+  "cycle_summary.edited": "Edited",
+  "cycle_summary.approved": "Approved",
+  "cycle_summary.discarded": "Removed",
 };
 
 const RESOURCE_LABELS: Record<string, string> = {
@@ -17,6 +28,7 @@ const RESOURCE_LABELS: Record<string, string> = {
   school_report: "the school-wide report",
   school: "the school's settings",
   class: "their class",
+  cycle_summary: "a summary of the cycle",
 };
 
 export default async function AdminAuditPage({

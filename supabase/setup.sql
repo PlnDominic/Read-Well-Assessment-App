@@ -7,7 +7,7 @@
 -- Safe to run on a brand-new project, on a project that ran only some of
 -- the migrations, and again on one that already ran all of this: every
 -- statement checks before it creates or changes anything. It is the
--- migrations in supabase/migrations/ (0001-0017) folded together, plus the
+-- migrations in supabase/migrations/ (0001-0023) folded together, plus the
 -- reports storage bucket and the ReadWell Level 1 Form A content. It creates no login
 -- accounts; run supabase/bootstrap.sql afterwards for your first admin.
 
@@ -417,6 +417,35 @@ create table if not exists public.student_report_summaries (
 create index if not exists student_report_summaries_student_idx on public.student_report_summaries (student_id);
 
 -- ===========================================================================
+-- Family notes and cycle summaries (0023): a summary's optional note for the
+-- family in Twi, Ga or Ewe, and a summary of a whole cycle for the school or
+-- one class, drafted by an administrator from the cycle's totals.
+-- ===========================================================================
+
+alter table public.student_report_summaries add column if not exists family_note jsonb;
+alter table public.student_report_summaries drop constraint if exists student_report_summaries_family_language_check;
+alter table public.student_report_summaries add constraint student_report_summaries_family_language_check
+  check (family_note is null or family_note->>'language' in ('tw', 'gaa', 'ee'));
+
+create table if not exists public.cycle_report_summaries (
+  id uuid primary key default gen_random_uuid(),
+  school_id uuid not null references public.schools (id) on delete cascade,
+  cycle_id uuid not null references public.assessment_cycles (id) on delete cascade,
+  teacher_id uuid references public.profiles (id) on delete cascade,
+  status text not null default 'draft' check (status in ('draft', 'approved')),
+  content jsonb not null,
+  model text not null,
+  edited boolean not null default false,
+  generated_by uuid references public.profiles (id) on delete set null,
+  approved_by uuid references public.profiles (id) on delete set null,
+  approved_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create unique index if not exists cycle_report_summaries_scope_idx
+  on public.cycle_report_summaries (cycle_id, coalesce(teacher_id, '00000000-0000-0000-0000-000000000000'::uuid));
+
+-- ===========================================================================
 -- Level-match guard (0006, 0014, 0017): a session's assessment must be for
 -- the student's own level. grade_override is still honoured for sessions
 -- created with an override before levels; nothing sets it any more.
@@ -609,6 +638,16 @@ drop policy if exists student_report_summaries_select_scoped on public.student_r
 create policy student_report_summaries_select_scoped on public.student_report_summaries
   for select to authenticated
   using (public.can_access_student(student_id));
+
+alter table public.cycle_report_summaries enable row level security;
+
+drop policy if exists cycle_report_summaries_select_scoped on public.cycle_report_summaries;
+create policy cycle_report_summaries_select_scoped on public.cycle_report_summaries
+  for select to authenticated
+  using (
+    school_id = public.current_profile_school_id()
+    and (public.is_administrator() or (teacher_id = auth.uid() and status = 'approved'))
+  );
 
 drop policy if exists school_reports_select_admin_only on public.school_reports;
 create policy school_reports_select_admin_only on public.school_reports

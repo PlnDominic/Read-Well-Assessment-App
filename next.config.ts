@@ -50,6 +50,14 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
   },
+  // The font for Twi, Ga and Ewe in report PDFs (src/lib/pdf/fonts.ts) is
+  // read from disk, so it's shipped with every route that renders a PDF:
+  // the API routes and the staff pages whose actions re-render one.
+  outputFileTracingIncludes: {
+    "/api/**": ["./src/lib/pdf/fonts/*.ttf"],
+    "/teacher/**": ["./src/lib/pdf/fonts/*.ttf"],
+    "/admin/**": ["./src/lib/pdf/fonts/*.ttf"],
+  },
 };
 
 export default nextConfig;

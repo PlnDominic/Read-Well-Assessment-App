@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { pathForUnauthorizedProfile } from "@/lib/staffRouting";
 import { after } from "next/server";
@@ -6,7 +7,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { aggregateClassroomBreakdown, computeWeightedAverage } from "@/lib/scoring";
 import { retrySchoolReport } from "./actions";
 import { levelLabel } from "@/lib/levels";
-import { PageHeader, quietButton } from "@/components/PageHeader";
+import { Card, PageHeader, quietButton } from "@/components/PageHeader";
+import { aiConfigured } from "@/lib/aiSummaryServer";
+import { className, parseCycleSummary } from "@/lib/cycleSummary";
+import { CycleSummaryPanel } from "./CycleSummaryPanel";
 
 type ResultRow = {
   session_id: string;
@@ -15,7 +19,8 @@ type ResultRow = {
   skill_areas: { id: string; name: string };
 };
 
-export default async function AdminDashboardPage() {
+export default async function AdminDashboardPage({ searchParams }: { searchParams: Promise<{ class?: string }> }) {
+  const { class: classParam } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -25,7 +30,7 @@ export default async function AdminDashboardPage() {
   const { data: profile } = await supabase.from("profiles").select("role, school_id").eq("id", user.id).single();
   if (!profile || profile.role !== "administrator") redirect(pathForUnauthorizedProfile(profile));
 
-  const { data: school } = await supabase.from("schools").select("name").eq("id", profile.school_id).single();
+  const { data: school } = await supabase.from("schools").select("name, ai_reports_enabled").eq("id", profile.school_id).single();
   const { data: cycle } = await supabase
     .from("assessment_cycles")
     .select("id, name")
@@ -144,6 +149,18 @@ export default async function AdminDashboardPage() {
     });
   }
 
+  // The cycle's AI-drafted summary (0023), for the whole school or the class picked with ?class=.
+  const summaryClass = classroomBreakdown.find((c) => c.teacherId === classParam) ?? null;
+  const summaryTeacherId = summaryClass?.teacherId ?? null;
+  let cycleSummary: { status: "draft" | "approved"; content: NonNullable<ReturnType<typeof parseCycleSummary>>; edited: boolean } | null = null;
+  if (cycle && studentsAssessed > 0) {
+    const query = supabase.from("cycle_report_summaries").select("status, content, edited").eq("cycle_id", cycle.id);
+    const { data: row } = await (summaryTeacherId ? query.eq("teacher_id", summaryTeacherId) : query.is("teacher_id", null)).maybeSingle();
+    const content = row ? parseCycleSummary(row.content) : null;
+    cycleSummary = row && content ? { status: row.status, content, edited: row.edited } : null;
+  }
+  const aiAvailable = Boolean(school?.ai_reports_enabled) && aiConfigured();
+
   const topFlagged = skillDistribution.filter((s) => s.pct > 0).slice(0, 2).map((s) => s.name);
   const planningNote = topFlagged.length > 0 ? `Most children need help with ${topFlagged.join(" and ")}.` : "No skill is hard for many children right now.";
 
@@ -252,6 +269,46 @@ export default async function AdminDashboardPage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {cycle && studentsAssessed > 0 && (
+        <Card title="Summary">
+          {classroomBreakdown.length > 0 && (
+            <nav aria-label="Summary for" className="flex flex-wrap gap-2 mb-4">
+              {[{ teacherId: null, label: "Whole school" }, ...classroomBreakdown.map((c) => ({ teacherId: c.teacherId, label: className(c.teacherName) }))].map((scope) => {
+                const current = scope.teacherId === summaryTeacherId;
+                return (
+                  <Link
+                    key={scope.teacherId ?? "school"}
+                    href={scope.teacherId ? `/admin?class=${scope.teacherId}` : "/admin"}
+                    scroll={false}
+                    aria-current={current ? "page" : undefined}
+                    className="font-bold text-xs px-3.5 py-2 rounded-full no-underline"
+                    style={{
+                      background: current ? "var(--color-ink)" : "var(--color-neutral)",
+                      color: current ? "var(--color-surface)" : "var(--color-ink-soft)",
+                    }}
+                  >
+                    {scope.label}
+                  </Link>
+                );
+              })}
+            </nav>
+          )}
+          <CycleSummaryPanel
+            key={summaryTeacherId ?? "school"}
+            cycleId={cycle.id}
+            teacherId={summaryTeacherId}
+            scopeName={summaryClass ? className(summaryClass.teacherName) : "the whole school"}
+            summary={cycleSummary}
+            aiAvailable={aiAvailable}
+            unavailable={
+              !school?.ai_reports_enabled
+                ? "AI summaries are switched off. You can turn them on in Settings."
+                : "AI summaries aren't set up on this deployment yet."
+            }
+          />
+        </Card>
       )}
 
       <div className="bg-[var(--color-orange-tint)] rounded-[24px] px-6.5 py-5.5 text-[var(--color-ink-soft)] text-sm leading-relaxed">

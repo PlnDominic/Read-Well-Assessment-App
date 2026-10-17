@@ -3,13 +3,26 @@
 import { useState, useTransition } from "react";
 import type { SummaryContent } from "@/lib/aiSummary";
 import { listToLines, titledToLines } from "@/lib/aiSummary";
-import { approveSummary, discardSummary, generateSummary, saveSummary, type SummaryActionResult } from "./summaryActions";
+import { FAMILY_LANGUAGES, type FamilyLanguage, type FamilyNote } from "@/lib/familyNote";
+import {
+  approveSummary,
+  discardSummary,
+  generateFamilyNote,
+  generateSummary,
+  removeFamilyNote,
+  saveFamilyNote,
+  saveSummary,
+  type SummaryActionResult,
+} from "./summaryActions";
 
 export interface PanelSummary {
   status: "draft" | "approved";
   content: SummaryContent;
   edited: boolean;
+  familyNote: FamilyNote | null;
 }
+
+type Run = (action: (data: FormData) => Promise<SummaryActionResult>, data: FormData, done?: () => void) => void;
 
 const card = "bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-8 py-7.5 mb-5";
 const button = "font-bold text-sm px-4.5 py-2.5 rounded-full cursor-pointer border-none disabled:opacity-60";
@@ -64,7 +77,7 @@ export function SummaryPanel({
   const [editing, setEditing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  function run(action: (data: FormData) => Promise<SummaryActionResult>, data: FormData, done?: () => void) {
+  const run: Run = (action, data, done) => {
     setMessage(null);
     startTransition(async () => {
       try {
@@ -76,7 +89,7 @@ export function SummaryPanel({
         setMessage("That didn't go through. Reload the page and try again (the app may have just been updated).");
       }
     });
-  }
+  };
   const withSession = () => {
     const data = new FormData();
     data.set("sessionId", sessionId);
@@ -171,6 +184,14 @@ export function SummaryPanel({
             Drafted by AI from this assessment&apos;s scores{summary.edited ? " and edited by a teacher" : ""}. AI can make mistakes:
             the scores and bands above are the record.
           </p>
+          <FamilyNoteBlock
+            sessionId={sessionId}
+            note={summary.familyNote}
+            canEdit={canEdit}
+            aiAvailable={aiAvailable}
+            pending={pending}
+            run={run}
+          />
           {canEdit && (
             <div className="flex gap-3 flex-wrap">
               {!approved && (
@@ -207,5 +228,139 @@ export function SummaryPanel({
       )}
       {message && <p role="alert" className="text-sm font-bold text-[var(--color-orange-dark)] mt-3 mb-0">{message}</p>}
     </section>
+  );
+}
+
+const LANGUAGE_CODES = Object.keys(FAMILY_LANGUAGES) as FamilyLanguage[];
+
+/**
+ * The summary's note for the family in Twi, Ga or Ewe (0023): written from
+ * the summary above, checked by the teacher and approved with it, then
+ * printed on a page of its own in the PDF to send home.
+ */
+function FamilyNoteBlock({
+  sessionId,
+  note,
+  canEdit,
+  aiAvailable,
+  pending,
+  run,
+}: {
+  sessionId: string;
+  note: FamilyNote | null;
+  canEdit: boolean;
+  aiAvailable: boolean;
+  pending: boolean;
+  run: Run;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [language, setLanguage] = useState<FamilyLanguage>(note?.language ?? "tw");
+  const write = (lang: FamilyLanguage) => {
+    const data = new FormData();
+    data.set("sessionId", sessionId);
+    data.set("language", lang);
+    run(generateFamilyNote, data);
+  };
+  const heading = <div className="text-xs font-extrabold uppercase text-[var(--color-muted)] mb-1">A note for the family</div>;
+  const box = "border-t border-[var(--color-neutral-divider)] pt-4 mb-4";
+
+  if (!note) {
+    if (!canEdit || !aiAvailable) return null;
+    return (
+      <div className={box}>
+        {heading}
+        <p className="text-sm text-[var(--color-body)] m-0 mb-3">
+          A short note in the family&apos;s language, made from the summary above, on its own page of the PDF to send home.
+          AI writes these languages less well than English, so have someone who reads it check every word before you approve.
+        </p>
+        <div className="flex gap-3 flex-wrap items-center">
+          <label className="text-sm font-bold text-[var(--color-ink-soft)] flex items-center gap-2">
+            Language
+            <select value={language} onChange={(e) => setLanguage(e.target.value as FamilyLanguage)} className={`${field} w-auto py-2`}>
+              {LANGUAGE_CODES.map((code) => <option key={code} value={code}>{FAMILY_LANGUAGES[code]}</option>)}
+            </select>
+          </label>
+          <button type="button" className={quiet} disabled={pending} onClick={() => write(language)}>
+            {pending ? "Writing…" : "Write the family note"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const name = FAMILY_LANGUAGES[note.language];
+  if (editing && canEdit) {
+    return (
+      <form
+        className={`${box} flex flex-col gap-3`}
+        onSubmit={(event) => {
+          event.preventDefault();
+          run(saveFamilyNote, new FormData(event.currentTarget), () => setEditing(false));
+        }}
+      >
+        {heading}
+        <input type="hidden" name="sessionId" value={sessionId} />
+        <input type="hidden" name="language" value={note.language} />
+        <label className="text-sm font-bold text-[var(--color-ink-soft)]">Note to the family, in {name}
+          <textarea name="text" lang={note.language} defaultValue={note.text} rows={4} className={`${field} mt-1`} required />
+        </label>
+        <label className="text-sm font-bold text-[var(--color-ink-soft)]">At home, in {name} (each as Title: what to do)
+          <textarea name="atHome" lang={note.language} defaultValue={titledToLines(note.atHome)} rows={3} className={`${field} mt-1`} required />
+        </label>
+        <div className="flex gap-3 flex-wrap">
+          <button type="submit" className={primary} disabled={pending}>{pending ? "Saving…" : "Save note"}</button>
+          <button type="button" className={quiet} onClick={() => setEditing(false)}>Cancel</button>
+        </div>
+      </form>
+    );
+  }
+
+  return (
+    <div className={box}>
+      {heading}
+      <p className="text-xs font-bold text-[var(--color-muted)] m-0 mb-2">In {name}</p>
+      <div lang={note.language}>
+        <p className="text-sm text-[var(--color-body)] leading-relaxed m-0 mb-2">{note.text}</p>
+        <ul className="m-0 pl-5 text-sm text-[var(--color-body)] leading-relaxed mb-3">
+          {note.atHome.map((p) => <li key={p.title}><strong>{p.title}.</strong> {p.text}</li>)}
+        </ul>
+      </div>
+      {canEdit && (
+        <>
+          <p className="text-xs text-[var(--color-muted)] m-0 mb-3">
+            Made by AI from the summary. Have someone who reads {name} check it before you approve. If you change the summary, write the note again.
+          </p>
+          <div className="flex gap-3 flex-wrap">
+            <button type="button" className={quiet} disabled={pending} onClick={() => setEditing(true)}>Edit note</button>
+            {aiAvailable && (
+              <button
+                type="button"
+                className={quiet}
+                disabled={pending}
+                onClick={() => {
+                  if (window.confirm(`Write the ${name} note again? This replaces the note above, including any edits.`)) write(note.language);
+                }}
+              >
+                Write it again
+              </button>
+            )}
+            <button
+              type="button"
+              className={quiet}
+              disabled={pending}
+              onClick={() => {
+                if (window.confirm("Remove the family note?")) {
+                  const data = new FormData();
+                  data.set("sessionId", sessionId);
+                  run(removeFamilyNote, data);
+                }
+              }}
+            >
+              Remove note
+            </button>
+          </div>
+        </>
+      )}
+    </div>
   );
 }

@@ -19,6 +19,15 @@ import {
   type SummaryContent,
   type SummaryFacts,
 } from "@/lib/aiSummary";
+import {
+  FAMILY_NOTE_INSTRUCTION,
+  FAMILY_NOTE_SCHEMA,
+  familyNoteMessage,
+  familyNotePrompt,
+  parseFamilyNote,
+  type FamilyLanguage,
+  type FamilyNote,
+} from "@/lib/familyNote";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
@@ -167,10 +176,23 @@ export interface ModelReply {
   stopReason: string | null;
   model: string;
 }
-export type CallModel = (system: string, user: string, model: string) => Promise<ModelReply>;
+/**
+ * The JSON shape an answer must take: a schema for models that can be held
+ * to one (Claude), and the same shape in words for those that can't.
+ */
+export interface AnswerFormat {
+  schema: Record<string, unknown>;
+  instruction: string;
+}
+export const SUMMARY_FORMAT: AnswerFormat = {
+  schema: SUMMARY_SCHEMA as unknown as Record<string, unknown>,
+  instruction: JSON_ANSWER_INSTRUCTION,
+};
 
-/** The real call: Anthropic's Messages API, answering in the summary's JSON shape. */
-export const callAnthropic: CallModel = async (system, user, model) => {
+export type CallModel = (system: string, user: string, model: string, format: AnswerFormat) => Promise<ModelReply>;
+
+/** The real call: Anthropic's Messages API, answering in the given JSON shape. */
+export const callAnthropic: CallModel = async (system, user, model, format) => {
   const client = new Anthropic({ timeout: 90_000, maxRetries: 2 });
   const response = await client.beta.messages.create({
     model,
@@ -178,7 +200,7 @@ export const callAnthropic: CallModel = async (system, user, model) => {
     system,
     messages: [{ role: "user", content: user }],
     // A short write-up from given facts needs little thinking; low effort keeps it quick and cheap.
-    output_config: { effort: "low", format: { type: "json_schema", schema: SUMMARY_SCHEMA as unknown as Record<string, unknown> } },
+    output_config: { effort: "low", format: { type: "json_schema", schema: format.schema } },
     // If the safety check declines a request, re-run it on the fallback model instead of failing.
     ...(SUPPORTS_FALLBACK.has(model) ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
   });
@@ -200,7 +222,7 @@ class HttpError extends Error {
  * a JSON object; a service that doesn't know that option is asked again
  * without it, since the instructions already spell out the shape.
  */
-export const callOpenAiCompatible: CallModel = async (system, user, model) => {
+export const callOpenAiCompatible: CallModel = async (system, user, model, format) => {
   const url = `${compatBaseUrl()}/chat/completions`;
   const key = process.env.AI_REPORT_API_KEY?.trim();
   const post = async (jsonMode: boolean) => {
@@ -215,7 +237,7 @@ export const callOpenAiCompatible: CallModel = async (system, user, model) => {
         // gpt-oss models think before answering; a short write-up needs little of it.
         ...(/gpt-oss/i.test(model) ? { reasoning_effort: "low" } : {}),
         messages: [
-          { role: "system", content: `${system}\n\n${JSON_ANSWER_INSTRUCTION}` },
+          { role: "system", content: `${system}\n\n${format.instruction}` },
           { role: "user", content: user },
         ],
         ...(jsonMode ? { response_format: { type: "json_object" } } : {}),
@@ -246,19 +268,34 @@ export const callOpenAiCompatible: CallModel = async (system, user, model) => {
   };
 };
 
-/** Asks the model for a summary of these facts; throws a SummaryError whose message is fit to show a teacher. */
-export async function draftSummary(
-  facts: SummaryFacts,
-  call: CallModel = summaryProvider() === "anthropic" ? callAnthropic : callOpenAiCompatible,
+/** What to ask the model, the shape to answer in, and the check its answer must pass. */
+export interface ModelRequest<T> {
+  system: string;
+  user: string;
+  format: AnswerFormat;
+  parse: (value: unknown) => T | null;
+}
+
+const defaultCall = (): CallModel => (summaryProvider() === "anthropic" ? callAnthropic : callOpenAiCompatible);
+// Small and free models sometimes miss the format; one more go is cheap. Claude answers in a schema, so it doesn't need it.
+const defaultAttempts = () => (summaryProvider() === "anthropic" ? 1 : 2);
+
+/**
+ * Asks the model for an answer of the request's shape, checked by its
+ * parse; throws a SummaryError whose message is fit to show a teacher.
+ * Used for a child's summary, its family note and a cycle's summary.
+ */
+export async function askModel<T>(
+  request: ModelRequest<T>,
+  call: CallModel = defaultCall(),
   model: string = summaryModel(),
-  // Small and free models sometimes miss the format; one more go is cheap. Claude answers in a schema, so it doesn't need it.
-  attempts: number = summaryProvider() === "anthropic" ? 1 : 2
-): Promise<{ content: SummaryContent; model: string }> {
+  attempts: number = defaultAttempts()
+): Promise<{ content: T; model: string }> {
   let lastProblem = "The summary came back in the wrong shape. Try again.";
   for (let attempt = 1; attempt <= attempts; attempt++) {
     let reply: ModelReply;
     try {
-      reply = await call(SYSTEM_PROMPT, factsMessage(facts), model);
+      reply = await call(request.system, request.user, model, request.format);
     } catch (err) {
       console.error("AI summary request failed", err);
       const status = err instanceof HttpError ? err.status : err instanceof Anthropic.APIError ? err.status : undefined;
@@ -277,9 +314,44 @@ export async function draftSummary(
       continue;
     }
     // A schema-constrained reply is plain JSON; a free model's may be wrapped in fences or chatter.
-    const parsed = parseSummary(extractJson(reply.text));
+    const parsed = request.parse(extractJson(reply.text));
     if (parsed) return { content: parsed, model: reply.model || model };
     lastProblem = "The summary came back in the wrong shape. Try again.";
   }
   throw new SummaryError(lastProblem);
+}
+
+/** Asks the model for a summary of one child's assessment. */
+export function draftSummary(
+  facts: SummaryFacts,
+  call?: CallModel,
+  model?: string,
+  attempts?: number
+): Promise<{ content: SummaryContent; model: string }> {
+  return askModel({ system: SYSTEM_PROMPT, user: factsMessage(facts), format: SUMMARY_FORMAT, parse: parseSummary }, call, model, attempts);
+}
+
+/**
+ * Asks the model for a short note to the family in Twi, Ga or Ewe, written
+ * from the English summary with the child's name taken out (familyNote.ts).
+ */
+export function draftFamilyNote(
+  summary: SummaryContent,
+  fullName: string,
+  language: FamilyLanguage,
+  call?: CallModel,
+  model?: string,
+  attempts?: number
+): Promise<{ content: FamilyNote; model: string }> {
+  return askModel(
+    {
+      system: familyNotePrompt(language),
+      user: familyNoteMessage(summary, fullName),
+      format: { schema: FAMILY_NOTE_SCHEMA as unknown as Record<string, unknown>, instruction: FAMILY_NOTE_INSTRUCTION },
+      parse: (value) => (value && typeof value === "object" ? parseFamilyNote({ ...value, language }) : null),
+    },
+    call,
+    model,
+    attempts
+  );
 }

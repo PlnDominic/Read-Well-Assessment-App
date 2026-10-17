@@ -6,8 +6,12 @@ import { StaffShell } from "@/components/StaffShell";
 import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
 import { createClient } from "@/lib/supabase/server";
 import { formDeliveryLabel, formLabel, levelLabel, type AssessmentForm, type Delivery } from "@/lib/levels";
+import { aiConfigured } from "@/lib/aiSummaryServer";
+import { parseCycleSummary } from "@/lib/cycleSummary";
+import { CycleSummaryView } from "@/components/CycleSummaryView";
 import { cancelSession } from "./actions";
 import { AddStudentForm } from "./AddStudentForm";
+import { DraftClassSummaries } from "./DraftClassSummaries";
 import { StartAssessmentMenu } from "./StartAssessmentMenu";
 
 const STATUS_STYLE: Record<string, { label: string; bg: string; color: string }> = {
@@ -95,6 +99,34 @@ export default async function TeacherRosterPage() {
     }
   }
   const hasCompletedReport = [...latestSessionByStudent.values()].some((s) => s.status === "completed");
+
+  // AI summaries (0022, 0023): which finished assessments have one waiting
+  // to be checked, and which have none yet, for drafting the class at once.
+  const { data: school } = await supabase.from("schools").select("ai_reports_enabled").eq("id", profile.school_id).maybeSingle();
+  const canDraft = canAssess && Boolean(school?.ai_reports_enabled) && aiConfigured();
+  const completedSessionIds = [...latestSessionByStudent.values()].filter((s) => s.status === "completed").map((s) => s.id);
+  const { data: summaryRows } = completedSessionIds.length
+    ? await supabase.from("student_report_summaries").select("session_id, status").in("session_id", completedSessionIds)
+    : { data: [] };
+  const summaryStatus = new Map((summaryRows ?? []).map((r) => [r.session_id, r.status]));
+  const withoutSummary = (students ?? []).flatMap((s) => {
+    const latest = latestSessionByStudent.get(s.id);
+    return latest?.status === "completed" && !summaryStatus.has(latest.id) ? [{ sessionId: latest.id, name: s.name }] : [];
+  });
+
+  // The class's summary for this cycle, once an administrator has approved it.
+  const { data: classSummaryRow } =
+    cycle && profile.role === "teacher"
+      ? await supabase
+          .from("cycle_report_summaries")
+          .select("content")
+          .eq("cycle_id", cycle.id)
+          .eq("teacher_id", user.id)
+          .eq("status", "approved")
+          .maybeSingle()
+      : { data: null };
+  const classSummary = classSummaryRow ? parseCycleSummary(classSummaryRow.content) : null;
+
   const classLevels = [...new Set((students ?? []).map((s) => s.level))].sort((a, b) => a - b);
 
   return (
@@ -117,11 +149,26 @@ export default async function TeacherRosterPage() {
           {classLevels.map(levelLabel).concat(cycle?.name ?? "No active assessment cycle").join(" · ")}
         </p>
 
+        {classSummary && (
+          <section
+            aria-labelledby="class-summary-heading"
+            className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-6 py-5 mb-5"
+          >
+            <h2 id="class-summary-heading" className="font-heading font-bold text-sm text-[var(--color-ink)] m-0 mb-3">
+              Your class this cycle
+            </h2>
+            <CycleSummaryView content={classSummary} />
+            <p className="text-xs text-[var(--color-muted)] m-0">Drafted with AI from the class&apos;s totals and approved by an administrator.</p>
+          </section>
+        )}
+
         {profile.role === "teacher" && (
           <div className="bg-[var(--color-surface)] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.07)] px-6 py-5 mb-5">
             <AddStudentForm />
           </div>
         )}
+
+        {canDraft && hasCompletedReport && <DraftClassSummaries sessions={withoutSummary} />}
 
         {canAssess && (
           <PrepareOffline
@@ -175,6 +222,9 @@ export default async function TeacherRosterPage() {
                     >
                       Code: <code className="bg-[var(--color-neutral)] px-2 py-1 rounded font-bold">{latest.sessionCode}</code>
                     </span>
+                  )}
+                  {status === "completed" && latest && summaryStatus.get(latest.id) === "draft" && canAssess && (
+                    <span className="text-xs font-bold text-[var(--color-orange-dark)]">Summary to check</span>
                   )}
                   {status === "completed" && latest && (
                     <Link
