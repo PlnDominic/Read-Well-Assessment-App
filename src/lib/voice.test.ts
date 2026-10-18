@@ -21,8 +21,6 @@ const NOT_RECORDED_YET = new Set([
   "Write the word tag. The shirt has a tag. tag.",
   "Write the word peg. Hang the cloth with a peg. peg.",
   "Write this sentence. The red bus is big. The... red... bus... is... big. The red bus is big.",
-  // The three-sentence listening story (migration 0020) opens the first question.
-  "Listen to my story. Kwaku has a little brown goat. One day the gate was open, and the goat ran away. Kwaku found the goat in the kitchen, eating the yam! Now answer my questions. What animal does Kwaku have? A goat, a hen, or a dog?",
 ]);
 
 describe("lineKey", () => {
