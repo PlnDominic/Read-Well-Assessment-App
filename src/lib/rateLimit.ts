@@ -69,6 +69,42 @@ export async function isRateLimited(key: string, max: number): Promise<boolean> 
   }
 }
 
+/**
+ * Failure-only limiting, for places many honest people share one key: a
+ * whole school's children come from one public IP, so counting every join
+ * would lock the 16th child out. `isBlocked` only reads the count;
+ * `recordFailure` is called when an attempt actually fails (a wrong code, a
+ * wrong password). Same 15 minute window as isRateLimited.
+ */
+export async function isBlocked(key: string, max: number): Promise<boolean> {
+  if (redis) {
+    try {
+      const count = Number((await redis.get<number | string>(`ratelimit:${key}`)) ?? 0);
+      return count >= max;
+    } catch (err) {
+      console.error("[rateLimit] Redis read failed, falling back to in-memory", err);
+    }
+  }
+  const bucket = memoryBuckets.get(key);
+  return !!bucket && Date.now() <= bucket.resetAt && bucket.count >= max;
+}
+
+export async function recordFailure(key: string): Promise<void> {
+  if (redis) {
+    try {
+      const count = await redis.incr(`ratelimit:${key}`);
+      if (count === 1) await redis.expire(`ratelimit:${key}`, WINDOW_SECONDS);
+      return;
+    } catch (err) {
+      console.error("[rateLimit] Redis write failed, falling back to in-memory", err);
+    }
+  }
+  const now = Date.now();
+  const bucket = memoryBuckets.get(key);
+  if (!bucket || now > bucket.resetAt) memoryBuckets.set(key, { count: 1, resetAt: now + WINDOW_MS });
+  else bucket.count += 1;
+}
+
 /** Best-effort caller IP from the headers Vercel (or any reverse proxy)
  * sets; "unknown" if absent, which still rate-limits fine (it just means
  * every unknown-IP caller shares one bucket). */

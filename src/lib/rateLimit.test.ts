@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { isRateLimited } from "./rateLimit";
+import { isBlocked, isRateLimited, recordFailure } from "./rateLimit";
 
 // A fresh random key per test/assertion avoids cross-test interference in
 // the module-level bucket map isRateLimited shares across the whole file.
@@ -44,5 +44,23 @@ describe("isRateLimited", () => {
     expect(await isRateLimited(key, 1)).toBe(true);
     vi.advanceTimersByTime(15 * 60 * 1000 + 1);
     expect(await isRateLimited(key, 1)).toBe(false);
+  });
+});
+
+describe("failure-only limiting", () => {
+  it("does not count anything until a failure is recorded", async () => {
+    const key = freshKey();
+    for (let i = 0; i < 50; i++) expect(await isBlocked(key, 3)).toBe(false);
+  });
+
+  it("blocks once enough failures are recorded, and only that key", async () => {
+    const key = freshKey();
+    const other = freshKey();
+    await recordFailure(key);
+    await recordFailure(key);
+    expect(await isBlocked(key, 3)).toBe(false);
+    await recordFailure(key);
+    expect(await isBlocked(key, 3)).toBe(true);
+    expect(await isBlocked(other, 3)).toBe(false);
   });
 });
