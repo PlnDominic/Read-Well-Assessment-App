@@ -447,6 +447,9 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
         <h1>Ready for a reading quest?</h1>
         <p>We&apos;ll explore sounds, words, stories and writing together. There are no wrong answers. Just try your best!</p>
         <button className="rw-primary rw-start" onClick={() => { setStarted(true); playSound("tap"); if (item && speechSupported) sayAloud(itemSpokenText(item)); }}>Let&apos;s start <span>→</span></button>
+        {Object.keys(state.answersByItemId).length === 0 && (
+          <div className="rw-quest-note"><a href="/student/join">Not {firstName}? Go back and check your code</a></div>
+        )}
         <div className="rw-quest-note">
           {missions.length} mini-mission{missions.length === 1 ? "" : "s"}
           {sittings > 1 ? ` · ${sittings} short sittings` : ""} · a star for every answer

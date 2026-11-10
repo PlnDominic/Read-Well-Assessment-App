@@ -3,16 +3,26 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { evaluateResponse, loadSessionForKiosk } from "@/lib/kiosk";
 import { partsFor } from "@/lib/gameParts";
 import { stopReachedAt } from "@/lib/gameStop";
+import { isRateLimited } from "@/lib/rateLimit";
 
 /**
  * Kiosk endpoints (student-facing, no auth; see supabase/migrations/0002_rls.sql
  * for why these use the service-role client instead of RLS).
  */
 
+// A real child makes about a hundred saves, plus retries while offline; this
+// only stops one session id being hammered.
+const MAX_REQUESTS_PER_SESSION = 1500;
+const TOO_MANY = "Too many requests. Wait a few minutes and try again.";
+const SAVE_FAILED = "Couldn't save that. Try again.";
+
 const ASSESSOR_LED_ERROR = "This assessment is given by a teacher on the assessor screen.";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ sessionId: string }> }) {
   const { sessionId } = await params;
+  if (await isRateLimited(`kiosk:${sessionId}`, MAX_REQUESTS_PER_SESSION)) {
+    return NextResponse.json({ error: TOO_MANY }, { status: 429 });
+  }
   const admin = createAdminClient();
   const state = await loadSessionForKiosk(admin, sessionId);
   if (!state) return NextResponse.json({ error: "Session not found" }, { status: 404 });
@@ -66,6 +76,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ se
     return NextResponse.json({ error: "Answer is too long" }, { status: 400 });
   }
 
+  if (await isRateLimited(`kiosk:${sessionId}`, MAX_REQUESTS_PER_SESSION)) {
+    return NextResponse.json({ error: TOO_MANY }, { status: 429 });
+  }
   const admin = createAdminClient();
   const state = await loadSessionForKiosk(admin, sessionId);
   if (!state) return NextResponse.json({ error: "Session not found" }, { status: 404 });
@@ -91,7 +104,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ se
       { session_id: sessionId, item_id: item.id, answer: body.answer, is_correct: isCorrect },
       { onConflict: "session_id,item_id" }
     );
-  if (responseError) return NextResponse.json({ error: responseError.message }, { status: 500 });
+  if (responseError) {
+    console.error("[kiosk] saving a response failed", responseError.message);
+    return NextResponse.json({ error: SAVE_FAILED }, { status: 500 });
+  }
 
   const itemIndex = state.items.findIndex((i) => i.id === item.id);
 
@@ -116,7 +132,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ se
       started_at: state.session.status === "not_started" ? new Date().toISOString() : undefined,
     })
     .eq("id", sessionId);
-  if (sessionError) return NextResponse.json({ error: sessionError.message }, { status: 500 });
+  if (sessionError) {
+    console.error("[kiosk] updating the session failed", sessionError.message);
+    return NextResponse.json({ error: SAVE_FAILED }, { status: 500 });
+  }
 
   return NextResponse.json(stop ? { ok: true, currentItemIndex: nextIndex, skipTo: stop.resumeAt } : { ok: true, currentItemIndex: nextIndex });
 }

@@ -133,3 +133,15 @@ describe("generateSessionCode", () => {
     }
   });
 });
+
+describe("session code expiry", () => {
+  const day = 24 * 60 * 60 * 1000;
+  it("expires a code older than the limit and keeps a recent one", async () => {
+    const { sessionCodeExpired, SESSION_CODE_TTL_DAYS } = await import("@/lib/kiosk");
+    const now = Date.parse("2026-11-10T00:00:00Z");
+    expect(sessionCodeExpired(new Date(now - 2 * day).toISOString(), now)).toBe(false);
+    expect(sessionCodeExpired(new Date(now - (SESSION_CODE_TTL_DAYS + 1) * day).toISOString(), now)).toBe(true);
+    expect(sessionCodeExpired(null, now)).toBe(false);
+    expect(sessionCodeExpired("not a date", now)).toBe(false);
+  });
+});

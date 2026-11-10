@@ -100,6 +100,16 @@ export function generateSessionCode(): string {
   return code;
 }
 
+/** How long a code works after the teacher made it. A code is the only thing between a stranger and a child's assessment, so an old one stops working. */
+export const SESSION_CODE_TTL_DAYS = 30;
+
+export function sessionCodeExpired(createdAt: string | null | undefined, now: number = Date.now()): boolean {
+  if (!createdAt) return false;
+  const created = Date.parse(createdAt);
+  if (Number.isNaN(created)) return false;
+  return now - created > SESSION_CODE_TTL_DAYS * 24 * 60 * 60 * 1000;
+}
+
 export async function loadSessionForKiosk(admin: AdminClient, sessionId: string) {
   const { data: session, error } = await admin
     .from("assessment_sessions")
@@ -133,7 +143,8 @@ export async function loadSessionForKiosk(admin: AdminClient, sessionId: string)
     assessment: assessmentMeta ?? { level: 0, form: null, version: 0 },
     items,
     responses: responses ?? [],
-    studentName: student?.name ?? "Student",
+    // First name only: this reaches an unauthenticated browser.
+    studentName: student?.name?.trim().split(/\s+/)[0] || "Student",
     /** Given on the assessor screen by a signed-in adult; the kiosk refuses these. */
     assessorLed: isAssessorLed(items),
   };

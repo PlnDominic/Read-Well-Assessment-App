@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { normalizeSessionCode } from "@/lib/kiosk";
+import { normalizeSessionCode, sessionCodeExpired } from "@/lib/kiosk";
 import { clientIp, isBlocked, recordFailure } from "@/lib/rateLimit";
 import { isAssessorLed } from "@/lib/readwell/form";
 import type { AssessmentItem } from "@/lib/database.types";
@@ -32,13 +32,16 @@ export async function redeemSessionCode(
   const admin = createAdminClient();
   const { data: session, error } = await admin
     .from("assessment_sessions")
-    .select("id, status, assessments(items)")
+    .select("id, status, created_at, assessments(items)")
     .eq("session_code", code)
     .single();
 
   if (error || !session) {
     await recordFailure(`join-ip:${ip}`);
     return { error: "That code wasn't found. Ask your teacher to check it." };
+  }
+  if (session.status !== "completed" && sessionCodeExpired((session as unknown as { created_at: string }).created_at)) {
+    return { error: "This code has run out. Ask your teacher for a new one." };
   }
   if (session.status === "completed") {
     return { error: "This assessment is already finished. Tell your teacher!" };

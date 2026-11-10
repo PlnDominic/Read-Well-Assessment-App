@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loadSessionForKiosk } from "@/lib/kiosk";
 import { completeSession } from "@/lib/sessions";
+import { isRateLimited } from "@/lib/rateLimit";
 
 /**
  * POST /api/kiosk/sessions/:id/complete: Assessment Service "complete"
@@ -11,6 +12,9 @@ import { completeSession } from "@/lib/sessions";
  */
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ sessionId: string }> }) {
   const { sessionId } = await params;
+  if (await isRateLimited(`kiosk-complete:${sessionId}`, 60)) {
+    return NextResponse.json({ error: "Too many requests. Wait a few minutes and try again." }, { status: 429 });
+  }
   const admin = createAdminClient();
 
   const state = await loadSessionForKiosk(admin, sessionId);

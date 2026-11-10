@@ -93,7 +93,10 @@ export async function completeSession(admin: AdminClient, sessionId: string): Pr
     .from("assessment_sessions")
     .update({ status: "completed", completed_at: new Date().toISOString() })
     .eq("id", sessionId);
-  if (updateError) return { ok: false, status: 500, error: updateError.message };
+  if (updateError) {
+    console.error("[sessions] marking a session completed failed", updateError.message);
+    return { ok: false, status: 500, error: "Couldn't finish this assessment. Try again." };
+  }
 
   await scoreSession(admin, sessionId);
 
