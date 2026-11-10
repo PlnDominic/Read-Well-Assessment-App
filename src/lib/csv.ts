@@ -18,3 +18,36 @@ export function neutralizeFormula(value: string): string {
 export function toCsvRow(fields: (string | number)[]): string {
   return fields.map((f) => csvEscape(typeof f === "string" ? neutralizeFormula(f) : String(f))).join(",");
 }
+
+/**
+ * Splits one CSV line into fields, honouring double quotes (so a name like
+ * "Mensah, Ama" stays one field and "" inside quotes is a quote). Not for
+ * fields that contain line breaks; the importer reads one line at a time.
+ */
+export function parseCsvLine(line: string): string[] {
+  const fields: string[] = [];
+  let current = "";
+  let quoted = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (quoted) {
+      if (ch === '"' && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else if (ch === '"') {
+        quoted = false;
+      } else {
+        current += ch;
+      }
+    } else if (ch === '"') {
+      quoted = true;
+    } else if (ch === ",") {
+      fields.push(current.trim());
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+  fields.push(current.trim());
+  return fields;
+}

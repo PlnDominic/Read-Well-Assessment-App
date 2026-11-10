@@ -4,7 +4,12 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export function ResetPasswordForm() {
+/**
+ * `forced` is the first sign-in with a temporary password an administrator
+ * gave out: same form, but the person is already signed in, so it goes
+ * straight to their dashboard afterwards instead of back to sign in.
+ */
+export function ResetPasswordForm({ forced = false }: { forced?: boolean }) {
   const router = useRouter();
   const [linkError, setLinkError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -41,7 +46,7 @@ export function ResetPasswordForm() {
 
     setIsPending(true);
     const supabase = createClient();
-    const { error } = await supabase.auth.updateUser({ password });
+    const { error } = await supabase.auth.updateUser({ password, data: { must_change_password: false } });
     setIsPending(false);
 
     if (error) {
@@ -49,7 +54,7 @@ export function ResetPasswordForm() {
       return;
     }
     setDone(true);
-    setTimeout(() => router.push("/login"), 2000);
+    setTimeout(() => router.push(forced ? "/" : "/login"), 2000);
   }
 
   if (linkError) {
@@ -68,15 +73,17 @@ export function ResetPasswordForm() {
     return (
       <div className="w-full max-w-[420px] mt-[10vh] text-center">
         <h1 className="font-heading font-bold text-2xl text-[var(--color-ink)] m-0 mb-3">Password updated</h1>
-        <p className="text-[var(--color-body)] text-sm">Taking you back to sign in…</p>
+        <p className="text-[var(--color-body)] text-sm">{forced ? "Taking you to your dashboard…" : "Taking you back to sign in…"}</p>
       </div>
     );
   }
 
   return (
     <div className="w-full max-w-[420px] mt-[10vh]">
-      <h1 className="font-heading font-bold text-2xl text-[var(--color-ink)] m-0 mb-1.5">Set a new password</h1>
-      <p className="text-[var(--color-body)] text-sm m-0 mb-6">At least 8 characters.</p>
+      <h1 className="font-heading font-bold text-2xl text-[var(--color-ink)] m-0 mb-1.5">{forced ? "Choose your own password" : "Set a new password"}</h1>
+      <p className="text-[var(--color-body)] text-sm m-0 mb-6">
+        {forced ? "You signed in with a temporary password. Pick one only you know. " : ""}At least 8 characters.
+      </p>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <input
           type="password"

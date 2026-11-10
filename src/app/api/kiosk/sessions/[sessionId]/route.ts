@@ -81,7 +81,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ se
     return NextResponse.json({ error: TOO_MANY }, { status: 429 });
   }
   const admin = createAdminClient();
-  const state = await loadSessionForKiosk(admin, sessionId);
+  const state = await loadSessionForKiosk(admin, sessionId, { withStudent: false });
   if (!state) return NextResponse.json({ error: "Session not found" }, { status: 404 });
   // Assessor-led items are scored by a signed-in adult, never from this
   // unauthenticated endpoint.

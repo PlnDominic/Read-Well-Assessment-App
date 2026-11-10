@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { isCronAuthorized } from "@/lib/cronAuth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { activateDueCycle } from "@/lib/cycles";
 import { appUrl, escapeHtml, sendEmail } from "@/lib/email";
@@ -23,8 +24,7 @@ const REMINDER_DAYS_BEFORE_END = 3;
  * purge-expired-data/route.ts for the CRON_SECRET auth this mirrors.
  */
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

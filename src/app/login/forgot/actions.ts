@@ -33,15 +33,20 @@ export async function requestPasswordReset(
   // address has an account.
   if (limited) return { submitted: true };
 
+  // The configured address wins: the Host header comes from the request, so
+  // building the link from it alone would let a forged header point a reset
+  // email at another site.
+  const configured = process.env.NEXT_PUBLIC_APP_URL;
   const h = await headers();
   const host = h.get("host") ?? "localhost:3000";
   const proto = host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "http" : "https";
+  const base = configured && !configured.includes("localhost") ? configured.replace(/\/$/, "") : `${proto}://${host}`;
 
   const supabase = await createClient();
   // Always report success regardless of whether the email exists, so this
   // can't be used to enumerate staff accounts.
   await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${proto}://${host}/login/reset`,
+    redirectTo: `${base}/login/reset`,
   });
 
   return { submitted: true };

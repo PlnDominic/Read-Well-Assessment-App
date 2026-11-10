@@ -13,6 +13,9 @@ type SessionRow = {
   students: { id: string; name: string; level: number } | null;
 };
 
+// PDF rendering and the AI call can run past the platform default, so ask for a minute.
+export const maxDuration = 60;
+
 /**
  * Every completed assessment in this cycle, school-wide, as one PDF --
  * the "or cycle" counterpart to /api/reports/class. Session listing uses

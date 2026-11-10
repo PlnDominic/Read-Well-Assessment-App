@@ -22,6 +22,9 @@ import { ItemMarks, StoryAndAttitude, StrandTable, WritingScores } from "./Level
 import { formDeliveryLabel, levelLabel, type AssessmentForm, type Delivery } from "@/lib/levels";
 import { isOnTrackLabel } from "@/lib/readwell/score";
 
+// PDF rendering and the AI call can run past the platform default, so ask for a minute.
+export const maxDuration = 60;
+
 type ResultRow = { score: number; flagged_as_difficulty: boolean; skill_areas: { id: string; name: string } };
 type HistorySessionRow = {
   id: string;

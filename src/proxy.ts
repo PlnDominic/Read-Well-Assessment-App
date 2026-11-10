@@ -84,6 +84,17 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // Someone who signed in with a temporary password an administrator gave out
+  // must choose their own before anything else (invite and reset actions set
+  // the flag; the change-password page clears it). Needs no database query:
+  // the flag rides on the session.
+  if (user && !isPublic && user.user_metadata?.must_change_password === true) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login/change-password";
+    url.search = "";
+    return redirectWithRefreshedCookies(url, response);
+  }
+
   return response;
 }
 

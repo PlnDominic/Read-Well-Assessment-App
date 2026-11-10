@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { csvEscape, neutralizeFormula, toCsvRow } from "./csv";
+import { csvEscape, neutralizeFormula, parseCsvLine, toCsvRow } from "./csv";
 
 describe("csvEscape", () => {
   it("leaves plain values unquoted", () => {
@@ -40,5 +40,18 @@ describe("toCsvRow", () => {
 
   it("leaves negative numbers as numbers", () => {
     expect(toCsvRow(["Amara", -5])).toBe("Amara,-5");
+  });
+});
+
+describe("parseCsvLine", () => {
+  it("splits plain fields", () => {
+    expect(parseCsvLine("Ama Mensah, 1 ,teacher@school.org")).toEqual(["Ama Mensah", "1", "teacher@school.org"]);
+  });
+  it("keeps a quoted field with a comma together, and unescapes doubled quotes", () => {
+    expect(parseCsvLine('"Mensah, Ama",1,t@x.org')).toEqual(["Mensah, Ama", "1", "t@x.org"]);
+    expect(parseCsvLine('"Ama ""Ami"" Boateng",2,t@x.org')).toEqual(['Ama "Ami" Boateng', "2", "t@x.org"]);
+  });
+  it("round-trips what toCsvRow writes", () => {
+    expect(parseCsvLine(toCsvRow(["Mensah, Ama", 1, "t@x.org"]))).toEqual(["Mensah, Ama", "1", "t@x.org"]);
   });
 });

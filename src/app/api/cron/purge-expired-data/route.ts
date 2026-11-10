@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { isCronAuthorized } from "@/lib/cronAuth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -19,8 +20,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * used to mass-delete data if its URL leaks.
  */
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

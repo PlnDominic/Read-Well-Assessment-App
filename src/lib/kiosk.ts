@@ -110,7 +110,25 @@ export function sessionCodeExpired(createdAt: string | null | undefined, now: nu
   return now - created > SESSION_CODE_TTL_DAYS * 24 * 60 * 60 * 1000;
 }
 
-export async function loadSessionForKiosk(admin: AdminClient, sessionId: string) {
+// An assessment's questions never change once saved (an edit makes a new
+// version with a new id), so they are kept in memory per id. Without this,
+// every answer a child saves re-reads the whole question set.
+const ITEMS_CACHE_MAX = 60;
+const itemsCache = new Map<string, AssessmentItem[]>();
+
+async function assessmentItems(admin: AdminClient, assessmentId: string): Promise<AssessmentItem[] | null> {
+  const cached = itemsCache.get(assessmentId);
+  if (cached) return cached;
+  const { data: assessment } = await admin.from("assessments").select("items").eq("id", assessmentId).single();
+  if (!assessment) return null;
+  const items = assessment.items as AssessmentItem[];
+  if (itemsCache.size >= ITEMS_CACHE_MAX) itemsCache.delete(itemsCache.keys().next().value as string);
+  itemsCache.set(assessmentId, items);
+  return items;
+}
+
+/** `withStudent: false` skips the name lookup for the calls that don't show it (saving and finishing). */
+export async function loadSessionForKiosk(admin: AdminClient, sessionId: string, { withStudent = true }: { withStudent?: boolean } = {}) {
   const { data: session, error } = await admin
     .from("assessment_sessions")
     .select("id, status, current_item_index, assessment_id, student_id, session_code, assessments(level, form, version)")
@@ -118,26 +136,15 @@ export async function loadSessionForKiosk(admin: AdminClient, sessionId: string)
     .single();
   if (error || !session) return null;
 
-  const { data: assessment } = await admin
-    .from("assessments")
-    .select("items")
-    .eq("id", session.assessment_id)
-    .single();
-  if (!assessment) return null;
-
-  const { data: responses } = await admin
-    .from("responses")
-    .select("item_id, answer, is_correct")
-    .eq("session_id", sessionId);
-
-  const { data: student } = await admin
-    .from("students")
-    .select("name")
-    .eq("id", session.student_id)
-    .single();
+  const [items, responsesResult, student] = await Promise.all([
+    assessmentItems(admin, session.assessment_id),
+    admin.from("responses").select("item_id, answer, is_correct").eq("session_id", sessionId),
+    withStudent ? admin.from("students").select("name").eq("id", session.student_id).single().then((r) => r.data) : Promise.resolve(null),
+  ]);
+  if (!items) return null;
+  const responses = responsesResult.data;
 
   const assessmentMeta = session.assessments as unknown as { level: number; form: AssessmentForm | null; version: number } | null;
-  const items = assessment.items as AssessmentItem[];
   return {
     session,
     assessment: assessmentMeta ?? { level: 0, form: null, version: 0 },

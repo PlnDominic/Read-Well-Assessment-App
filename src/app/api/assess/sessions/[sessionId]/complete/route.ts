@@ -4,6 +4,9 @@ import { loadAssessorSession, requireAssessor } from "@/lib/readwell/assessorSes
 import { computeFlow, isOneToOneComplete } from "@/lib/readwell/flow";
 import { completeSession } from "@/lib/sessions";
 
+// PDF rendering and the AI call can run past the platform default, so ask for a minute.
+export const maxDuration = 60;
+
 /**
  * Finishes an assessor-led session once every one-to-one part (1-12) is
  * marked or skipped by a gate, then scores it and schedules its reports.

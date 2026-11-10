@@ -1,5 +1,6 @@
 import "server-only";
 import { headers } from "next/headers";
+import { logError } from "@/lib/logger";
 import { Redis } from "@upstash/redis";
 
 // Backed by Upstash Redis when UPSTASH_REDIS_REST_URL/TOKEN are configured
@@ -64,7 +65,7 @@ export async function isRateLimited(key: string, max: number): Promise<boolean> 
     // Upstash hiccup: fail open to the in-memory limiter rather than
     // blocking every sign-in/join attempt because a third-party store had
     // a bad moment.
-    console.error("[rateLimit] Redis request failed, falling back to in-memory", err);
+    void logError("rateLimit:redis", err);
     return isRateLimitedInMemory(key, max);
   }
 }
@@ -82,7 +83,7 @@ export async function isBlocked(key: string, max: number): Promise<boolean> {
       const count = Number((await redis.get<number | string>(`ratelimit:${key}`)) ?? 0);
       return count >= max;
     } catch (err) {
-      console.error("[rateLimit] Redis read failed, falling back to in-memory", err);
+      void logError("rateLimit:redis", err);
     }
   }
   const bucket = memoryBuckets.get(key);
@@ -96,7 +97,7 @@ export async function recordFailure(key: string): Promise<void> {
       if (count === 1) await redis.expire(`ratelimit:${key}`, WINDOW_SECONDS);
       return;
     } catch (err) {
-      console.error("[rateLimit] Redis write failed, falling back to in-memory", err);
+      void logError("rateLimit:redis", err);
     }
   }
   const now = Date.now();

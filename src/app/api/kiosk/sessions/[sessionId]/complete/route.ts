@@ -4,6 +4,9 @@ import { loadSessionForKiosk } from "@/lib/kiosk";
 import { completeSession } from "@/lib/sessions";
 import { isRateLimited } from "@/lib/rateLimit";
 
+// PDF rendering and the AI call can run past the platform default, so ask for a minute.
+export const maxDuration = 60;
+
 /**
  * POST /api/kiosk/sessions/:id/complete: Assessment Service "complete"
  * endpoint (TRD §4.1); see completeSession in lib/sessions.ts. Not for
@@ -17,7 +20,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ se
   }
   const admin = createAdminClient();
 
-  const state = await loadSessionForKiosk(admin, sessionId);
+  const state = await loadSessionForKiosk(admin, sessionId, { withStudent: false });
   if (!state) return NextResponse.json({ error: "Session not found" }, { status: 404 });
   if (state.assessorLed) return NextResponse.json({ error: ASSESSOR_LED_ERROR }, { status: 409 });
 

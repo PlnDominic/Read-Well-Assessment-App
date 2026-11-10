@@ -6,6 +6,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { buildStudentReportPageData } from "@/lib/reports";
 import { BulkStudentReportsPdf } from "@/lib/pdf/BulkStudentReportsPdf";
 
+// PDF rendering and the AI call can run past the platform default, so ask for a minute.
+export const maxDuration = 60;
+
 /**
  * Bundles every one of the caller's accessible students' latest completed
  * assessment into one downloadable PDF: a teacher's whole class, a

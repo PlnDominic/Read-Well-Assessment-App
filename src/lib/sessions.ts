@@ -90,16 +90,30 @@ export async function completeSession(admin: AdminClient, sessionId: string): Pr
   if (sessionError || !session) return { ok: false, status: 404, error: "Session not found" };
   if (session.status === "completed") return { ok: true };
 
-  const { error: updateError } = await admin
+  // Score BEFORE marking the session completed. If scoring fails the session
+  // stays open, the child's device keeps its "finish" queued and tries again,
+  // and nothing is left completed-but-unscored (a completed session is never
+  // scored again, because the check above returns early).
+  try {
+    await scoreSession(admin, sessionId);
+  } catch (err) {
+    await logError("sessions:score", err);
+    return { ok: false, status: 500, error: "Couldn't finish this assessment. Try again." };
+  }
+
+  // Only the first of two simultaneous finishes flips the status, and only
+  // that one goes on to prepare the reports.
+  const { data: flipped, error: updateError } = await admin
     .from("assessment_sessions")
     .update({ status: "completed", completed_at: new Date().toISOString() })
-    .eq("id", sessionId);
+    .eq("id", sessionId)
+    .neq("status", "completed")
+    .select("id");
   if (updateError) {
     await logError("sessions:complete", updateError);
     return { ok: false, status: 500, error: "Couldn't finish this assessment. Try again." };
   }
-
-  await scoreSession(admin, sessionId);
+  if (!flipped || flipped.length === 0) return { ok: true };
 
   await admin.from("student_reports").upsert(
     { student_id: session.student_id, session_id: sessionId, overall_label: "Pending", status: "pending" },

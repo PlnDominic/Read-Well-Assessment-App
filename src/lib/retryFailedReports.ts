@@ -9,6 +9,8 @@ import {
   markStudentReportFailed,
 } from "@/lib/reports";
 import { decideReportRetry } from "@/lib/reportRetry";
+import { rescoreAndRegenerate } from "@/lib/sessions";
+import { logError } from "@/lib/logger";
 
 /**
  * Retries report generation that failed, or stalled at 'pending' without
@@ -23,6 +25,39 @@ import { decideReportRetry } from "@/lib/reportRetry";
  * now fails CI on that), and an every-15-minutes schedule here blocked every deploy.
  * /api/cron/retry-failed-reports still exists for running it on demand.
  */
+/**
+ * Finds recently completed sessions that have no result rows (scoring failed
+ * after the session was marked completed, which older versions of
+ * completeSession allowed) and scores them again, then re-renders their
+ * reports. At most 20 a run, so one bad batch can't use up the whole request.
+ */
+export async function rescoreUnscoredSessions(admin: ReturnType<typeof createAdminClient>): Promise<number> {
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const { data: completed } = await admin
+    .from("assessment_sessions")
+    .select("id")
+    .eq("status", "completed")
+    .gte("completed_at", since)
+    .limit(1000);
+  const ids = (completed ?? []).map((row) => row.id);
+  if (ids.length === 0) return 0;
+
+  const { data: scored } = await admin.from("results").select("session_id").in("session_id", ids);
+  const scoredIds = new Set((scored ?? []).map((row) => row.session_id));
+  const missing = ids.filter((id) => !scoredIds.has(id)).slice(0, 20);
+
+  let fixed = 0;
+  for (const id of missing) {
+    try {
+      await rescoreAndRegenerate(admin, id);
+      fixed++;
+    } catch (err) {
+      await logError("cron:rescore-unscored", err, { session: id });
+    }
+  }
+  return fixed;
+}
+
 export async function retryFailedReports() {
   const admin = createAdminClient();
   const now = new Date();
@@ -81,5 +116,7 @@ export async function retryFailedReports() {
     }
   }
 
-  return { studentRetried, studentAlerted, schoolRetried, schoolAlerted };
+  const rescored = await rescoreUnscoredSessions(admin);
+
+  return { studentRetried, studentAlerted, schoolRetried, schoolAlerted, rescored };
 }

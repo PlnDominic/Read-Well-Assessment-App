@@ -2,6 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+// PDF rendering and the AI call can run past the platform default, so ask for a minute.
+export const maxDuration = 60;
+
 /** Same pattern as the student report route; see its comment for the auth model. */
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ cycleId: string }> }) {
   const { cycleId } = await params;

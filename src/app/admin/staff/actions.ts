@@ -58,6 +58,8 @@ export async function inviteStaff(
     email,
     password: tempPassword,
     email_confirm: true,
+    // Checked in src/proxy.ts: sends them to choose their own password first.
+    user_metadata: { must_change_password: true },
   });
   if (createError || !created.user) {
     return { error: createError?.message ?? "Could not create the account.", result: null };
@@ -169,7 +171,7 @@ export async function resetStaffPassword(
   }
 
   const tempPassword = generateTempPassword();
-  const { error } = await admin.auth.admin.updateUserById(id, { password: tempPassword });
+  const { error } = await admin.auth.admin.updateUserById(id, { password: tempPassword, user_metadata: { must_change_password: true } });
   if (error) return { error: error.message, result: null };
 
   return { error: null, result: { email, tempPassword } };

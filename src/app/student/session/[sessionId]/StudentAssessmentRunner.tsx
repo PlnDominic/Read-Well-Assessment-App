@@ -1,5 +1,6 @@
 "use client";
 
+import { backoffDelayMs, isFinalFailure } from "@/lib/syncRetry";
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { MicIcon, SpeakerIcon } from "@/components/icons";
@@ -158,6 +159,8 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
   /** Where the server said to go after a question, when it ended a part early (see `skipsRef`). */
   const [skips, setSkips] = useState<Record<string, number>>({});
   const pendingRef = useRef<Record<string, unknown>>({});
+  // After a failed send, wait longer each time (6s, 12s ... 60s) instead of hammering the server.
+  const backoffRef = useRef({ failures: 0, until: 0 });
   const storyTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const starsRef = useRef<HTMLSpanElement>(null);
   const finishCelebrated = useRef(false);
@@ -260,9 +263,10 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
     burst("quest");
   }, [state?.status]);
 
-  const flushPending = useCallback(async () => {
+  const flushPending = useCallback(async (force = false) => {
     const entries = Object.entries(pendingRef.current);
     if (!entries.length) return true;
+    if (!force && Date.now() < backoffRef.current.until) return false;
     setSyncing(true);
     let ok = true;
     for (const [itemId, answer] of entries) {
@@ -272,16 +276,23 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
           delete pendingRef.current[itemId];
           const { skipTo } = await response.json().catch(() => ({})) as { skipTo?: unknown };
           if (typeof skipTo === "number") { skipsRef.current = { ...skipsRef.current, [itemId]: skipTo }; setSkips(skipsRef.current); }
+        } else if (isFinalFailure(response.status)) {
+          // The server will never accept this one (the question was removed, or the assessment is already finished), so
+          // retrying forever would stop the child ever finishing. Drop it and carry on.
+          delete pendingRef.current[itemId];
         } else ok = false;
       } catch { ok = false; }
     }
     writeJson(pendingKey, pendingRef.current);
+    backoffRef.current = ok
+      ? { failures: 0, until: 0 }
+      : { failures: backoffRef.current.failures + 1, until: Date.now() + backoffDelayMs(backoffRef.current.failures) };
     setSyncing(false);
     return ok;
   }, [pendingKey, sessionId]);
 
   const complete = useCallback(async () => {
-    if (!(await flushPending())) return false;
+    if (!(await flushPending(true))) return false;
     try {
       const response = await fetch(`/api/kiosk/sessions/${sessionId}/complete`, { method: "POST" });
       if (!response.ok) return false;
@@ -292,10 +303,10 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
   }, [flushPending, pendingCompleteKey, sessionId]);
 
   useEffect(() => {
-    const online = () => { setIsOnline(true); flushPending(); if (localStorage.getItem(pendingCompleteKey)) complete(); };
+    const online = () => { setIsOnline(true); flushPending(true); if (localStorage.getItem(pendingCompleteKey)) complete(); };
     const offline = () => setIsOnline(false);
     window.addEventListener("online", online); window.addEventListener("offline", offline);
-    const interval = setInterval(flushPending, 6000);
+    const interval = setInterval(() => { void flushPending(); }, 6000);
     return () => { window.removeEventListener("online", online); window.removeEventListener("offline", offline); clearInterval(interval); };
   }, [complete, flushPending, pendingCompleteKey]);
 

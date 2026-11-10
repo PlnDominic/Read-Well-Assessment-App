@@ -1,4 +1,5 @@
 import "server-only";
+import { logError } from "@/lib/logger";
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 
@@ -31,7 +32,7 @@ export function escapeHtml(value: string): string {
 export async function sendEmail({ to, subject, html }: SendEmailInput): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
-    console.warn(`[email] RESEND_API_KEY not set; skipping email to ${to}: "${subject}"`);
+    console.warn(`[email] RESEND_API_KEY not set; skipping "${subject}"`);
     return;
   }
   const from = process.env.RESEND_FROM_EMAIL ?? "Read Well <notifications@resend.dev>";
@@ -43,10 +44,12 @@ export async function sendEmail({ to, subject, html }: SendEmailInput): Promise<
       body: JSON.stringify({ from, to, subject, html }),
     });
     if (!res.ok) {
-      console.error(`[email] Resend rejected email to ${to}: ${res.status} ${await res.text().catch(() => "")}`);
+      // Never log the address: it is personal data. A 403 or 422 here usually means
+      // the sender domain isn't verified (resend.dev only delivers to the account owner).
+      await logError("email:rejected", `Resend answered ${res.status}: ${(await res.text().catch(() => "")).slice(0, 200)}`, { status: res.status });
     }
   } catch (err) {
-    console.error(`[email] Failed to send to ${to}`, err);
+    await logError("email:failed", err);
   }
 }
 

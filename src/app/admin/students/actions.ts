@@ -1,5 +1,6 @@
 "use server";
 
+import { parseCsvLine } from "@/lib/csv";
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/authz";
@@ -130,8 +131,10 @@ const MAX_CSV_BYTES = 2 * 1024 * 1024;
 const MAX_CSV_ROWS = 2000;
 
 /**
- * Expects a CSV with a header row: name,level,teacher_email
- * (a simple comma split, fields containing commas aren't supported).
+ * Expects a CSV with a header row: name,level,teacher_email (a name with a
+ * comma goes in double quotes). A student already on the roster with the same
+ * name, teacher and level is skipped, so uploading the same file twice does
+ * not create everyone twice.
  */
 export async function importStudentsCsv(
   _prevState: ImportCsvState,
@@ -142,6 +145,10 @@ export async function importStudentsCsv(
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
     return { error: "Choose a CSV file first.", summary: null };
+  }
+  // The browser's accept filter is only a hint, so check here too.
+  if (!/\.csv$/i.test(file.name) && !/csv|text\/plain/i.test(file.type)) {
+    return { error: "That doesn't look like a CSV file. Save it as .csv and try again.", summary: null };
   }
   if (file.size > MAX_CSV_BYTES) {
     return { error: `That file is too large (max ${MAX_CSV_BYTES / (1024 * 1024)}MB).`, summary: null };
@@ -169,7 +176,7 @@ export async function importStudentsCsv(
 
   dataLines.forEach((line, i) => {
     const rowNum = i + (first.startsWith("name,") ? 2 : 1);
-    const [name, levelRaw, teacherEmail] = line.split(",").map((v) => v?.trim());
+    const [name, levelRaw, teacherEmail] = parseCsvLine(line);
     if (!name || !levelRaw || !teacherEmail) {
       rowErrors.push(`Row ${rowNum}: expected "name,level,teacher_email"`);
       return;
@@ -187,11 +194,25 @@ export async function importStudentsCsv(
     rowsToInsert.push({ school_id: profile.school_id, teacher_id: teacherId, name, level });
   });
 
+  // Skip anyone already on the roster (same name, teacher and level), and
+  // repeats inside the file itself.
+  const { data: existing } = await supabase.from("students").select("name, teacher_id, level").eq("school_id", profile.school_id);
+  const key = (r: { name: string; teacher_id: string; level: number }) => `${r.name.trim().toLowerCase()}|${r.teacher_id}|${r.level}`;
+  const seen = new Set((existing ?? []).map(key));
+  const fresh = rowsToInsert.filter((r) => {
+    if (seen.has(key(r))) {
+      rowErrors.push(`Skipped ${r.name}: already on the roster`);
+      return false;
+    }
+    seen.add(key(r));
+    return true;
+  });
+
   let inserted = 0;
-  if (rowsToInsert.length > 0) {
-    const { error, count } = await supabase.from("students").insert(rowsToInsert, { count: "exact" });
+  if (fresh.length > 0) {
+    const { error, count } = await supabase.from("students").insert(fresh, { count: "exact" });
     if (error) return { error: error.message, summary: null };
-    inserted = count ?? rowsToInsert.length;
+    inserted = count ?? fresh.length;
   }
 
   revalidatePath("/admin/students");
@@ -199,11 +220,23 @@ export async function importStudentsCsv(
 }
 
 export async function assignSpecialist(formData: FormData) {
-  const { supabase } = await requireAdmin();
+  const { supabase, profile } = await requireAdmin();
 
   const studentId = String(formData.get("studentId") ?? "");
   const specialistId = String(formData.get("specialistId") ?? "");
   if (!studentId || !specialistId) throw new Error("Student and specialist are required");
+
+  // The person must be an active reading specialist in this school, so a
+  // pasted id from another school can't be given access to this one's students.
+  const { data: specialist } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", specialistId)
+    .eq("school_id", profile.school_id)
+    .eq("role", "reading_specialist")
+    .eq("is_active", true)
+    .maybeSingle();
+  if (!specialist) throw new Error("That person is not a reading specialist at this school");
 
   const { error } = await supabase
     .from("specialist_assignments")
