@@ -19,6 +19,11 @@ jobs:
 
       - run: npm ci
 
+      - name: Dependency audit
+        # Fails the build when a production dependency has a known high or
+        # critical vulnerability, so one can't ship unnoticed.
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Type-check
         run: npx tsc --noEmit
 

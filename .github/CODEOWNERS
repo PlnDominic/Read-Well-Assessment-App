@@ -1,0 +1,7 @@
+# Every change needs a review from the owner once branch protection requires it.
+* @PlnDominic
+# Anything that changes who can see a child's data deserves a careful look.
+/supabase/ @PlnDominic
+/src/proxy.ts @PlnDominic
+/src/lib/authz.ts @PlnDominic
+/.github/ @PlnDominic
