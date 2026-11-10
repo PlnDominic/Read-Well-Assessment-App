@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { activateDueCycle } from "@/lib/cycles";
 import { appUrl, escapeHtml, sendEmail } from "@/lib/email";
 import { retryFailedReports } from "@/lib/retryFailedReports";
+import { logError } from "@/lib/logger";
 
 // How many days before a cycle's end date its reminder email goes out.
 // Fixed rather than a per-school setting, same tradeoff as
@@ -135,7 +136,7 @@ export async function GET(request: NextRequest) {
   try {
     reportRetry = await retryFailedReports();
   } catch (err) {
-    console.error("retryFailedReports failed", err);
+    await logError("cron:retryFailedReports", err);
     reportRetry = { error: err instanceof Error ? err.message : String(err) };
   }
 

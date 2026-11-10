@@ -7,6 +7,7 @@ import type { Database } from "@/lib/database.types";
 import type { AssessmentForm, Delivery } from "@/lib/levels";
 import { generateSessionCode } from "@/lib/kiosk";
 import { scoreSession } from "@/lib/scoring";
+import { logError } from "@/lib/logger";
 import { generateSchoolReport, generateStudentReport, markSchoolReportFailed, markStudentReportFailed } from "@/lib/reports";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
@@ -94,7 +95,7 @@ export async function completeSession(admin: AdminClient, sessionId: string): Pr
     .update({ status: "completed", completed_at: new Date().toISOString() })
     .eq("id", sessionId);
   if (updateError) {
-    console.error("[sessions] marking a session completed failed", updateError.message);
+    await logError("sessions:complete", updateError);
     return { ok: false, status: 500, error: "Couldn't finish this assessment. Try again." };
   }
 

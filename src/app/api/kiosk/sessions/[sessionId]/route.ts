@@ -4,6 +4,7 @@ import { evaluateResponse, loadSessionForKiosk } from "@/lib/kiosk";
 import { partsFor } from "@/lib/gameParts";
 import { stopReachedAt } from "@/lib/gameStop";
 import { isRateLimited } from "@/lib/rateLimit";
+import { logError } from "@/lib/logger";
 
 /**
  * Kiosk endpoints (student-facing, no auth; see supabase/migrations/0002_rls.sql
@@ -105,7 +106,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ se
       { onConflict: "session_id,item_id" }
     );
   if (responseError) {
-    console.error("[kiosk] saving a response failed", responseError.message);
+    await logError("kiosk:save-response", responseError);
     return NextResponse.json({ error: SAVE_FAILED }, { status: 500 });
   }
 
@@ -133,7 +134,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ se
     })
     .eq("id", sessionId);
   if (sessionError) {
-    console.error("[kiosk] updating the session failed", sessionError.message);
+    await logError("kiosk:update-session", sessionError);
     return NextResponse.json({ error: SAVE_FAILED }, { status: 500 });
   }
 
