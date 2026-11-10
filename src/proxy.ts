@@ -5,7 +5,7 @@ import { NextResponse, type NextRequest } from "next/server";
 // id/code in the route itself); /api/cron is authorized by CRON_SECRET.
 // Redirecting either to /login breaks them: the kiosk fetch would get the
 // login page's HTML instead of JSON.
-const PUBLIC_PATHS = ["/login", "/student", "/offline", "/sw.js", "/api/kiosk", "/api/cron"];
+const PUBLIC_PATHS = ["/login", "/student", "/offline", "/privacy", "/terms", "/sw.js", "/api/kiosk", "/api/cron", "/api/health"];
 
 /**
  * A `NextResponse.redirect()` is a brand-new response object; it does not

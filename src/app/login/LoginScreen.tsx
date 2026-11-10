@@ -4,6 +4,7 @@ import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { SunnyAvatar } from "@/components/SunnyAvatar";
+import { LegalLinks } from "@/components/LegalLinks";
 import { clearStaffOfflineData, savedStaffHome } from "@/lib/offline";
 import { signInWithPassword } from "./actions";
 
@@ -89,6 +90,7 @@ export function LoginScreen() {
           onClick={() => setMode("administrator")}
         />
       </div>
+      <LegalLinks className="mt-8 mb-0" />
     </div>
   );
 }
@@ -223,6 +225,7 @@ function StaffLoginForm({ mode, onBack }: { mode: Exclude<Mode, "select">; onBac
         >
           Forgot your password?
         </Link>
+        <LegalLinks className="text-center mt-5 mb-0" />
       </div>
     </div>
   );

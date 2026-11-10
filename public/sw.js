@@ -20,7 +20,7 @@ const VERSION = new URL(self.location.href).searchParams.get("v") || "dev";
 const CACHE = `rw-${VERSION}`;
 const STAFF_CACHE = `rw-staff-${VERSION}`;
 const STAFF_HOME_KEY = "/__staff-home";
-const PRECACHE_PAGES = ["/login", "/student/join", "/offline"];
+const PRECACHE_PAGES = ["/login", "/student/join", "/offline", "/privacy", "/terms"];
 // Sunny's avatar, the login screen's role avatars, and the PWA manifest's
 // icons: plain <img src>s (or, for the manifest itself, the OS's own install
 // prompt) the browser fetches on its own, not something cacheAssetsFrom()
@@ -89,6 +89,8 @@ function isPublicPage(pathname) {
     pathname === "/login/forgot" ||
     pathname === "/student/join" ||
     pathname === "/offline" ||
+    pathname === "/privacy" ||
+    pathname === "/terms" ||
     pathname.startsWith("/student/session/")
   );
 }

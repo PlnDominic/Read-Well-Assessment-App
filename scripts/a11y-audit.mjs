@@ -114,7 +114,7 @@ for (const scheme of ["light", "dark"]) {
     await page.route(`**/api/kiosk/sessions/${ID}/complete`, (route) => route.fulfill({ json: { ok: true } }));
     const tag = `${scheme} ${device}`;
 
-    for (const url of ["/login", "/student/join", "/offline"]) {
+    for (const url of ["/login", "/student/join", "/offline", "/privacy", "/terms"]) {
       await page.goto(BASE + url, { waitUntil: "networkidle" });
       await audit(page, `${tag}: ${url}`);
       if (device === "desktop") await auditFocus(page, `${tag}: ${url}`);

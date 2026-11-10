@@ -1,5 +1,6 @@
 "use client";
 
+import { LegalLinks } from "@/components/LegalLinks";
 import { useActionState } from "react";
 import Link from "next/link";
 import { SunnyAvatar } from "@/components/SunnyAvatar";
@@ -90,6 +91,7 @@ export function JoinForm() {
       >
         &larr; Back
       </Link>
+      <LegalLinks className="mt-6 mb-0" />
     </div>
   );
 }
