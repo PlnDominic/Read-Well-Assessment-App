@@ -250,8 +250,17 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
     return () => { if (storyTimerRef.current) clearInterval(storyTimerRef.current); };
   }, [item, isStory, started, state?.status]);
 
+  // A line that repeats from one question to the next ("Read this word out
+  // loud.", "Slide the sounds together and say it.") is read once, not before
+  // every question: eight times a few seconds each is tiring to sit through.
+  // The Listen button still plays it whenever a child wants it again.
+  const lastSpokenRef = useRef("");
   useEffect(() => {
-    if (started && item && speechSupported) sayAloud(itemSpokenText(item));
+    if (started && item && speechSupported) {
+      const line = itemSpokenText(item);
+      if (line !== lastSpokenRef.current) sayAloud(line);
+      lastSpokenRef.current = line;
+    }
     return () => stopSpeaking();
   }, [item, started, speechSupported]);
 
@@ -335,6 +344,8 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
 
   function recordMic() {
     if (savedString || recording || !item) return;
+    // The mic must not hear Sunny: stop any instruction still playing first.
+    stopSpeaking();
     const Recognition = window.SpeechRecognition ?? window.webkitSpeechRecognition;
     if (!Recognition) { setRecording(true); setTimeout(() => { setRecording(false); saveAnswer("attempted"); }, 1000); return; }
     const recognition = new Recognition();
@@ -358,6 +369,8 @@ export function StudentAssessmentRunner({ sessionId }: { sessionId: string }) {
       const guesses = Array.from(event.results[0] ?? [], (alt) => alt.transcript.trim()).filter(Boolean);
       if (guesses.length === 0) return heardNothingNow();
       finished = true;
+      // Sunny stops "listening" now, not whenever the recogniser gets round to ending.
+      setRecording(false);
       saveAnswer([...new Set(guesses)].join(HEARD_SEPARATOR));
     };
     recognition.onerror = (event) => {
