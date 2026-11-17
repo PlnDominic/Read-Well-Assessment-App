@@ -17,10 +17,6 @@ const ROOT = path.resolve(import.meta.dirname, "../..");
 const NOT_RECORDED_YET = new Set([
   "Write your name.",
   "Write the letter for the first sound in sun. sun.",
-  "Write the letter for the first sound in mango. mango.",
-  "Write the word tag. The shirt has a tag. tag.",
-  "Write the word peg. Hang the cloth with a peg. peg.",
-  "Write this sentence. The red bus is big. The... red... bus... is... big. The red bus is big.",
 ]);
 
 describe("lineKey", () => {
