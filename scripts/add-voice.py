@@ -15,6 +15,7 @@ src/lib/voice.test.ts checks it all still fits together.
 Needs python3 and ffmpeg.
 """
 import json
+import os
 import re
 import subprocess
 import sys
@@ -62,6 +63,9 @@ SHAPE = (
 )
 # Every clip is set to the same loudness so Sunny is never suddenly quiet or
 # loud from one question to the next, with headroom so nothing clips.
+# Playback speed, 1.0 = as recorded. VOICE_SPEED=0.85 slows a clip about 15%
+# without changing its pitch (used for the cloned voice, which came out fast).
+SPEED = float(os.environ.get("VOICE_SPEED", "1.0"))
 TARGET_LUFS = -16
 TARGET_PEAK = -2.0
 
@@ -84,7 +88,7 @@ def polish(source: str, dest: Path) -> None:
     try:
         # 1. Shape into a lossless file, so the mp3 below is only encoded once.
         subprocess.run(
-            ["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", str(source), "-af", SHAPE, "-ac", "1", "-ar", "24000", str(shaped)],
+            ["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", str(source), "-af", SHAPE + (f",atempo={SPEED}" if SPEED != 1.0 else ""), "-ac", "1", "-ar", "24000", str(shaped)],
             check=True,
         )
         # 2. Set the gain that brings it to the target loudness, and catch any
