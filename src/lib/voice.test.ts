@@ -15,7 +15,6 @@ const ROOT = path.resolve(import.meta.dirname, "../..");
  * its clip, drop it from here, and this test says so.
  */
 const NOT_RECORDED_YET = new Set([
-  "Write your name.",
   "Write the letter for the first sound in sun. sun.",
 ]);
 

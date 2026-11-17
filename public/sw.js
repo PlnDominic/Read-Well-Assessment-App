@@ -79,8 +79,9 @@ const VOICE_CLIPS = [
   "1412afb8c4b467.mp3", "14c118035c1ed8.mp3", "1592c84b183480.mp3", "1660d33ba1f7f8.mp3",
   "171ae52f6e4096.mp3", "17982d0cc23b9c.mp3", "17ad420b844056.mp3", "18db4a22786163.mp3",
   "190b278b829c8c.mp3", "19575d9199d3f8.mp3", "1a725bf7060f53.mp3", "1a93c39ad4ee93.mp3",
-  "1a9e3750d3d660.mp3", "1abba644a0a981.mp3", "1c3da3a2a9146c.mp3", "1d2289ca5f3435.mp3",
-  "1d7188d1630fc0.mp3", "1ea056cde63d6b.mp3", "1eb2783d92009b.mp3", "1ed815504cc99f.mp3"
+  "1a9e3750d3d660.mp3", "1abba644a0a981.mp3", "1c3da3a2a9146c.mp3", "1cf9471adffa7f.mp3",
+  "1d2289ca5f3435.mp3", "1d7188d1630fc0.mp3", "1ea056cde63d6b.mp3", "1eb2783d92009b.mp3",
+  "1ed815504cc99f.mp3"
 ];
 const STAFF_HOMES = ["/teacher", "/admin", "/specialist"];
 
