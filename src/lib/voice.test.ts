@@ -14,9 +14,7 @@ const ROOT = path.resolve(import.meta.dirname, "../..");
  * ran out of credits before they were recorded) and the new story opening. When one is recorded, add
  * its clip, drop it from here, and this test says so.
  */
-const NOT_RECORDED_YET = new Set([
-  "Write the letter for the first sound in sun. sun.",
-]);
+const NOT_RECORDED_YET = new Set<string>([]);
 
 describe("lineKey", () => {
   it("ignores whitespace differences, not wording", () => {

@@ -1,5 +1,5 @@
 {
- "voice": "Qwen Audio 3.0 TTS Flash, preset voice 'Naomi', seed 7, instruction: Warm, friendly Ghanaian English accent, like a kind primary school teacher in Accra speaking to young children | Level 1 story listening (first three questions): a real Ghanaian male voice recording",
+ "voice": "Voice cloned from a consenting speaker's sample with Chatterbox (Google Colab, see voice-clone/) | Level 1 story listening (first three questions): a real Ghanaian male voice recording",
  "clips": {
   "002670c0b797eb": "Mission complete! Great job!",
   "01286c7fb0dc17": "Tap the ladder.",
@@ -39,6 +39,7 @@
   "18db4a22786163": "Find the letter ay. Tap it.",
   "190b278b829c8c": "Why do you think Tim is happy at the end? He lost his bag, he has a new friend, or it is raining?",
   "19575d9199d3f8": "How do you feel about learning to read? Happy, Just okay, Sad?",
+  "1a317fbe7a0760": "Write the letter for the first sound in sun. sun.",
   "1a725bf7060f53": "Write the word peg. Hang the cloth with a peg. peg.",
   "1a93c39ad4ee93": "Which letter makes the first sound in apple? apple.",
   "1a9e3750d3d660": "Why was the goat able to run away? The gate was open, it was raining, or Kwaku was asleep?",
